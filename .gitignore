@@ -1,0 +1,6 @@
+node_modules/
+npm-debug.log
+*.log
+users.json
+public/images/card_backs_temp/
+utils/__pycache__/
