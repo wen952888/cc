@@ -10,7 +10,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.disable('x-powered-by'); // <<< 添加这一行
+app.disable('x-powered-by');
 
 const PORT = process.env.PORT || 23502;
 
@@ -39,7 +39,6 @@ io.on('connection', (socket) => {
         roomManager.handleDisconnect(socket);
     });
 
-    // Send initial room list (can be moved to after auth if preferred)
     socket.emit('roomListUpdate', roomManager.getPublicRoomList());
 });
 
