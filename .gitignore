@@ -2,5 +2,6 @@ node_modules/
 npm-debug.log
 *.log
 users.json
-public/images/card_backs_temp/
-utils/__pycache__/
+# 如果你曾创建过 utils/crop_cards.py 产生的临时目录，可以加上
+# public/images/card_backs_temp/
+# utils/__pycache__/
