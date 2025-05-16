@@ -29,7 +29,7 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
     padding-bottom: 25px;
     box-sizing: border-box;
     background-color: #e0e0e0;
-    overflow: hidden;
+    overflow: hidden; /* Important for absolute positioned children like #gameInfoBar */
 }
 
 #gameInfoBar {
@@ -48,13 +48,7 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
     box-shadow: 0 1px 2px rgba(0,0,0,0.15);
     z-index: 300;
 }
-#gameInfoBar .room-name-id {
-    font-size: 0.75em;
-    color: #333;
-    margin-right: 12px;
-    white-space: nowrap;
-    /* display: none; */ /* Uncomment to hide room name/ID */
-}
+#gameInfoBar .room-name-id { font-size: 0.75em; color: #333; margin-right: 12px; white-space: nowrap; }
 #gameInfoBar .room-name-id .room-name { font-weight: normal; }
 #gameInfoBar .room-name-id .room-id { opacity: 0.8; margin-left: 4px; }
 #gameInfoBar #leaveRoomButton { padding: 4px 8px; font-size: 0.75em; background-color: #e57373; color: white; border: none; border-radius: 4px; flex-shrink: 0; }
@@ -112,7 +106,7 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
     box-sizing: border-box;
     opacity: 1; 
     transform: translateY(0) scale(1); 
-    position: relative; /* Ensure z-index context */
+    position: relative; /* Ensures z-index context for stacking */
 }
 .card.hidden {
     background-image: url('/images/card-back.png');
@@ -122,27 +116,33 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
 #myHand.myHand .card {
     transform-origin: bottom center;
     cursor: pointer;
-    margin-left: -70px;
-    /* Default z-index is auto or can be set by JS to DOM order (e.g., cardElement.style.zIndex = index) */
+    margin-left: -70px; /* Adjust based on your card width for overlap */
+    /* Default z-index is determined by DOM order or JS if set (e.g., cardElement.style.zIndex = index) */
 }
 #myHand.myHand .card:first-child { margin-left: 0; }
 
-/* MODIFIED: z-index strategy for selected and hovered cards */
+/* MODIFIED: z-index logic for hover and selected states */
 #myHand.myHand .card:not(.disabled):hover {
     transform: translateY(-25px) scale(1.05);
-    z-index: 200 !important; /* Hovered card always on top of other non-disabled cards in hand */
+    z-index: 200 !important; /* Hovered card is highest */
     box-shadow: 3px 3px 8px rgba(0,0,0,0.25);
 }
 #myHand.myHand .card.selected:not(.disabled) {
     border: 3px solid #007bff;
-    transform: translateY(-30px) scale(1.06) !important;
-    /* Selected card should be above unselected cards, but below a hovered card (even if selected) */
-    /* If a card is selected AND hovered, the hover z-index (200) will take precedence if higher */
-    z-index: 150 !important;
+    transform: translateY(-35px) scale(1.06) !important; /* Selected card pops up more */
+    /* 
+      Selected card z-index:
+      - Should be higher than unselected, non-hovered cards.
+      - If a selected card is ALSO hovered, the :hover rule's z-index (200) will apply,
+        which is fine as the directly interacted card should be on top.
+      - If multiple cards are selected, their relative z-index among themselves
+        will still be based on DOM order (or JS-set initial z-index) unless
+        the last selected card gets a higher z-index via JS, which is more complex.
+        For now, 150 should make it float above unselected cards.
+    */
+    z-index: 150 !important; 
     box-shadow: 2px 3px 7px rgba(0,0,0,0.2);
 }
-/* If a card is selected AND hovered, it will get z-index 200 from the :hover rule */
-/* This ensures the card directly under the mouse is visually foremost */
 
 #myHand.myHand .card.hinted:not(.disabled) {
     border: 3px dashed orange;
@@ -154,7 +154,7 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
     cursor: not-allowed;
     transform: translateY(0) scale(1) !important; 
     box-shadow: 1px 1px 2px rgba(0,0,0,0.08);
-    z-index: 5 !important; /* Lowest among interactive hand cards */
+    z-index: 5 !important; 
     border-color: #b0b0b0;
 }
 
