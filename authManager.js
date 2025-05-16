@@ -33,7 +33,6 @@ function saveUsers() {
 function findUserById(userId) {
     for (const phone in users) {
         if (users[phone].userId === userId) {
-            // Return a copy of user data excluding sensitive info if needed
             return { userId: users[phone].userId, username: users[phone].username };
         }
     }
@@ -97,11 +96,9 @@ function init(socket) {
     socket.on('reauthenticate', (storedUserId, callback) => {
         console.log(`[AUTH] Reauthentication attempt for userId: ${storedUserId} on socket: ${socket.id}`);
         let userData = null;
-        // let userPhone = null; // Store the phone number for lookup (not strictly needed here)
         for (const phone in users) {
             if (users[phone].userId === storedUserId) {
                 userData = users[phone];
-                // userPhone = phone; // Found the user
                 break;
             }
         }
@@ -127,13 +124,12 @@ function init(socket) {
                      });
                  } else {
                      callback({
-                         success: true, // Reauth itself was successful
+                         success: true,
                          message: '重新认证成功，但无法自动重加房间。',
                          userId: userData.userId,
                          username: userData.username,
-                         roomState: null // Indicate no room state to restore immediately
+                         roomState: null
                      });
-                      // Send room list if couldn't rejoin
                      socket.emit('roomListUpdate', roomManager.getPublicRoomList());
                  }
             } else {
@@ -144,10 +140,8 @@ function init(socket) {
                      username: userData.username,
                      roomState: null
                  });
-                 // If not rejoining a room, send the general room list
                  socket.emit('roomListUpdate', roomManager.getPublicRoomList());
             }
-            // Let room manager know about authenticated user (e.g., to update room list for this socket)
             roomManager.handleAuthentication(socket);
 
         } else {
