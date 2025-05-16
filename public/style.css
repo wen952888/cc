@@ -23,7 +23,27 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
 /* --- Game View Layout --- */
 #roomView { width: 100%; height: 100%; padding: 0; background-color: transparent; display: flex; flex-direction: column;}
 #gameArea { flex-grow: 1; position: relative; padding-top: 45px; padding-bottom: 25px; box-sizing: border-box; background-color: #e0e0e0; overflow: hidden; }
-#gameInfoBar { display: flex; justify-content: space-between; align-items: center; padding: 0 10px; font-size: 0.9em; color: #444; position: absolute; top: 0; left: 0; right: 0; height: 40px; line-height: 40px; z-index: 300; background-color: rgba(240, 240, 240, 0.9); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+
+/* MODIFIED SECTION */
+#gameInfoBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 0.9em;
+    color: #333; /* 文字颜色，如果背景变深可能需要调整为浅色，#333 或 #444 在 #e0e0e0 上应该还好 */
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    line-height: 40px;
+    z-index: 300;
+    background-color: #e0e0e0; /* 修改为与游戏区域背景色一致 */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15); /* 可以调整阴影使其更融合或更突出，或者移除 (none) */
+}
+/* END MODIFIED SECTION */
+
 #gameInfoBar .room-id { opacity: 0.7; margin-left: 8px; }
 #gameInfoBar #leaveRoomButton { padding: 5px 10px; font-size: 0.8em; background-color: #e57373; border: none; color:white; border-radius: 4px; margin-top: auto; margin-bottom: auto; }
 .playerArea { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 3px; box-sizing: border-box; min-width: 80px; }
@@ -40,36 +60,15 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
 .opponent-left { top: 30%; left: 5px; transform: translateY(-50%); }
 .opponent-right { top: 30%; right: 5px; transform: translateY(-50%); }
 .opponentHand { display: flex; justify-content: center; align-items: center; width: auto; min-width: 40px; height: 50px; position: relative; margin-top: 2px; }
-
-/* === Card dimensions for opponent hand. ADJUST THESE BASED ON YOUR CARD BACK IMAGE AND DESIRED LOOK === */
-.opponentHand .card {
-    position: absolute;
-    width: 40px;  /* 示例值，请替换 */
-    height: 56px; /* 示例值，请替换 (保持牌背宽高比) */
-    border-radius: 3px;
-    box-shadow: 0.5px 0.5px 1px rgba(0,0,0,0.1);
-    background-size: contain; /* или 'cover' */
-    background-repeat: no-repeat;
-    background-position: center;
-}
-
+.opponentHand .card { position: absolute; width: 40px; height: 56px; border-radius: 3px; box-shadow: 0.5px 0.5px 1px rgba(0,0,0,0.1); background-size: contain; background-repeat: no-repeat; background-position: center; }
 #centerArea { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); width: auto; max-width: 70%; min-width: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5px; z-index: 50; min-height: 230px; }
 #centerInfo { text-align: center; margin-bottom: 3px; width: 100%; }
 #centerInfo #lastHandText { font-size: 0.7em; color: #666; margin: 0 0 1px 0; }
 #centerInfo #lastHandTypeDisplay { font-size: 0.75em; color: #444; font-weight: bold; min-height: 1em; }
 #centerPileArea { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; width: 100%; min-height: 215px; padding: 2px; box-sizing: border-box; }
-
-/* === Card dimensions for center pile. Should match .card or be specific if needed === */
-#centerPileArea .card {
-    position: relative;
-    margin: 2px;
-    /* width: 100px; */ /* 将继承 .card 的值, 如需不同请取消注释并修改 */
-    /* height: 140px; */
-    border-radius: 8px;
-}
-
+#centerPileArea .card { position: relative; margin: 2px; border-radius: 8px; }
 #playerAreaBottom.selfArea { position: absolute; bottom: 25px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; padding: 0 5px; box-sizing: border-box; z-index: 200; }
-#myHand.playerCards.myHand { order: 1; width: 100%; max-width: 95vw; min-height: 230px; /* 根据卡牌高度调整 */ overflow-x: auto; overflow-y: hidden; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 5px; margin-bottom: 5px; scrollbar-width: thin; scrollbar-color: #b0b0b0 #e0e0e0; }
+#myHand.playerCards.myHand { order: 1; width: 100%; max-width: 95vw; min-height: 230px; overflow-x: auto; overflow-y: hidden; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 5px; margin-bottom: 5px; scrollbar-width: thin; scrollbar-color: #b0b0b0 #e0e0e0; }
 #myHand.playerCards.myHand::-webkit-scrollbar { height: 4px; }
 #playerAreaBottom .self-player-info-container { order: 2; display: flex; flex-direction: column; align-items: center; margin-bottom: 5px; }
 #playerAreaBottom .self-player-info-container .player-avatar { width: 30px; height: 30px;}
@@ -84,75 +83,35 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
 
 .card {
     border: 1px solid #a0a0a0;
-    border-radius: 8px; /* 圆角可以根据你的图片调整 */
-
-    /* === 重要：将这里的 width 和 height 修改为你的牌面图片的实际尺寸 === */
-    /* === 或者你希望它们在“自己手牌”和“中央牌堆”中显示的主要尺寸 === */
-    /* === 保持宽高比！ 例如，如果你的图片是 200x280，可以设为 100px 和 140px === */
-    width: 100px;  /* 示例：请替换为你图片的宽度或期望宽度 */
-    height: 140px; /* 示例：请替换 (宽度 * (图片高/图片宽)) */
-
-    background-color: #fff; /* 图片加载失败时的后备颜色 */
+    border-radius: 8px;
+    width: 100px; 
+    height: 140px;
+    background-color: #fff; 
     box-shadow: 2px 2px 4px rgba(0,0,0,0.12);
-
-    /* 控制背景图片如何填充元素 */
-    background-size: contain; /* 'contain' 保证图片完整显示，可能会留白 */
-                              /* 'cover' 会填满元素，但可能裁剪图片 */
-                              /* '100% 100%' 会拉伸图片以填满，可能变形 */
+    background-size: contain; 
     background-repeat: no-repeat;
-    background-position: center; /* 图片在元素内居中 */
-
-    display: flex; /* 即使没有文本，也保留弹性布局的可能 */
-    overflow: hidden; /* 确保超出部分不显示 */
-    flex-shrink: 0; /* 防止在 flex 容器中被不成比例地缩小 */
+    background-position: center;
+    display: flex; 
+    overflow: hidden;
+    flex-shrink: 0;
     transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
-    user-select: none; /* 禁止选中文本（如果卡牌上有的话，现在是图片了） */
-    box-sizing: border-box; /* 推荐，边框和内边距不增加元素总宽高 */
+    user-select: none;
+    box-sizing: border-box;
 }
 .card.hidden {
-    background-image: url('/images/card-back.png'); /* 确保此路径正确 */
+    background-image: url('/images/card-back.png');
     border-color: #777;
-    /* 如果牌背和牌面尺寸不一致，可能需要在这里覆盖 .card 的 width/height，
-       但通常对手牌 .opponentHand .card 会有自己的尺寸 */
 }
 
-/* My Hand Specific Card Interaction & Overlap */
 #myHand.myHand .card {
-    position: relative;
-    transform-origin: bottom center;
-    cursor: pointer;
-    /* === 重要：根据你的 .card width 调整 margin-left 以获得期望的重叠效果 === */
-    /* 示例：如果 .card width 是 100px，你想让每张牌露出 30px */
-    /* margin-left = -(卡牌宽度 - 露出宽度) = -(100 - 30) = -70px */
+    position: relative; transform-origin: bottom center; cursor: pointer;
     margin-left: -70px;
 }
-#myHand.myHand .card:first-child {
-    margin-left: 0;
-}
-
-#myHand.myHand .card:hover {
-    transform: translateY(-25px) scale(1.05); /* 悬停效果轻微上移和放大 */
-    z-index: 200 !important;
-    box-shadow: 3px 3px 8px rgba(0,0,0,0.2);
-}
-#myHand.myHand .card.selected {
-    border: 3px solid #007bff;
-    transform: translateY(-30px) scale(1.06) !important; /* 选中效果更明显 */
-    z-index: 50 !important; /* 比普通牌高，但低于悬停牌，除非悬停的也是选中的 */
-    box-shadow: 2px 3px 7px rgba(0,0,0,0.2);
-}
-#myHand.myHand .card.hinted {
-    border: 3px dashed orange;
-    transform: translateY(-10px); /* 提示效果轻微上移 */
-    z-index: 40 !important;
-}
-#myHand.myHand .card.disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: translateY(0) !important; /* 移除任何上移效果 */
-    box-shadow: 1px 1px 2px rgba(0,0,0,0.08);
-    z-index: 5 !important; /* 确保在最底层（相对于手牌中其他交互牌） */
-}
+#myHand.myHand .card:first-child { margin-left: 0; }
+#myHand.myHand .card:hover {transform: translateY(-25px) scale(1.05); z-index: 200 !important; box-shadow: 3px 3px 8px rgba(0,0,0,0.2);}
+#myHand.myHand .card.selected {border: 3px solid #007bff; transform: translateY(-30px) scale(1.06) !important; z-index: 50 !important; box-shadow: 2px 3px 7px rgba(0,0,0,0.2);}
+#myHand.myHand .card.hinted {border: 3px dashed orange;transform: translateY(-10px);z-index: 40 !important;}
+#myHand.myHand .card.disabled {opacity: 0.6; cursor: not-allowed;transform: translateY(0) !important;box-shadow: 1px 1px 2px rgba(0,0,0,0.08);z-index: 5 !important;}
 
 .playerArea.current-turn .player-avatar { box-shadow: 0 0 5px 1px gold; }
 #gameStatusDisplay  { position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); background-color: rgba(230, 230, 230, 0.88); padding: 2px 7px; border-radius: 8px; font-size: 0.7em; color: #333; z-index: 350; min-height: 1em; white-space: nowrap; box-shadow: 0 1px 1px rgba(0,0,0,0.05); }
@@ -165,22 +124,16 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
 .hand-count-display { font-size: 0.7em; color: #fff; background-color: rgba(0,0,0,0.7); padding: 1px 4px; border-radius: 6px; z-index: 160; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); white-space: nowrap; }
 .opponent-left .hand-count-display, .opponent-right .hand-count-display { bottom: auto; top: calc(100% - 10px); }
 
-/* === Responsive adjustments - 确保这里的卡牌尺寸也与你的图片和期望效果一致 === */
-@media (max-height: 700px) and (max-width: 900px), (max-width: 768px) { /* 调整断点和逻辑 */
+@media (max-height: 700px) and (max-width: 900px), (max-width: 768px) {
     #gameArea { padding-top: 35px; padding-bottom: 20px; }
     #gameInfoBar { height: 30px; font-size:0.8em; }
-
-    /* 示例：如果主卡牌是 100x140, 中等屏幕可能是 80x112 */
     .card { width: 80px; height: 112px; }
-    #myHand.myHand .card { margin-left: -55px; } /* e.g., -(80 - 25px visible) */
-    /* #centerPileArea .card already inherits .card dimensions */
-    .opponentHand .card { width: 30px; height: 42px; } /* 保持牌背宽高比 */
-
-    #myHand.playerCards.myHand { min-height: 130px; } /* (112px + padding/margin) */
+    #myHand.myHand .card { margin-left: -55px; }
+    .opponentHand .card { width: 30px; height: 42px; }
+    #myHand.playerCards.myHand { min-height: 130px; } 
     #centerArea { min-height: 130px; }
-    #centerPileArea { min-height: 120px; } /* (112px + margin) */
-    .opponentHand { height: 50px; } /* (42px + padding/margin) */
-
+    #centerPileArea { min-height: 120px; }
+    .opponentHand { height: 50px; } 
     .my-actions-container button { min-width: 38px; height: 26px; font-size: 0.65em;}
     .player-avatar { width: 24px; height: 24px; }
     #gameStatusDisplay { font-size: 0.6em; padding: 1px 5px; bottom: 1px;}
@@ -189,12 +142,10 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
     #centerArea { top: 43%; }
 }
 
-@media (max-width: 480px) { /* 针对非常小的屏幕 */
-    /* 示例：更小的卡牌 */
+@media (max-width: 480px) { 
     .card { width: 50px; height: 70px; }
-    #myHand.myHand .card { margin-left: -30px; } /* e.g., -(50 - 20px visible) */
+    #myHand.myHand .card { margin-left: -30px; } 
     .opponentHand .card { width: 25px; height: 35px; }
-
     #myHand.playerCards.myHand { min-height: 85px; }
     #centerArea { min-height: 85px; top: 44%;}
     #centerPileArea { min-height: 75px; }
