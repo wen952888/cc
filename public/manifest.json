@@ -1,0 +1,21 @@
+{
+  "name": "KK 在线纸牌",
+  "short_name": "KK纸牌",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#e0e0e0",
+  "theme_color": "#e0e0e0",
+  "description": "KK 多人在线纸牌游戏",
+  "icons": [
+    {
+      "src": "/images/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
