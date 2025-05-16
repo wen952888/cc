@@ -1,7 +1,7 @@
 {
-  "name": "kk-card-game",
+  "name": "kk-card-game-visuals",
   "version": "1.0.0",
-  "description": "Multiplayer card game with rooms",
+  "description": "Multiplayer card game with rooms and custom card images",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
