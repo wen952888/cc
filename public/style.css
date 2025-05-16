@@ -22,30 +22,66 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
 
 /* --- Game View Layout --- */
 #roomView { width: 100%; height: 100%; padding: 0; background-color: transparent; display: flex; flex-direction: column;}
-#gameArea { flex-grow: 1; position: relative; padding-top: 45px; padding-bottom: 25px; box-sizing: border-box; background-color: #e0e0e0; overflow: hidden; }
 
-/* MODIFIED SECTION */
-#gameInfoBar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 10px;
-    font-size: 0.9em;
-    color: #333; /* 文字颜色，如果背景变深可能需要调整为浅色，#333 或 #444 在 #e0e0e0 上应该还好 */
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 40px;
-    line-height: 40px;
-    z-index: 300;
-    background-color: #e0e0e0; /* 修改为与游戏区域背景色一致 */
-    box-shadow: 0 1px 3px rgba(0,0,0,0.15); /* 可以调整阴影使其更融合或更突出，或者移除 (none) */
+/* MODIFIED: #gameArea padding-top to reduce or remove space previously for full-width bar */
+#gameArea {
+    flex-grow: 1;
+    position: relative;
+    padding-top: 10px; /* Reduced top padding, adjust as needed, or set to 0 */
+    padding-bottom: 25px;
+    box-sizing: border-box;
+    background-color: #e0e0e0;
+    overflow: hidden;
 }
-/* END MODIFIED SECTION */
 
-#gameInfoBar .room-id { opacity: 0.7; margin-left: 8px; }
-#gameInfoBar #leaveRoomButton { padding: 5px 10px; font-size: 0.8em; background-color: #e57373; border: none; color:white; border-radius: 4px; margin-top: auto; margin-bottom: auto; }
+/* MODIFIED SECTION for #gameInfoBar to be a small block in top-right */
+#gameInfoBar {
+    position: absolute;
+    top: 10px;         /* Distance from top of #gameArea, adjust as needed */
+    right: 10px;       /* Distance from right of #gameArea, adjust as needed */
+    width: auto;       /* Width determined by content */
+    height: auto;      /* Height determined by content */
+    padding: 6px 10px; /* Inner spacing */
+    
+    display: flex;
+    flex-direction: row; /* Arrange items in a row */
+    align-items: center; /* Vertically align items if they have different heights */
+    justify-content: flex-end; /* Push content to the right if multiple items */
+
+    background-color: rgba(240, 240, 240, 0.8); /* Slightly transparent light background */
+                                                /* Or use #e0e0e0; for full match with gameArea */
+    border-radius: 5px;   /* Rounded corners */
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15); /* Subtle shadow */
+    z-index: 300;       /* Ensure it's on top */
+}
+
+#gameInfoBar .room-name-id {
+    font-size: 0.75em; /* Slightly smaller font for room info */
+    color: #333;
+    margin-right: 12px; /* Space between info and button */
+    white-space: nowrap; /* Prevent room name/ID from wrapping */
+    /* display: none; */ /* Uncomment this line if you ONLY want the '离开' button */
+}
+#gameInfoBar .room-name-id .room-name {
+    font-weight: normal; /* Less emphasis than before */
+}
+#gameInfoBar .room-name-id .room-id {
+    opacity: 0.8;
+    margin-left: 4px;
+}
+
+#gameInfoBar #leaveRoomButton {
+    padding: 4px 8px; /* Smaller padding for a smaller button */
+    font-size: 0.75em; /* Smaller font size */
+    background-color: #e57373;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    flex-shrink: 0; /* Prevent button from shrinking if .room-name-id is long */
+}
+/* END MODIFIED SECTION for #gameInfoBar */
+
+
 .playerArea { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 3px; box-sizing: border-box; min-width: 80px; }
 .playerHeader { display: flex; flex-direction: column; align-items: center; margin-bottom: 1px; }
 .player-avatar { width: 30px; height: 30px; border-radius: 50%; background-color: #d0d0d0; background-size: cover; background-position: center; flex-shrink: 0; border: 1px solid #b0b0b0; display: flex; justify-content: center; align-items: center; margin-bottom: 2px; }
@@ -56,9 +92,9 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
 .playerInfo { font-size: 0.6em; line-height: 1.1; color: #666; width: 100%; margin-top: 1px;}
 .playerInfo .ready { color: #28a745; } .playerInfo .not-ready { color: #ffc107; } .playerInfo .disconnected { color: #dc3545; font-style: italic; } .playerInfo .finished { color: #6c757d; font-style: italic; }
 .opponent-area { position: absolute; z-index: 100; }
-.opponent-top { top: 5px; left: 50%; transform: translateX(-50%); padding-top: 0;}
+.opponent-top { top: 10px; /* Adjusted to be below the new #gameInfoBar if it's also at top:10px */ left: 50%; transform: translateX(-50%); padding-top: 0;}
 .opponent-left { top: 30%; left: 5px; transform: translateY(-50%); }
-.opponent-right { top: 30%; right: 5px; transform: translateY(-50%); }
+.opponent-right { top: 30%; right: 5px; transform: translateY(-50%); } /* This might overlap with new #gameInfoBar if content is wide */
 .opponentHand { display: flex; justify-content: center; align-items: center; width: auto; min-width: 40px; height: 50px; position: relative; margin-top: 2px; }
 .opponentHand .card { position: absolute; width: 40px; height: 56px; border-radius: 3px; box-shadow: 0.5px 0.5px 1px rgba(0,0,0,0.1); background-size: contain; background-repeat: no-repeat; background-position: center; }
 #centerArea { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); width: auto; max-width: 70%; min-width: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5px; z-index: 50; min-height: 230px; }
@@ -125,8 +161,10 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
 .opponent-left .hand-count-display, .opponent-right .hand-count-display { bottom: auto; top: calc(100% - 10px); }
 
 @media (max-height: 700px) and (max-width: 900px), (max-width: 768px) {
-    #gameArea { padding-top: 35px; padding-bottom: 20px; }
-    #gameInfoBar { height: 30px; font-size:0.8em; }
+    #gameArea { padding-top: 8px; /* Adjusted padding-top */ padding-bottom: 20px; }
+    #gameInfoBar { top: 5px; right: 5px; padding: 5px 8px; } /* Adjust position and padding for smaller bar */
+    #gameInfoBar .room-name-id { font-size: 0.7em; margin-right: 8px;}
+    #gameInfoBar #leaveRoomButton { font-size: 0.7em; padding: 3px 6px; }
     .card { width: 80px; height: 112px; }
     #myHand.myHand .card { margin-left: -55px; }
     .opponentHand .card { width: 30px; height: 42px; }
@@ -143,6 +181,10 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
 }
 
 @media (max-width: 480px) { 
+    #gameArea { padding-top: 5px; }
+    #gameInfoBar { top: 3px; right: 3px; padding: 4px 6px; }
+    #gameInfoBar .room-name-id { font-size: 0.65em; margin-right: 6px;}
+    #gameInfoBar #leaveRoomButton { font-size: 0.65em; padding: 2px 5px; }
     .card { width: 50px; height: 70px; }
     #myHand.myHand .card { margin-left: -30px; } 
     .opponentHand .card { width: 25px; height: 35px; }
@@ -151,6 +193,5 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
     #centerPileArea { min-height: 75px; }
     .opponentHand { height: 45px; }
     .my-actions-container button { font-size: 0.6em; min-width: 35px; height: 24px;}
-    #gameInfoBar { font-size:0.7em; }
     .player-avatar { width: 20px; height: 20px; }
 }
