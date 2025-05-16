@@ -22,65 +22,42 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
 
 /* --- Game View Layout --- */
 #roomView { width: 100%; height: 100%; padding: 0; background-color: transparent; display: flex; flex-direction: column;}
-
-/* MODIFIED: #gameArea padding-top to reduce or remove space previously for full-width bar */
 #gameArea {
     flex-grow: 1;
     position: relative;
-    padding-top: 10px; /* Reduced top padding, adjust as needed, or set to 0 */
+    padding-top: 10px; 
     padding-bottom: 25px;
     box-sizing: border-box;
     background-color: #e0e0e0;
     overflow: hidden;
 }
 
-/* MODIFIED SECTION for #gameInfoBar to be a small block in top-right */
 #gameInfoBar {
     position: absolute;
-    top: 10px;         /* Distance from top of #gameArea, adjust as needed */
-    right: 10px;       /* Distance from right of #gameArea, adjust as needed */
-    width: auto;       /* Width determined by content */
-    height: auto;      /* Height determined by content */
-    padding: 6px 10px; /* Inner spacing */
-    
+    top: 10px;
+    right: 10px;
+    width: auto;
+    height: auto;
+    padding: 6px 10px;
     display: flex;
-    flex-direction: row; /* Arrange items in a row */
-    align-items: center; /* Vertically align items if they have different heights */
-    justify-content: flex-end; /* Push content to the right if multiple items */
-
-    background-color: rgba(240, 240, 240, 0.8); /* Slightly transparent light background */
-                                                /* Or use #e0e0e0; for full match with gameArea */
-    border-radius: 5px;   /* Rounded corners */
-    box-shadow: 0 1px 2px rgba(0,0,0,0.15); /* Subtle shadow */
-    z-index: 300;       /* Ensure it's on top */
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    background-color: rgba(240, 240, 240, 0.8);
+    border-radius: 5px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    z-index: 300;
 }
-
 #gameInfoBar .room-name-id {
-    font-size: 0.75em; /* Slightly smaller font for room info */
+    font-size: 0.75em;
     color: #333;
-    margin-right: 12px; /* Space between info and button */
-    white-space: nowrap; /* Prevent room name/ID from wrapping */
-    /* display: none; */ /* Uncomment this line if you ONLY want the '离开' button */
+    margin-right: 12px;
+    white-space: nowrap;
+    /* display: none; */ /* Uncomment to hide room name/ID */
 }
-#gameInfoBar .room-name-id .room-name {
-    font-weight: normal; /* Less emphasis than before */
-}
-#gameInfoBar .room-name-id .room-id {
-    opacity: 0.8;
-    margin-left: 4px;
-}
-
-#gameInfoBar #leaveRoomButton {
-    padding: 4px 8px; /* Smaller padding for a smaller button */
-    font-size: 0.75em; /* Smaller font size */
-    background-color: #e57373;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    flex-shrink: 0; /* Prevent button from shrinking if .room-name-id is long */
-}
-/* END MODIFIED SECTION for #gameInfoBar */
-
+#gameInfoBar .room-name-id .room-name { font-weight: normal; }
+#gameInfoBar .room-name-id .room-id { opacity: 0.8; margin-left: 4px; }
+#gameInfoBar #leaveRoomButton { padding: 4px 8px; font-size: 0.75em; background-color: #e57373; color: white; border: none; border-radius: 4px; flex-shrink: 0; }
 
 .playerArea { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 3px; box-sizing: border-box; min-width: 80px; }
 .playerHeader { display: flex; flex-direction: column; align-items: center; margin-bottom: 1px; }
@@ -92,9 +69,9 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
 .playerInfo { font-size: 0.6em; line-height: 1.1; color: #666; width: 100%; margin-top: 1px;}
 .playerInfo .ready { color: #28a745; } .playerInfo .not-ready { color: #ffc107; } .playerInfo .disconnected { color: #dc3545; font-style: italic; } .playerInfo .finished { color: #6c757d; font-style: italic; }
 .opponent-area { position: absolute; z-index: 100; }
-.opponent-top { top: 10px; /* Adjusted to be below the new #gameInfoBar if it's also at top:10px */ left: 50%; transform: translateX(-50%); padding-top: 0;}
+.opponent-top { top: 10px; left: 50%; transform: translateX(-50%); padding-top: 0;}
 .opponent-left { top: 30%; left: 5px; transform: translateY(-50%); }
-.opponent-right { top: 30%; right: 5px; transform: translateY(-50%); } /* This might overlap with new #gameInfoBar if content is wide */
+.opponent-right { top: 30%; right: 5px; transform: translateY(-50%); }
 .opponentHand { display: flex; justify-content: center; align-items: center; width: auto; min-width: 40px; height: 50px; position: relative; margin-top: 2px; }
 .opponentHand .card { position: absolute; width: 40px; height: 56px; border-radius: 3px; box-shadow: 0.5px 0.5px 1px rgba(0,0,0,0.1); background-size: contain; background-repeat: no-repeat; background-position: center; }
 #centerArea { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); width: auto; max-width: 70%; min-width: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5px; z-index: 50; min-height: 230px; }
@@ -123,16 +100,19 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
     width: 100px; 
     height: 140px;
     background-color: #fff; 
-    box-shadow: 2px 2px 4px rgba(0,0,0,0.12);
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.1);
     background-size: contain; 
     background-repeat: no-repeat;
     background-position: center;
     display: flex; 
     overflow: hidden;
     flex-shrink: 0;
-    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out, opacity 0.15s ease-out, border-color 0.15s ease-out;
     user-select: none;
     box-sizing: border-box;
+    opacity: 1; 
+    transform: translateY(0) scale(1); 
+    position: relative; /* Ensure z-index context */
 }
 .card.hidden {
     background-image: url('/images/card-back.png');
@@ -140,14 +120,44 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
 }
 
 #myHand.myHand .card {
-    position: relative; transform-origin: bottom center; cursor: pointer;
+    transform-origin: bottom center;
+    cursor: pointer;
     margin-left: -70px;
+    /* Default z-index is auto or can be set by JS to DOM order (e.g., cardElement.style.zIndex = index) */
 }
 #myHand.myHand .card:first-child { margin-left: 0; }
-#myHand.myHand .card:hover {transform: translateY(-25px) scale(1.05); z-index: 200 !important; box-shadow: 3px 3px 8px rgba(0,0,0,0.2);}
-#myHand.myHand .card.selected {border: 3px solid #007bff; transform: translateY(-30px) scale(1.06) !important; z-index: 50 !important; box-shadow: 2px 3px 7px rgba(0,0,0,0.2);}
-#myHand.myHand .card.hinted {border: 3px dashed orange;transform: translateY(-10px);z-index: 40 !important;}
-#myHand.myHand .card.disabled {opacity: 0.6; cursor: not-allowed;transform: translateY(0) !important;box-shadow: 1px 1px 2px rgba(0,0,0,0.08);z-index: 5 !important;}
+
+/* MODIFIED: z-index strategy for selected and hovered cards */
+#myHand.myHand .card:not(.disabled):hover {
+    transform: translateY(-25px) scale(1.05);
+    z-index: 200 !important; /* Hovered card always on top of other non-disabled cards in hand */
+    box-shadow: 3px 3px 8px rgba(0,0,0,0.25);
+}
+#myHand.myHand .card.selected:not(.disabled) {
+    border: 3px solid #007bff;
+    transform: translateY(-30px) scale(1.06) !important;
+    /* Selected card should be above unselected cards, but below a hovered card (even if selected) */
+    /* If a card is selected AND hovered, the hover z-index (200) will take precedence if higher */
+    z-index: 150 !important;
+    box-shadow: 2px 3px 7px rgba(0,0,0,0.2);
+}
+/* If a card is selected AND hovered, it will get z-index 200 from the :hover rule */
+/* This ensures the card directly under the mouse is visually foremost */
+
+#myHand.myHand .card.hinted:not(.disabled) {
+    border: 3px dashed orange;
+    transform: translateY(-10px);
+    z-index: 140 !important; /* Below selected and hovered */
+}
+#myHand.myHand .card.disabled {
+    opacity: 0.65; 
+    cursor: not-allowed;
+    transform: translateY(0) scale(1) !important; 
+    box-shadow: 1px 1px 2px rgba(0,0,0,0.08);
+    z-index: 5 !important; /* Lowest among interactive hand cards */
+    border-color: #b0b0b0;
+}
+
 
 .playerArea.current-turn .player-avatar { box-shadow: 0 0 5px 1px gold; }
 #gameStatusDisplay  { position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); background-color: rgba(230, 230, 230, 0.88); padding: 2px 7px; border-radius: 8px; font-size: 0.7em; color: #333; z-index: 350; min-height: 1em; white-space: nowrap; box-shadow: 0 1px 1px rgba(0,0,0,0.05); }
@@ -161,8 +171,8 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
 .opponent-left .hand-count-display, .opponent-right .hand-count-display { bottom: auto; top: calc(100% - 10px); }
 
 @media (max-height: 700px) and (max-width: 900px), (max-width: 768px) {
-    #gameArea { padding-top: 8px; /* Adjusted padding-top */ padding-bottom: 20px; }
-    #gameInfoBar { top: 5px; right: 5px; padding: 5px 8px; } /* Adjust position and padding for smaller bar */
+    #gameArea { padding-top: 8px; padding-bottom: 20px; }
+    #gameInfoBar { top: 5px; right: 5px; padding: 5px 8px; }
     #gameInfoBar .room-name-id { font-size: 0.7em; margin-right: 8px;}
     #gameInfoBar #leaveRoomButton { font-size: 0.7em; padding: 3px 6px; }
     .card { width: 80px; height: 112px; }
