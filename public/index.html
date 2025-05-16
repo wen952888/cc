@@ -4,13 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>KK 在线纸牌</title>
-    <link rel="stylesheet" href="style.css?v=1.0.16"> <!-- 版本号递增 -->
+    <link rel="stylesheet" href="style.css?v=1.0.17"> <!-- 递增版本号 -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#e0e0e0"/>
-    <link rel="apple-touch-icon" href="/images/icon-192x192.png"> <!-- 你可能需要提供这个图标 -->
+    <link rel="apple-touch-icon" href="/images/icon-192x192.png">
 </head>
 <body>
-    <!-- Loading, Login/Register, Lobby Views remain the same -->
     <div id="loadingView" class="view view-block"><p>连接中...</p></div>
     <div id="loginRegisterView" class="view hidden-view">
         <h2>登录 / 注册</h2>
@@ -28,10 +27,8 @@
         <p id="lobbyMessage" class="message"></p>
     </div>
 
-
     <div id="roomView" class="view hidden-view view-flex">
         <div id="gameArea">
-            <!-- 顶栏信息 -->
             <div id="gameInfoBar">
                 <div class="room-name-id">
                     <span class="room-name">房间名</span>
@@ -39,60 +36,29 @@
                 </div>
                 <button id="leaveRoomButton">离开</button>
             </div>
-
-            <!-- 对手玩家区域 -->
             <div id="playerAreaTop" class="playerArea opponent-area opponent-top">
-                <div class="playerHeader">
-                    <div class="player-avatar"></div>
-                    <div class="player-details"><span class="playerName"></span><span class="playerRole"></span></div>
-                </div>
-                <div class="playerInfo"></div>
-                <div class="playerCards opponentHand"></div>
+                <div class="playerHeader"><div class="player-avatar"></div><div class="player-details"><span class="playerName"></span><span class="playerRole"></span></div></div>
+                <div class="playerInfo"></div><div class="playerCards opponentHand"></div>
             </div>
             <div id="playerAreaLeft" class="playerArea opponent-area opponent-left">
-                <div class="playerHeader">
-                    <div class="player-avatar"></div>
-                    <div class="player-details"><span class="playerName"></span><span class="playerRole"></span></div>
-                </div>
-                <div class="playerInfo"></div>
-                <div class="playerCards opponentHand"></div>
+                <div class="playerHeader"><div class="player-avatar"></div><div class="player-details"><span class="playerName"></span><span class="playerRole"></span></div></div>
+                <div class="playerInfo"></div><div class="playerCards opponentHand"></div>
             </div>
             <div id="playerAreaRight" class="playerArea opponent-area opponent-right">
-                <div class="playerHeader">
-                    <div class="player-avatar"></div>
-                    <div class="player-details"><span class="playerName"></span><span class="playerRole"></span></div>
-                </div>
-                <div class="playerInfo"></div>
-                <div class="playerCards opponentHand"></div>
+                <div class="playerHeader"><div class="player-avatar"></div><div class="player-details"><span class="playerName"></span><span class="playerRole"></span></div></div>
+                <div class="playerInfo"></div><div class="playerCards opponentHand"></div>
             </div>
-
-            <!-- 中央牌堆 -->
             <div id="centerArea">
                 <div id="centerPileArea"></div>
-                <div id="centerInfo">
-                    <p id="lastHandText">上一手牌:</p>
-                    <span id="lastHandTypeDisplay"></span>
-                </div>
+                <div id="centerInfo"><p id="lastHandText">上一手牌:</p><span id="lastHandTypeDisplay"></span></div>
             </div>
-
-            <!-- 自己的区域 (最下方) -->
             <div id="playerAreaBottom" class="playerArea selfArea">
-                <!-- 自己的手牌 (最上面) -->
-                <div id="myHand" class="playerCards myHand">
-                    <!-- 卡牌由JS动态生成 -->
-                </div>
-                <!-- 自己头像信息和准备按钮 (中间) -->
+                <div id="myHand" class="playerCards myHand"></div>
                 <div class="self-player-info-container">
-                    <div class="playerHeader">
-                        <div class="player-avatar"></div>
-                        <div class="player-details">
-                            <span class="playerName">你</span><span class="playerRole">[?]</span>
-                        </div>
-                    </div>
+                    <div class="playerHeader"><div class="player-avatar"></div><div class="player-details"><span class="playerName">你</span><span class="playerRole">[?]</span></div></div>
                     <div class="playerInfo">总分: 0</div>
                     <button id="readyButton" class="hidden-view">准备</button>
                 </div>
-                <!-- 操作按钮 (最下面) -->
                 <div class="my-actions-container hidden-view">
                     <button id="sortHandButton" title="整理">整理</button>
                     <button id="hintButton" title="提示">提示</button>
@@ -100,22 +66,16 @@
                     <button id="playSelectedCardsButton" title="出牌" disabled>出牌</button>
                 </div>
             </div>
-
-            <!-- 游戏状态显示条 -->
             <div id="gameStatusDisplay">等待玩家...</div>
         </div>
-
         <div id="gameOverOverlay" class="overlay hidden-view view-flex">
              <div class="overlay-content">
-                 <h3 id="gameOverTitle">游戏结束!</h3>
-                 <p id="gameOverReason"></p>
-                 <div id="gameOverScores"></div>
+                 <h3 id="gameOverTitle">游戏结束!</h3><p id="gameOverReason"></p><div id="gameOverScores"></div>
                  <button id="backToLobbyButton">返回大厅</button>
              </div>
          </div>
     </div>
-
     <script src="/socket.io/socket.io.js"></script>
-    <script src="client.js?v=1.0.16"></script> <!-- Increment version for cache busting -->
+    <script src="client.js?v=1.0.17"></script>
 </body>
 </html>
