@@ -5,7 +5,7 @@
   "display": "standalone",
   "background_color": "#e0e0e0",
   "theme_color": "#e0e0e0",
-  "description": "KK 多人在线纸牌游戏",
+  "description": "KK 多人在线纸牌游戏 (自定义图片)",
   "icons": [
     {
       "src": "/images/icon-192x192.png",
