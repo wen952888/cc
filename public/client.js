@@ -228,7 +228,7 @@ function clearPlayerAreaDOM(area) {
     if (roleEl) roleEl.textContent = '[?]'; 
     if (infoEl) infoEl.innerHTML = '总分: 0'; 
     
-    if (cardsEl && area.id !== 'playerAreaBottom') { // 只清理对手的牌区域，自己的手牌由renderPlayerCards处理
+    if (cardsEl && area.id !== 'playerAreaBottom') {
         cardsEl.innerHTML = '<span style="color:#888; font-style:italic;">- 等待 -</span>'; 
     }
     
@@ -294,13 +294,12 @@ function renderCard(cardData, isHidden, isCenterPileCard = false) { const cardDi
 function renderPlayerCards(containerParam, playerData, isMe, isMyTurnAndCanPlay) {
     let targetContainer;
     if (isMe) {
-        targetContainer = document.getElementById('myHand'); // 总是获取 #myHand 容器
+        targetContainer = document.getElementById('myHand'); 
         if (!targetContainer) { console.error("[DEBUG] renderPlayerCards: #myHand 未找到!"); return; }
     }  else {
-        // 对手手牌逻辑
-        targetContainer = containerParam; // 这是对手的 .playerCards 容器
+        targetContainer = containerParam; 
         if (!targetContainer) { console.error(`[DEBUG] renderPlayerCards 对手 (${playerData.username}): 传入的容器为null。`); return; }
-        targetContainer.innerHTML = ''; // 清空对手的牌容器
+        targetContainer.innerHTML = ''; 
 
         const cardElements = [];
         if (playerData.finished) { 
@@ -327,11 +326,10 @@ function renderPlayerCards(containerParam, playerData, isMe, isMyTurnAndCanPlay)
         if (cardElements.length > 0) { 
             requestAnimationFrame(() => { fanCards(targetContainer, cardElements, targetContainer.closest('.playerArea')?.id); }); 
         }
-        return; // 对手渲染完毕
+        return; 
     }
     
-    // --- 开始渲染自己的手牌 ---
-    targetContainer.innerHTML = ''; // **确保自己的手牌容器在渲染前是空的**
+    targetContainer.innerHTML = ''; 
 
     let handToRender = [];
     if (playerData && Array.isArray(playerData.hand)) {
@@ -357,11 +355,13 @@ function renderPlayerCards(containerParam, playerData, isMe, isMyTurnAndCanPlay)
         handToRender.forEach((cardData, index) => {
             const cardElement = renderCard(cardData, false, false);
             
-            cardElement.style.zIndex = index; 
-            cardElement.classList.remove('selected', 'hinted', 'disabled'); // 重置所有状态类
-            cardElement.style.transform = ''; // 清除内联transform, 让CSS类接管
+            // **重置所有可能影响布局和层叠的内联样式和类**
+            cardElement.className = 'card visible'; // Start with base classes
+            cardElement.style.transform = ''; // Clear inline transform
+            cardElement.style.zIndex = index;   // Set base z-index for stacking
 
             if (isMyTurnAndCanPlay) {
+                // 卡牌可交互状态
                 const isSelected = selectedCards.some(c => c.rank === cardData.rank && c.suit === cardData.suit);
                 const isHinted = currentHint && currentHint.cards.some(c => c.rank === cardData.rank && c.suit === cardData.suit);
                 
@@ -370,20 +370,20 @@ function renderPlayerCards(containerParam, playerData, isMe, isMyTurnAndCanPlay)
                 } else if (isHinted) {
                     cardElement.classList.add('hinted');
                 }
-                // 移除 disabled（如果之前有）
-                // cardElement.classList.remove('disabled'); // 已在上面统一移除
+                // 移除 .disabled (如果它之前被添加了)
+                // cardElement.classList.remove('disabled'); // 已经在 className 重置中处理了
                 cardElement.onclick = () => toggleCardSelection(cardData, cardElement);
             } else {
-                // **不是我的回合，或我已经出完牌，应用 'disabled' 类**
-                // CSS中的 .disabled 类应该将 transform 强制设为 translateY(0px) scale(1) !important
-                // 并处理光标等。
+                // **卡牌不可交互状态 (非当前回合或已出完)**
                 cardElement.classList.add('disabled');
+                // CSS .disabled 类应负责将 transform 设为 translateY(0) scale(1) !important
+                // 并处理 cursor 和 opacity
+                // 不需要在这里直接设置 .style.transform，让 CSS .disabled 类来处理
             }
             targetContainer.appendChild(cardElement);
         });
     }
 }
-
 
 function clearHintsAndSelection(resetSelectionAndCycle = true) {
     if (resetSelectionAndCycle) {
@@ -397,13 +397,12 @@ function clearHintsAndSelection(resetSelectionAndCycle = true) {
         const cardElements = localMyHandArea.querySelectorAll('.card');
         cardElements.forEach(el => {
             el.classList.remove('hinted', 'selected');
-            // 如果不是轮到当前玩家，.disabled 类会被 renderPlayerCards 添加，
-            // CSS 中 .disabled 的 !important transform 会覆盖其他。
-            // 如果是轮到当前玩家，transform 由 .selected, .hinted, 或 :hover 控制。
-            // 此处不需要直接操作 transform，交给 renderPlayerCards 和 CSS。
+            // 当调用 renderPlayerCards 时，它会根据 isMyTurnAndCanPlay 正确设置或移除 'disabled'
+            // 并且会重置 transform (通过清除内联 style.transform 然后让CSS类生效)
         });
     }
 }
+
 
 // --- UI事件处理器 (保持与上一版本相同) ---
 function handleRegister() { const phone = regPhoneInput.value.trim(); const password = regPasswordInput.value; if (!phone || !password) { displayMessage(authMessage, '请输入手机号和密码。', true); return; } if (password.length < 4) { displayMessage(authMessage, '密码至少需要4位。', true); return; } registerButton.disabled = true; socket.emit('register', { phoneNumber: phone, password }, (response) => { registerButton.disabled = false; displayMessage(authMessage, response.message, !response.success, response.success); if (response.success) { regPhoneInput.value = ''; regPasswordInput.value = ''; } }); }
@@ -533,8 +532,6 @@ socket.on('gameStateUpdate', (newState) => {
             myNewPlayerState.hand = [];
         } else if (myNewPlayerState.hand === undefined) { 
             if (myOldHand && myOldPlayerState && !myNewPlayerState.finished) {
-                 // If handCount changed (I played), myOldHand should reflect the cards *after* my play due to optimistic update in handlePlaySelectedCards
-                 // If handCount is same (another player played), myOldHand is still my current hand.
                 myNewPlayerState.hand = myOldHand;
             } else if (myNewPlayerState.handCount > 0 && !myNewPlayerState.finished) {
                 console.warn("[gameStateUpdate] Hand count > 0, but hand array is undefined and no local old hand. Requesting full state.");
@@ -598,58 +595,4 @@ function initClientSession() {
                     showView('lobbyView');
                 }
             } else {
-                console.warn(`[INIT] 重新认证失败: ${response.message}`);
-                try { localStorage.removeItem('kkUserId'); localStorage.removeItem('kkUsername'); } catch (e) {}
-                displayMessage(authMessage, response.message || "重新认证失败，请重新登录。", true);
-                showView('loginRegisterView');
-            }
-        });
-    } else {
-        showView('loginRegisterView');
-    }
-}
-
-function setupEventListeners() {
-    if(registerButton) registerButton.addEventListener('click', handleRegister);
-    if(loginButton) loginButton.addEventListener('click', handleLogin);
-    const lobbyLogoutBtnInstance = document.getElementById('logoutButton');
-    if(lobbyLogoutBtnInstance) lobbyLogoutBtnInstance.addEventListener('click', handleLogout);
-    if(createRoomButton) createRoomButton.addEventListener('click', handleCreateRoom);
-
-    if (roomView) {
-        roomView.addEventListener('click', function(event) {
-            const buttonElement = event.target.closest('button');
-            if (!buttonElement) return;
-            const buttonId = buttonElement.id;
-            if (currentView !== 'roomView' && currentView !== 'gameOverOverlay') return;
-            if (currentView === 'gameOverOverlay' && buttonId !== 'backToLobbyButton') return;
-
-            switch (buttonId) {
-                case 'readyButton': handleReadyClick(); break;
-                case 'leaveRoomButton': handleGameLeave(); break;
-                case 'sortHandButton': handleSortHand(); break;
-                case 'playSelectedCardsButton': handlePlaySelectedCards(); break;
-                case 'passTurnButton': handlePassTurn(); break;
-                case 'hintButton': handleHint(); break;
-                case 'backToLobbyButton': handleReturnToLobby(); break;
-            }
-        });
-    }
-    regPasswordInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter' && registerButton && !registerButton.disabled) handleRegister(); });
-    loginPasswordInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter' && loginButton && !loginButton.disabled) handleLogin(); });
-    createRoomNameInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter' && createRoomButton && !createRoomButton.disabled) handleCreateRoom(); });
-    createRoomPasswordInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter' && createRoomButton && !createRoomButton.disabled) handleCreateRoom(); });
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("DOM 已加载。正在设置客户端...");
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
-    setupEventListeners();
-    if (socket.connected) {
-        initClientSession();
-    } else {
-        showView('loadingView');
-    }
-    console.log('客户端设置完成。');
-});
+                console.warn(`[INIT] 
