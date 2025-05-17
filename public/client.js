@@ -134,17 +134,17 @@ async function initializeAudioFeatures() {
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         console.warn('浏览器不支持 getUserMedia API');
-        displayMessage(gameStatusDisplay, '您的浏览器不支持语音功能。', true);
+        // displayMessage(gameStatusDisplay, '您的浏览器不支持语音功能。', true); // 这条消息可能在游戏状态消息之上，暂时注释掉
         return;
     }
     if (!window.MediaRecorder) {
         console.warn('浏览器不支持 MediaRecorder API');
-        displayMessage(gameStatusDisplay, '您的浏览器不支持语音录制。', true);
+        // displayMessage(gameStatusDisplay, '您的浏览器不支持语音录制。', true);
         return;
     }
     if (!window.MediaSource) {
         console.warn('浏览器不支持 MediaSource API');
-        displayMessage(gameStatusDisplay, '您的浏览器不支持语音流播放。', true);
+        // displayMessage(gameStatusDisplay, '您的浏览器不支持语音流播放。', true);
         return;
     }
 
@@ -195,13 +195,20 @@ async function initializeAudioFeatures() {
 
     } catch (err) {
         console.error('获取麦克风权限失败:', err);
-        displayMessage(gameStatusDisplay, `麦克风错误: ${err.message}`, true);
+        if (gameStatusDisplay) displayMessage(gameStatusDisplay, `麦克风错误: ${err.message}`, true);
         if (micButton) micButton.disabled = true;
     }
 }
 
 function toggleMic(forceState) {
-    if (!mediaRecorder || !micButton) return;
+    if (!mediaRecorder || !micButton) {
+        if (gameStatusDisplay && (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)) {
+            displayMessage(gameStatusDisplay, '语音功能不可用 (浏览器不支持)。', true);
+        } else if (gameStatusDisplay && micButton && micButton.disabled) {
+            displayMessage(gameStatusDisplay, '麦克风权限获取失败或未初始化。', true);
+        }
+        return;
+    }
     const newState = typeof forceState === 'boolean' ? forceState : !isMicActive;
     if (newState) {
         if (mediaRecorder.state === 'inactive') {
@@ -233,7 +240,7 @@ function setupRemoteAudioPlayer(userId) {
     if (remoteAudioPlayers[userId]) return remoteAudioPlayers[userId];
     const audio = new Audio();
     audio.autoplay = true;
-    document.body.appendChild(audio);
+    document.body.appendChild(audio); // 可以考虑创建一个隐藏的div来存放这些audio元素
     const mediaSource = new MediaSource();
     audio.src = URL.createObjectURL(mediaSource);
     let sourceBuffer = null;
@@ -251,10 +258,10 @@ function setupRemoteAudioPlayer(userId) {
                 sourceBuffer = mediaSource.addSourceBuffer(mime);
             } else {
                 console.error(`MediaSource does not support MIME type: ${mime} for user ${userId}`);
-                if (MediaSource.isTypeSupported('audio/mp4; codecs="mp4a.40.2"')) {
+                if (MediaSource.isTypeSupported('audio/mp4; codecs="mp4a.40.2"')) { // 最后的备选
                      sourceBuffer = mediaSource.addSourceBuffer('audio/mp4; codecs="mp4a.40.2"');
                 } else {
-                    console.error("No suitable MIME type found for MediaSource playback.");
+                    console.error("No suitable MIME type found for MediaSource playback for user " + userId);
                     return;
                 }
             }
@@ -284,19 +291,20 @@ function setupRemoteAudioPlayer(userId) {
                     console.error(`Error appending buffer for user ${userId}:`, e, "Chunk size:", arrayBuffer.byteLength, "SourceBuffer state:", sourceBuffer.updating);
                     isAppending = false;
                     if (e.name === 'QuotaExceededError' && sourceBuffer.buffered.length > 0) {
-                        console.warn("SourceBuffer quota exceeded. Attempting to clear old buffer.");
+                        console.warn("SourceBuffer quota exceeded for user " + userId + ". Attempting to clear old buffer.");
                         try {
-                            const removeEnd = sourceBuffer.buffered.end(0) - 1;
-                            if (removeEnd > sourceBuffer.buffered.start(0)){
-                                sourceBuffer.remove(sourceBuffer.buffered.start(0), removeEnd);
+                            const bufferedAmount = sourceBuffer.buffered.end(0) - sourceBuffer.buffered.start(0);
+                            const removeDuration = Math.max(0, bufferedAmount - 2); // 尝试保留最后2秒
+                            if (removeDuration > 0 && sourceBuffer.buffered.length > 0) {
+                                sourceBuffer.remove(sourceBuffer.buffered.start(0), sourceBuffer.buffered.start(0) + removeDuration);
                             }
                         } catch (removeError) {
-                            console.error("Error removing buffer segments:", removeError);
+                            console.error("Error removing buffer segments for user " + userId + ":", removeError);
                         }
                     }
                 }
             }).catch(e => {
-                console.error("Error converting blob to arrayBuffer:", e);
+                console.error("Error converting blob to arrayBuffer for user " + userId + ":", e);
                 isAppending = false;
             });
         }
@@ -327,9 +335,9 @@ function stopAudioPlaybackAndRecording() {
     if (micButton) { micButton.classList.remove('active'); micButton.textContent = '🎤'; micButton.disabled = true; }
     for (const userId in remoteAudioPlayers) {
         const player = remoteAudioPlayers[userId];
-        if (player.audio) { player.audio.pause(); player.audio.src = ''; player.audio.remove(); }
+        if (player.audio) { player.audio.pause(); player.audio.src = ''; try{player.audio.remove();} catch(e){} }
         if (player.mediaSource && player.mediaSource.readyState === 'open') {
-            try { if (player.sourceBuffer && player.mediaSource.sourceBuffers.length > 0) player.mediaSource.endOfStream(); }
+            try { if (player.sourceBuffer && player.mediaSource.sourceBuffers.length > 0 && !player.sourceBuffer.updating) player.mediaSource.endOfStream(); }
             catch (e) { console.warn(`Error ending MediaSource stream for user ${userId}:`, e); }
         }
         setVoiceIndicator(userId, false);
@@ -389,7 +397,8 @@ function updateRoomControls(state) {
     }
     if (micButton) {
         micButton.style.display = (state.status === 'playing' || state.status === 'waiting') ? 'inline-block' : 'none';
-        if (state.status !== 'playing' && state.status !== 'waiting' && isMicActive) toggleMic(false);
+        // 如果getUserMedia失败，micButton会被禁用，这里不需要再次判断isMicActive
+        if (state.status !== 'playing' && state.status !== 'waiting' && mediaRecorder && mediaRecorder.state === 'recording') toggleMic(false);
     }
 }
 function renderRoomList(rooms) { if (!roomListEl) { console.error("CLIENT: roomList DOM 元素 (roomListEl) 未找到!"); return; } roomListEl.innerHTML = ''; if (!Array.isArray(rooms)) { console.error("CLIENT: rooms 数据不是数组!", rooms); roomListEl.innerHTML = '<p>获取房间列表失败 (数据格式错误)。</p>'; return; } if (rooms.length === 0) { roomListEl.innerHTML = '<p>当前没有房间。</p>'; return; } rooms.forEach(room => { const item = document.createElement('div'); item.classList.add('room-item'); const nameSpan = document.createElement('span'); nameSpan.textContent = `${room.roomName} (${room.playerCount}/${room.maxPlayers})`; item.appendChild(nameSpan); const statusSpan = document.createElement('span'); statusSpan.textContent = `状态: ${room.status === 'waiting' ? '等待中' : (room.status === 'playing' ? '游戏中' : '已结束')}`; statusSpan.classList.add(`status-${room.status}`); item.appendChild(statusSpan); if (room.hasPassword) { const passwordSpan = document.createElement('span'); passwordSpan.textContent = '🔒'; item.appendChild(passwordSpan); } const joinButton = document.createElement('button'); joinButton.textContent = '加入'; joinButton.disabled = room.status !== 'waiting' || room.playerCount >= room.maxPlayers; joinButton.onclick = () => joinRoom(room.roomId, room.hasPassword); item.appendChild(joinButton); roomListEl.appendChild(item); }); }
@@ -502,9 +511,6 @@ function renderPlayerArea(container, playerData, isMe, state, absoluteSlot) {
     if (cardsEl) renderPlayerCards(cardsEl, playerData, isMe, state.status === 'playing' && state.currentPlayerId === myUserId && !playerData.finished);
 }
 
-// fanCards 函数不再需要，注释掉或删除
-// function fanCards(cardContainer, cardElements, areaId) { ... }
-
 function getCardImageFilename(cardData) { if (!cardData || typeof cardData.rank !== 'string' || typeof cardData.suit !== 'string') { console.error("获取卡牌图片文件名时数据无效:", cardData); return null; } let rankStr = cardData.rank.toLowerCase(); if (rankStr === 't') rankStr = '10'; else if (rankStr === 'j') rankStr = 'jack'; else if (rankStr === 'q') rankStr = 'queen'; else if (rankStr === 'k') rankStr = 'king'; else if (rankStr === 'a') rankStr = 'ace'; let suitStr = ''; switch (cardData.suit.toUpperCase()) { case 'S': suitStr = 'spades'; break; case 'H': suitStr = 'hearts'; break; case 'D': suitStr = 'diamonds'; break; case 'C': suitStr = 'clubs'; break; default: console.warn("卡牌图片花色无效:", cardData.suit); return null; } return `${rankStr}_of_${suitStr}.png`; }
 function renderCard(cardData, isHidden, isCenterPileCard = false) { const cardDiv = document.createElement('div'); cardDiv.classList.add('card'); if (isHidden || !cardData) { cardDiv.classList.add('hidden'); } else { cardDiv.classList.add('visible'); const filename = getCardImageFilename(cardData); if (filename) { cardDiv.style.backgroundImage = `url('/images/cards/${filename}')`; cardDiv.dataset.suit = cardData.suit; cardDiv.dataset.rank = cardData.rank; } else { cardDiv.textContent = `${cardData.rank}${cardData.suit}`; cardDiv.style.textAlign = 'center'; cardDiv.style.lineHeight = '140px'; console.error("生成卡牌图片文件名失败:", cardData, "使用文本备用。"); } } return cardDiv; }
 
@@ -516,23 +522,24 @@ function renderPlayerCards(containerParam, playerData, isMe, isMyTurnAndCanPlay)
     }  else { // 对手玩家
         targetContainer = containerParam;
         if (!targetContainer) { console.error(`[DEBUG] renderPlayerCards 对手 (${playerData.username}): 传入的容器为null。`); return; }
-        targetContainer.innerHTML = ''; // 清空旧卡牌
+        targetContainer.innerHTML = '';
 
         if (playerData.finished) {
             targetContainer.innerHTML = '<span style="color:#888; font-style:italic;">已出完</span>';
         } else if (playerData.handCount > 0) {
-            const cardWidth = 30; // 根据 .opponentHand .card 在 style.css 中的宽度调整
-            const overlapFactor = 0.6; // 卡牌重叠部分占自身宽度的比例，例如0.6表示重叠60%
-            const maxVisibleCards = 10; // 最多渲染这么多张真实卡牌，超出则只增加计数
-            const numToRender = Math.min(playerData.handCount, maxVisibleCards);
+            // 从CSS中获取卡牌宽度，或者硬编码一个值（需要与CSS同步）
+            // const cardStyle = window.getComputedStyle(renderCard(null, true)); // 动态获取可能复杂且低效
+            // const cardWidth = parseFloat(cardStyle.width) || 30;
+            const cardWidth = 30; // 与 .opponentHand .card 样式中的 width 一致
+            const visibleOffset = 10; // 每张后续卡牌露出的像素值
+
+            const maxVisibleRenderedCards = 10; // 最多实际渲染的卡牌DOM元素数量
+            const numToRender = Math.min(playerData.handCount, maxVisibleRenderedCards);
 
             for (let i = 0; i < numToRender; i++) {
                 const cardElement = renderCard(null, true, false); // true 表示背面
-                // 计算卡牌的 left 位置来实现堆叠效果
-                // 容器 (.opponentHand) 需要有足够的宽度或 overflow: visible;
-                // 同时 .opponentHand .card 必须是 position: absolute;
-                cardElement.style.left = `${i * cardWidth * (1 - overlapFactor)}px`;
-                cardElement.style.zIndex = i; // 后面的牌叠在上面
+                cardElement.style.left = `${i * visibleOffset}px`;
+                cardElement.style.zIndex = i;
                 targetContainer.appendChild(cardElement);
             }
 
@@ -545,12 +552,10 @@ function renderPlayerCards(containerParam, playerData, isMe, isMyTurnAndCanPlay)
             }
             if (handCountEl) handCountEl.textContent = `${playerData.handCount} 张`;
 
-            // 如果实际卡牌数量超过渲染数量，可以在计数旁加个 + 号
             if (playerData.handCount > numToRender && handCountEl) {
-                handCountEl.textContent += '+';
+                // handCountEl.textContent += ` (+${playerData.handCount - numToRender})`; // 更明确的提示
             }
-
-        } else { // handCount === 0 且未完成
+        } else {
             targetContainer.innerHTML = '<span style="color:#555; font-style:italic;">- 等待 -</span>';
             let handCountEl = targetContainer.closest('.playerArea')?.querySelector('.hand-count-display');
             if (handCountEl) handCountEl.remove();
@@ -558,7 +563,7 @@ function renderPlayerCards(containerParam, playerData, isMe, isMyTurnAndCanPlay)
         return; // 对手牌渲染结束
     }
 
-    // 自己的手牌渲染逻辑 (基本不变)
+    // 自己的手牌渲染逻辑
     targetContainer.innerHTML = '';
     let handToRender = [];
     if (playerData && Array.isArray(playerData.hand)) handToRender = [...playerData.hand];
@@ -628,7 +633,7 @@ function handlePlaySelectedCards() {
                 const myPlayer = currentGameState.players.find(p => p.userId === myUserId);
                 if (myPlayer && Array.isArray(myPlayer.hand)) {
                     const cardsPlayedSet = new Set(selectedCards.map(c => `${c.rank}${c.suit}`));
-                    myPlayer.hand = myPlayer.hand.filter(card => !cardsPlayedSet.has(`${card.rank}${card.suit}`));
+                    myPlayer.hand = myPlayer.hand.filter(card => !cardsPlayedSet.has(`${c.rank}${c.suit}`));
                 }
             }
             selectedCards = []; clearHintsAndSelection(true);
@@ -676,9 +681,9 @@ socket.on('playerLeft', ({ userId, username, reason }) => {
         const playerIdx = currentGameState.players.findIndex(p => p.userId === userId);
         if (playerIdx > -1) { currentGameState.players[playerIdx].connected = false; currentGameState.players[playerIdx].isReady = false; }
         if (remoteAudioPlayers[userId]) {
-            remoteAudioPlayers[userId].audio.pause(); remoteAudioPlayers[userId].audio.src = ''; remoteAudioPlayers[userId].audio.remove();
+            remoteAudioPlayers[userId].audio.pause(); remoteAudioPlayers[userId].audio.src = ''; try{remoteAudioPlayers[userId].audio.remove();}catch(e){}
             if (remoteAudioPlayers[userId].mediaSource && remoteAudioPlayers[userId].mediaSource.readyState === 'open') {
-                try { if (remoteAudioPlayers[userId].sourceBuffer && remoteAudioPlayers[userId].mediaSource.sourceBuffers.length > 0) remoteAudioPlayers[userId].mediaSource.endOfStream(); }
+                try { if (remoteAudioPlayers[userId].sourceBuffer && remoteAudioPlayers[userId].mediaSource.sourceBuffers.length > 0 && !remoteAudioPlayers[userId].sourceBuffer.updating) remoteAudioPlayers[userId].mediaSource.endOfStream(); }
                 catch(e) { console.warn("Error ending stream on playerLeft:", e); }
             }
             delete remoteAudioPlayers[userId];
@@ -762,7 +767,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (passTurnButton) passTurnButton.addEventListener('click', handlePassTurn);
     if (hintButton) hintButton.addEventListener('click', handleHint);
     if (sortHandButton) sortHandButton.addEventListener('click', handleSortHand);
-    if (micButton) micButton.addEventListener('click', () => toggleMic());
+    if (micButton) micButton.addEventListener('click', () => toggleMic()); // 确保绑定
     if (backToLobbyButton) backToLobbyButton.addEventListener('click', () => {
         if (currentRoomId) {
             const actualLeaveButton = document.getElementById('leaveRoomButton');
