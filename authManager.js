@@ -1,3 +1,4 @@
+// authManager.js
 const fs = require('fs');
 const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
@@ -82,7 +83,7 @@ function init(socket) {
                 socket.username = userData.username;
                 console.log(`[AUTH] User logged in: ${socket.username} (ID: ${socket.userId}), Socket: ${socket.id}`);
                 callback({ success: true, message: '登录成功！', userId: userData.userId, username: userData.username });
-                const roomManager = require('./roomManager');
+                const roomManager = require('./roomManager'); 
                 roomManager.handleAuthentication(socket);
             } else {
                 callback({ success: false, message: '密码错误。' });
@@ -108,7 +109,7 @@ function init(socket) {
             socket.username = userData.username;
             console.log(`[AUTH] User reauthenticated: ${socket.username} (ID: ${socket.userId}), Socket: ${socket.id}`);
 
-            const roomManager = require('./roomManager');
+            const roomManager = require('./roomManager'); 
             const previousRoom = roomManager.findRoomByUserId(socket.userId);
 
             if (previousRoom) {
@@ -128,7 +129,7 @@ function init(socket) {
                          message: '重新认证成功，但无法自动重加房间。',
                          userId: userData.userId,
                          username: userData.username,
-                         roomState: null
+                         roomState: null 
                      });
                      socket.emit('roomListUpdate', roomManager.getPublicRoomList());
                  }
@@ -138,7 +139,7 @@ function init(socket) {
                      message: '重新认证成功！',
                      userId: userData.userId,
                      username: userData.username,
-                     roomState: null
+                     roomState: null 
                  });
                  socket.emit('roomListUpdate', roomManager.getPublicRoomList());
             }
