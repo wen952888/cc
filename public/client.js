@@ -10,11 +10,11 @@ let myUserId = null;
 let myUsername = null;
 let currentRoomId = null;
 let currentGameState = null;
-let previousGameState = null; 
+let previousGameState = null;
 let isReadyForGame = false;
 let selectedCards = [];
-let currentSortMode = 'rank'; 
-let currentHint = null; 
+let currentSortMode = 'rank';
+let currentHint = null;
 let currentHintCycleIndex = 0;
 
 // --- DOM 元素 (缓存以便频繁访问) ---
@@ -47,13 +47,13 @@ const playSelectedCardsButton = document.getElementById('playSelectedCardsButton
 const passTurnButton = document.getElementById('passTurnButton');
 const hintButton = document.getElementById('hintButton');
 const sortHandButton = document.getElementById('sortHandButton');
-const gameStatusDisplay = document.getElementById('gameStatusDisplay'); 
+const gameStatusDisplay = document.getElementById('gameStatusDisplay');
 
-const playerAreas = { 
-    0: document.getElementById('playerAreaBottom'), 
-    1: document.getElementById('playerAreaLeft'),   
-    2: document.getElementById('playerAreaTop'),    
-    3: document.getElementById('playerAreaRight')   
+const playerAreas = {
+    0: document.getElementById('playerAreaBottom'),
+    1: document.getElementById('playerAreaLeft'),
+    2: document.getElementById('playerAreaTop'),
+    3: document.getElementById('playerAreaRight')
 };
 
 const gameOverTitle = document.getElementById('gameOverTitle');
@@ -61,8 +61,8 @@ const gameOverReason = document.getElementById('gameOverReason');
 const gameOverScores = document.getElementById('gameOverScores');
 const backToLobbyButton = document.getElementById('backToLobbyButton');
 
-const ALARM_ICON_SRC = '/images/alarm-icon.svg'; 
-const AVATAR_PATHS = [ 
+const ALARM_ICON_SRC = '/images/alarm-icon.svg';
+const AVATAR_PATHS = [
     '/images/avatar-slot-0.png',
     '/images/avatar-slot-1.png',
     '/images/avatar-slot-2.png',
@@ -99,7 +99,7 @@ function showView(viewName) {
         selectedCards = [];
         currentHint = null;
         currentHintCycleIndex = 0;
-        if (currentView !== 'gameOverOverlay') { 
+        if (currentView !== 'gameOverOverlay') {
             currentGameState = null;
             previousGameState = null;
         }
@@ -109,7 +109,7 @@ function displayMessage(element, message, isError = false, isSuccess = false) { 
 function clearMessages() { [authMessage, lobbyMessage].forEach(el => { if (el) { el.textContent = ''; el.classList.remove('error', 'success', 'message'); } }); }
 const RANK_ORDER_CLIENT = ["4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A", "2", "3"];
 const RANK_VALUES_CLIENT = {}; RANK_ORDER_CLIENT.forEach((r, i) => RANK_VALUES_CLIENT[r] = i);
-const SUIT_ORDER_CLIENT = ["D", "C", "H", "S"]; 
+const SUIT_ORDER_CLIENT = ["D", "C", "H", "S"];
 const SUIT_VALUES_CLIENT = {}; SUIT_ORDER_CLIENT.forEach((s, i) => SUIT_VALUES_CLIENT[s] = i);
 function compareSingleCardsClient(cardA, cardB) { const rankValueA = RANK_VALUES_CLIENT[cardA.rank]; const rankValueB = RANK_VALUES_CLIENT[cardB.rank]; if (rankValueA !== rankValueB) return rankValueA - rankValueB; return SUIT_VALUES_CLIENT[cardA.suit] - SUIT_VALUES_CLIENT[cardB.suit]; }
 function compareBySuitThenRank(cardA, cardB) { const suitValueA = SUIT_VALUES_CLIENT[cardA.suit]; const suitValueB = SUIT_VALUES_CLIENT[cardB.suit]; if (suitValueA !== suitValueB) return suitValueA - suitValueB; return RANK_VALUES_CLIENT[cardA.rank] - RANK_VALUES_CLIENT[cardB.rank]; }
@@ -142,9 +142,9 @@ function updateRoomControls(state) {
             if(passTurnButton) {
                 let disablePass = false;
                 if (state.isFirstTurn && myPlayerInState.hand && myPlayerInState.hand.some(c=>c.rank==='4'&&c.suit==='D')) {
-                    disablePass = true; 
+                    disablePass = true;
                 } else if ((!state.lastHandInfo || (state.lastHandInfo && state.lastPlayerWhoPlayedId === myUserId)) && state.currentPlayerId === myUserId) {
-                    if(!(state.isFirstTurn && myPlayerInState.hand && myPlayerInState.hand.some(c=>c.rank==='4'&&c.suit==='D'))) { 
+                    if(!(state.isFirstTurn && myPlayerInState.hand && myPlayerInState.hand.some(c=>c.rank==='4'&&c.suit==='D'))) {
                         disablePass = true;
                     }
                 }
@@ -166,12 +166,12 @@ function renderRoomView(state) {
     currentGameState = state;
 
     const myHandContainer = document.getElementById('myHand');
-    if (myHandContainer) { 
-        myHandContainer.innerHTML = ''; 
+    if (myHandContainer) {
+        myHandContainer.innerHTML = '';
     } else {
         console.error("[DEBUG] #myHand 容器未找到，无法清空!");
     }
-    
+
     updateGameInfoBarDOM(state);
     updateGameStatusDisplayDOM(state);
     Object.values(playerAreas).forEach(area => {
@@ -207,103 +207,143 @@ function renderRoomView(state) {
     });
     renderCenterPileDOM(state);
     updateRoomControls(state);
-    
+
     const isMyTurnAndCanPlayNow = state.status === 'playing' && state.currentPlayerId === myUserId && !myPlayer.finished;
     if (!isMyTurnAndCanPlayNow) {
       clearHintsAndSelection(true);
     }
 }
 
-function clearPlayerAreaDOM(area) { 
-    if (!area) { return; } 
-    const avatarEl = area.querySelector('.player-avatar'); 
-    const nameEl = area.querySelector('.playerName'); 
-    const roleEl = area.querySelector('.playerRole'); 
-    const infoEl = area.querySelector('.playerInfo'); 
-    const cardsEl = area.querySelector('.playerCards'); 
-    const handCountEl = area.querySelector('.hand-count-display'); 
-    
-    if (avatarEl) { avatarEl.innerHTML = ''; avatarEl.style.backgroundImage = ''; avatarEl.classList.remove('current-turn');} 
-    if (nameEl) nameEl.textContent = (area.id === 'playerAreaBottom' && myUsername) ? myUsername + ' (你)' : '空位'; 
-    if (roleEl) roleEl.textContent = '[?]'; 
-    if (infoEl) infoEl.innerHTML = '总分: 0'; 
-    
+function clearPlayerAreaDOM(area) {
+    if (!area) { return; }
+    const avatarEl = area.querySelector('.player-avatar');
+    const nameEl = area.querySelector('.playerName');
+    const roleEl = area.querySelector('.playerRole');
+    const infoEl = area.querySelector('.playerInfo');
+    const cardsEl = area.querySelector('.playerCards');
+    const handCountEl = area.querySelector('.hand-count-display');
+
+    if (avatarEl) { avatarEl.innerHTML = ''; avatarEl.style.backgroundImage = ''; avatarEl.classList.remove('current-turn');}
+    if (nameEl) nameEl.textContent = (area.id === 'playerAreaBottom' && myUsername) ? myUsername + ' (你)' : '空位';
+    if (roleEl) roleEl.textContent = '[?]';
+    if (infoEl) infoEl.innerHTML = '总分: 0';
+
     if (cardsEl && area.id !== 'playerAreaBottom') {
-        cardsEl.innerHTML = '<span style="color:#888; font-style:italic;">- 等待 -</span>'; 
+        cardsEl.innerHTML = '<span style="color:#888; font-style:italic;">- 等待 -</span>';
     }
-    
-    if (handCountEl) handCountEl.remove(); 
-    
-    if (area.id === 'playerAreaBottom') { 
-        const actionsContainers = area.querySelectorAll('.my-actions-container'); 
-        actionsContainers.forEach(ac => ac.classList.add('hidden-view')); 
-        const readyBtn = area.querySelector('#readyButton'); 
-        if (readyBtn) readyBtn.classList.add('hidden-view'); 
-    } 
+
+    if (handCountEl) handCountEl.remove();
+
+    if (area.id === 'playerAreaBottom') {
+        const actionsContainers = area.querySelectorAll('.my-actions-container');
+        actionsContainers.forEach(ac => ac.classList.add('hidden-view'));
+        const readyBtn = area.querySelector('#readyButton');
+        if (readyBtn) readyBtn.classList.add('hidden-view');
+    }
 }
 
-function renderPlayerArea(container, playerData, isMe, state, absoluteSlot) { 
-    const avatarEl = container.querySelector('.player-avatar'); 
-    const nameEl = container.querySelector('.playerName'); 
-    const roleEl = container.querySelector('.playerRole'); 
-    const infoEl = container.querySelector('.playerInfo'); 
-    const cardsEl = container.querySelector('.playerCards'); 
-    
-    if (!playerData || !playerData.userId) { 
-        clearPlayerAreaDOM(container); 
-        return; 
-    } 
-    
-    if (avatarEl) { 
-        avatarEl.innerHTML = ''; 
-        avatarEl.style.backgroundImage = `url('${AVATAR_PATHS[absoluteSlot % AVATAR_PATHS.length]}')`; 
-        avatarEl.classList.remove('current-turn'); 
-        if (state.status === 'playing' && playerData.userId === state.currentPlayerId && !playerData.finished) { 
-            avatarEl.classList.add('current-turn'); 
-            const alarmImg = document.createElement('img'); 
-            alarmImg.src = ALARM_ICON_SRC; 
-            alarmImg.alt = '出牌提示'; 
-            alarmImg.classList.add('alarm-icon'); 
-            avatarEl.appendChild(alarmImg); 
-            avatarEl.style.backgroundImage = 'none'; 
-        } 
-    } 
-    if (nameEl) nameEl.textContent = playerData.username + (isMe ? ' (你)' : ''); 
-    if (roleEl) roleEl.textContent = playerData.role ? `[${playerData.role}]` : '[?]'; 
-    if (infoEl) { 
-        let infoText = `总分: ${playerData.score || 0}`; 
-        if (state.status === 'waiting' && !isMe) { 
-            infoText += playerData.isReady ? ' <span class="ready">[已准备]</span>' : ' <span class="not-ready">[未准备]</span>'; 
-        } else if (playerData.finished) { 
-            infoText += ' <span class="finished">[已完成]</span>'; 
-        } else if (!playerData.connected && state.status !== 'waiting') { 
-            infoText += ' <span class="disconnected">[已断线]</span>'; 
-        } 
-        infoEl.innerHTML = infoText; 
-    } 
-    
+function renderPlayerArea(container, playerData, isMe, state, absoluteSlot) {
+    const avatarEl = container.querySelector('.player-avatar');
+    const nameEl = container.querySelector('.playerName');
+    const roleEl = container.querySelector('.playerRole');
+    const infoEl = container.querySelector('.playerInfo');
+    const cardsEl = container.querySelector('.playerCards');
+
+    if (!playerData || !playerData.userId) {
+        clearPlayerAreaDOM(container);
+        return;
+    }
+
+    if (avatarEl) {
+        avatarEl.innerHTML = '';
+        avatarEl.style.backgroundImage = `url('${AVATAR_PATHS[absoluteSlot % AVATAR_PATHS.length]}')`;
+        avatarEl.classList.remove('current-turn');
+        if (state.status === 'playing' && playerData.userId === state.currentPlayerId && !playerData.finished) {
+            avatarEl.classList.add('current-turn');
+            const alarmImg = document.createElement('img');
+            alarmImg.src = ALARM_ICON_SRC;
+            alarmImg.alt = '出牌提示';
+            alarmImg.classList.add('alarm-icon');
+            avatarEl.appendChild(alarmImg);
+            avatarEl.style.backgroundImage = 'none';
+        }
+    }
+    if (nameEl) nameEl.textContent = playerData.username + (isMe ? ' (你)' : '');
+    if (roleEl) roleEl.textContent = playerData.role ? `[${playerData.role}]` : '[?]';
+    if (infoEl) {
+        let infoText = `总分: ${playerData.score || 0}`;
+        if (state.status === 'waiting' && !isMe) {
+            infoText += playerData.isReady ? ' <span class="ready">[已准备]</span>' : ' <span class="not-ready">[未准备]</span>';
+        } else if (playerData.finished) {
+            infoText += ' <span class="finished">[已完成]</span>';
+        } else if (!playerData.connected && state.status !== 'waiting') {
+            infoText += ' <span class="disconnected">[已断线]</span>';
+        }
+        infoEl.innerHTML = infoText;
+    }
+
     if (cardsEl) {
-        renderPlayerCards(cardsEl, playerData, isMe, state.status === 'playing' && state.currentPlayerId === myUserId && !playerData.finished); 
+        renderPlayerCards(cardsEl, playerData, isMe, state.status === 'playing' && state.currentPlayerId === myUserId && !playerData.finished);
     }
 }
 
-function fanCards(cardContainer, cardElements, areaId) { const numCards = cardElements.length; if (numCards === 0 || areaId === 'playerAreaBottom') { if (areaId === 'playerAreaBottom') { cardElements.forEach((card, i) => { card.style.zIndex = i; card.style.transform = ''; card.style.left = ''; card.style.top = ''; card.style.position = ''; }); } return; } const offsetXPerCard = 1; const offsetYPerCard = 1; const maxVisibleStackedCards = Math.min(numCards, 5); cardElements.forEach((card, i) => { let currentOffsetX = 0; let currentOffsetY = 0; if (i < maxVisibleStackedCards) { currentOffsetX = i * offsetXPerCard; currentOffsetY = i * offsetYPerCard; } else { currentOffsetX = (maxVisibleStackedCards - 1) * offsetXPerCard; currentOffsetY = (maxVisibleStackedCards - 1) * offsetYPerCard; } card.style.transform = `translate(${currentOffsetX}px, ${currentOffsetY}px)`; card.style.zIndex = i; card.style.opacity = (i < maxVisibleStackedCards) ? '1' : '0'; }); }
+function fanCards(cardContainer, cardElements, areaId) {
+    const numCards = cardElements.length;
+    if (numCards === 0 || areaId === 'playerAreaBottom') {
+        if (areaId === 'playerAreaBottom' && numCards > 0) {
+            // 这个块理论上不应该被触达，如果 renderPlayerCards 正确处理了
+            // 不对玩家自己的手牌 (playerAreaBottom) 调用 fanCards 的情况，
+            // 因为玩家的手牌使用flexbox和负边距，而不是这里的变换来实现扇形。
+            // 如果它确实被触达了，确保至少重置卡牌的任何扇形变换。
+            // console.warn("[fanCards] 对 playerAreaBottom 意外调用了 fanCards 并带有卡牌。正在重置变换。");
+            cardElements.forEach((card, i) => {
+                // zIndex 通常由 renderPlayerCards 为 #myHand 设置
+                // card.style.zIndex = i;
+                card.style.transform = ''; // 清除任何扇形变换
+            });
+        }
+        return;
+    }
+
+    // 对手手牌扇形展开
+    const offsetXPerCard = 2; // 从 1 增加到 2 以获得更好的视觉分离
+    const offsetYPerCard = 2; // 从 1 增加到 2 以获得更好的视觉分离
+    const maxVisibleStackedCards = Math.min(numCards, 5); // 最多显示 5 个不同的卡牌位置
+
+    cardElements.forEach((card, i) => {
+        let currentOffsetX = 0;
+        let currentOffsetY = 0;
+        if (i < maxVisibleStackedCards) {
+            currentOffsetX = i * offsetXPerCard;
+            currentOffsetY = i * offsetYPerCard;
+        } else {
+            // 超出 maxVisibleStackedCards 的卡牌与最后一张可见卡牌堆叠在相同位置
+            currentOffsetX = (maxVisibleStackedCards - 1) * offsetXPerCard;
+            currentOffsetY = (maxVisibleStackedCards - 1) * offsetYPerCard;
+        }
+        // CSS 中的 .opponentHand .card 已经有 position: absolute。
+        // transform 是相对于卡牌正常流位置的。
+        card.style.transform = `translate(${currentOffsetX}px, ${currentOffsetY}px)`;
+        card.style.zIndex = i; // 更高的索引表示在顶部
+        card.style.opacity = (i < maxVisibleStackedCards) ? '1' : '0'; // 使堆叠在下方的卡牌不可见
+    });
+}
 function getCardImageFilename(cardData) { if (!cardData || typeof cardData.rank !== 'string' || typeof cardData.suit !== 'string') { console.error("获取卡牌图片文件名时数据无效:", cardData); return null; } let rankStr = cardData.rank.toLowerCase(); if (rankStr === 't') rankStr = '10'; else if (rankStr === 'j') rankStr = 'jack'; else if (rankStr === 'q') rankStr = 'queen'; else if (rankStr === 'k') rankStr = 'king'; else if (rankStr === 'a') rankStr = 'ace'; let suitStr = ''; switch (cardData.suit.toUpperCase()) { case 'S': suitStr = 'spades'; break; case 'H': suitStr = 'hearts'; break; case 'D': suitStr = 'diamonds'; break; case 'C': suitStr = 'clubs'; break; default: console.warn("卡牌图片花色无效:", cardData.suit); return null; } return `${rankStr}_of_${suitStr}.png`; }
 function renderCard(cardData, isHidden, isCenterPileCard = false) { const cardDiv = document.createElement('div'); cardDiv.classList.add('card'); if (isHidden || !cardData) { cardDiv.classList.add('hidden'); } else { cardDiv.classList.add('visible'); const filename = getCardImageFilename(cardData); if (filename) { cardDiv.style.backgroundImage = `url('/images/cards/${filename}')`; cardDiv.dataset.suit = cardData.suit; cardDiv.dataset.rank = cardData.rank; } else { cardDiv.textContent = `${cardData.rank}${cardData.suit}`; cardDiv.style.textAlign = 'center'; cardDiv.style.lineHeight = '140px'; console.error("生成卡牌图片文件名失败:", cardData, "使用文本备用。"); } } return cardDiv; }
 
 function renderPlayerCards(containerParam, playerData, isMe, isMyTurnAndCanPlay) {
     let targetContainer;
     if (isMe) {
-        targetContainer = document.getElementById('myHand'); 
+        targetContainer = document.getElementById('myHand');
         if (!targetContainer) { console.error("[DEBUG] renderPlayerCards: #myHand 未找到!"); return; }
     }  else {
-        targetContainer = containerParam; 
+        targetContainer = containerParam;
         if (!targetContainer) { console.error(`[DEBUG] renderPlayerCards 对手 (${playerData.username}): 传入的容器为null。`); return; }
-        targetContainer.innerHTML = ''; 
+        targetContainer.innerHTML = '';
 
         const cardElements = [];
-        if (playerData.finished) { 
-            targetContainer.innerHTML = '<span style="color:#888; font-style:italic;">已出完</span>'; 
+        if (playerData.finished) {
+            targetContainer.innerHTML = '<span style="color:#888; font-style:italic;">已出完</span>';
         } else if (playerData.handCount > 0) {
             for (let i = 0; i < playerData.handCount; i++) {
                 const cardElement = renderCard(null, true, false);
@@ -311,25 +351,25 @@ function renderPlayerCards(containerParam, playerData, isMe, isMyTurnAndCanPlay)
                 cardElements.push(cardElement);
             }
             let handCountEl = targetContainer.closest('.playerArea')?.querySelector('.hand-count-display');
-            if (!handCountEl) { 
-                handCountEl = document.createElement('div'); 
-                handCountEl.classList.add('hand-count-display'); 
-                const playerAreaEl = targetContainer.closest('.playerArea'); 
-                if (playerAreaEl) { playerAreaEl.appendChild(handCountEl); } 
+            if (!handCountEl) {
+                handCountEl = document.createElement('div');
+                handCountEl.classList.add('hand-count-display');
+                const playerAreaEl = targetContainer.closest('.playerArea');
+                if (playerAreaEl) { playerAreaEl.appendChild(handCountEl); }
             }
             if (handCountEl) handCountEl.textContent = `${playerData.handCount} 张`;
-        } else { 
-            targetContainer.innerHTML = '<span style="color:#555; font-style:italic;">- 等待 -</span>'; 
-            let handCountEl = targetContainer.closest('.playerArea')?.querySelector('.hand-count-display'); 
-            if (handCountEl) handCountEl.remove(); 
+        } else {
+            targetContainer.innerHTML = '<span style="color:#555; font-style:italic;">- 等待 -</span>';
+            let handCountEl = targetContainer.closest('.playerArea')?.querySelector('.hand-count-display');
+            if (handCountEl) handCountEl.remove();
         }
-        if (cardElements.length > 0) { 
-            requestAnimationFrame(() => { fanCards(targetContainer, cardElements, targetContainer.closest('.playerArea')?.id); }); 
+        if (cardElements.length > 0) {
+            requestAnimationFrame(() => { fanCards(targetContainer, cardElements, targetContainer.closest('.playerArea')?.id); });
         }
-        return; 
+        return;
     }
-    
-    targetContainer.innerHTML = ''; 
+
+    targetContainer.innerHTML = '';
 
     let handToRender = [];
     if (playerData && Array.isArray(playerData.hand)) {
@@ -337,24 +377,24 @@ function renderPlayerCards(containerParam, playerData, isMe, isMyTurnAndCanPlay)
     } else if (playerData && playerData.hand === undefined && playerData.handCount > 0 && !playerData.finished) {
         console.warn(`[renderPlayerCards] 渲染自己手牌: hand 数组缺失, 但 handCount 是 ${playerData.handCount}. 显示同步中...`);
         targetContainer.innerHTML = `<span style="color:#cc0000; font-style:italic;">手牌同步中 (${playerData.handCount} 张)...</span>`;
-        return; 
+        return;
     } else if (playerData && !playerData.finished) {
          console.warn(`[RenderPlayerCards] 我的手牌不是数组 (用户: ${playerData.username}, 完成状态: ${playerData.finished}). 渲染为空.`);
     }
 
-    if (playerData.finished) { 
-        targetContainer.innerHTML = '<span style="color:#888; font-style:italic;">已出完</span>'; 
-    } else if (handToRender.length === 0 && currentGameState && currentGameState.status === 'playing') { 
-        targetContainer.innerHTML = '<span style="color:#555; font-style:italic;">- 无手牌 -</span>'; 
-    } else if (handToRender.length === 0) { 
-        targetContainer.innerHTML = '<span style="color:#555; font-style:italic;">- 等待发牌 -</span>'; 
+    if (playerData.finished) {
+        targetContainer.innerHTML = '<span style="color:#888; font-style:italic;">已出完</span>';
+    } else if (handToRender.length === 0 && currentGameState && currentGameState.status === 'playing') {
+        targetContainer.innerHTML = '<span style="color:#555; font-style:italic;">- 无手牌 -</span>';
+    } else if (handToRender.length === 0) {
+        targetContainer.innerHTML = '<span style="color:#555; font-style:italic;">- 等待发牌 -</span>';
     } else {
         if (currentSortMode === 'rank') handToRender.sort(compareSingleCardsClient);
         else handToRender.sort(compareBySuitThenRank);
-        
+
         handToRender.forEach((cardData, index) => {
             const cardElement = renderCard(cardData, false, false);
-            
+
             // **重置所有可能影响布局和层叠的内联样式和类**
             cardElement.className = 'card visible'; // Start with base classes
             cardElement.style.transform = ''; // Clear inline transform
@@ -364,9 +404,9 @@ function renderPlayerCards(containerParam, playerData, isMe, isMyTurnAndCanPlay)
                 // 卡牌可交互状态
                 const isSelected = selectedCards.some(c => c.rank === cardData.rank && c.suit === cardData.suit);
                 const isHinted = currentHint && currentHint.cards.some(c => c.rank === cardData.rank && c.suit === cardData.suit);
-                
+
                 if (isSelected) {
-                    cardElement.classList.add('selected'); 
+                    cardElement.classList.add('selected');
                 } else if (isHinted) {
                     cardElement.classList.add('hinted');
                 }
@@ -455,8 +495,8 @@ function handlePlaySelectedCards() {
                     myPlayer.hand = myPlayer.hand.filter(card => !cardsPlayedSet.has(`${card.rank}${card.suit}`));
                 }
             }
-            selectedCards = []; 
-            clearHintsAndSelection(true); 
+            selectedCards = [];
+            clearHintsAndSelection(true);
         }
     });
 }
@@ -530,25 +570,25 @@ socket.on('gameStateUpdate', (newState) => {
             // Server sent full hand, use it
         } else if (myNewPlayerState.finished || myNewPlayerState.handCount === 0) {
             myNewPlayerState.hand = [];
-        } else if (myNewPlayerState.hand === undefined) { 
+        } else if (myNewPlayerState.hand === undefined) {
             if (myOldHand && myOldPlayerState && !myNewPlayerState.finished) {
                 myNewPlayerState.hand = myOldHand;
             } else if (myNewPlayerState.handCount > 0 && !myNewPlayerState.finished) {
                 console.warn("[gameStateUpdate] Hand count > 0, but hand array is undefined and no local old hand. Requesting full state.");
-                socket.emit('requestGameState', (fullState) => { 
-                    if(fullState) { 
-                        currentGameState = fullState; 
-                        renderRoomView(currentGameState); 
+                socket.emit('requestGameState', (fullState) => {
+                    if(fullState) {
+                        currentGameState = fullState;
+                        renderRoomView(currentGameState);
                     }
                 });
-                return; 
-            } else { 
+                return;
+            } else {
                 myNewPlayerState.hand = [];
             }
         }
     }
-    
-    if (previousGameState && currentGameState) { 
+
+    if (previousGameState && currentGameState) {
       const myTurnChangedToNotMyTurn = previousGameState.currentPlayerId === myUserId && currentGameState.currentPlayerId !== myUserId;
       const newRoundStartedForMe = !currentGameState.lastHandInfo && previousGameState.lastHandInfo && currentGameState.currentPlayerId === myUserId;
       const iPlayedLastAndNowNewRound = previousGameState.lastPlayerWhoPlayedId === myUserId && !currentGameState.lastHandInfo && currentGameState.currentPlayerId === myUserId;
@@ -595,4 +635,49 @@ function initClientSession() {
                     showView('lobbyView');
                 }
             } else {
-                console.warn(`[INIT] 
+                console.warn(`[INIT] 自动重连失败: ${response.message}`);
+                try { localStorage.removeItem('kkUserId'); localStorage.removeItem('kkUsername'); }
+                catch (e) { console.warn('[INIT] 移除 localStorage 出错:', e); }
+                showView('loginRegisterView');
+            }
+        });
+    } else {
+        showView('loginRegisterView');
+    }
+}
+
+// --- 初始化与事件监听器 ---
+document.addEventListener('DOMContentLoaded', () => {
+    // 绑定事件监听器
+    if (registerButton) registerButton.addEventListener('click', handleRegister);
+    if (loginButton) loginButton.addEventListener('click', handleLogin);
+    if (logoutButton) logoutButton.addEventListener('click', handleLogout);
+    if (createRoomButton) createRoomButton.addEventListener('click', handleCreateRoom);
+
+    const readyButton = document.getElementById('readyButton');
+    if (readyButton) readyButton.addEventListener('click', handleReadyClick);
+
+    const leaveRoomButton = document.getElementById('leaveRoomButton');
+    if (leaveRoomButton) leaveRoomButton.addEventListener('click', handleGameLeave);
+
+    if (playSelectedCardsButton) playSelectedCardsButton.addEventListener('click', handlePlaySelectedCards);
+    if (passTurnButton) passTurnButton.addEventListener('click', handlePassTurn);
+    if (hintButton) hintButton.addEventListener('click', handleHint);
+    if (sortHandButton) sortHandButton.addEventListener('click', handleSortHand);
+
+    if (backToLobbyButton) backToLobbyButton.addEventListener('click', () => {
+        if (currentRoomId) {
+            const actualLeaveButton = document.getElementById('leaveRoomButton');
+            if (actualLeaveButton && !actualLeaveButton.disabled) {
+                handleGameLeave(); // 调用已有的离开房间逻辑
+            } else {
+                handleReturnToLobby(); // 如果无法触发离开，则直接返回
+            }
+        } else {
+            handleReturnToLobby();
+        }
+    });
+
+    // 初始视图
+    showView('loadingView'); // 初始显示加载视图，等待 socket 连接后决定
+});
