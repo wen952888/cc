@@ -165,13 +165,34 @@ function renderRoomView(state) {
     previousGameState = currentGameState ? JSON.parse(JSON.stringify(currentGameState)) : null;
     currentGameState = state;
 
+    // ** 在更新任何玩家区域之前，先清空自己的手牌区域 **
     const myHandContainer = document.getElementById('myHand');
-    // **重要：在渲染自己的手牌之前，先清空myHandContainer**
-    if (myHandContainer) { myHandContainer.innerHTML = ''; }
+    if (myHandContainer) { 
+        myHandContainer.innerHTML = ''; 
+    } else {
+        console.error("[DEBUG] #myHand 容器未找到，无法清空!");
+    }
     
     updateGameInfoBarDOM(state);
     updateGameStatusDisplayDOM(state);
-    Object.values(playerAreas).forEach(clearPlayerAreaDOM);
+    Object.values(playerAreas).forEach(area => {
+        // 对于非底部（非自己）的玩家区域，执行标准清理
+        if (area.id !== 'playerAreaBottom') {
+            clearPlayerAreaDOM(area);
+        } else {
+            // 对于底部玩家区域（自己），只清理头像、信息等，手牌区域已在上面单独清理
+            const avatarEl = area.querySelector('.player-avatar');
+            const nameEl = area.querySelector('.playerName');
+            const roleEl = area.querySelector('.playerRole');
+            const infoEl = area.querySelector('.playerInfo');
+            if (avatarEl) { avatarEl.innerHTML = ''; avatarEl.style.backgroundImage = ''; avatarEl.classList.remove('current-turn');}
+            if (nameEl) nameEl.textContent = (myUsername) ? myUsername + ' (你)' : '你';
+            if (roleEl) roleEl.textContent = '[?]';
+            if (infoEl) infoEl.innerHTML = '总分: 0';
+            // myHand 区域由 renderPlayerCards 自己处理清空和渲染
+        }
+    });
+
 
     const myPlayer = state.players.find(p => p.userId === myUserId);
     if (!myPlayer) { console.error("[DEBUG] 我的玩家数据在游戏状态中未找到!", state.players); handleReturnToLobby(); return; }
@@ -192,15 +213,86 @@ function renderRoomView(state) {
     renderCenterPileDOM(state);
     updateRoomControls(state);
     
-    // 当不是我的回合，或者游戏不在进行中，或者我已经出完牌时，清空选中和提示状态
-    const isMyTurnAndCanPlay = state.status === 'playing' && state.currentPlayerId === myUserId && !myPlayer.finished;
-    if (!isMyTurnAndCanPlay) {
+    const isMyTurnAndCanPlayNow = state.status === 'playing' && state.currentPlayerId === myUserId && !myPlayer.finished;
+    if (!isMyTurnAndCanPlayNow) {
       clearHintsAndSelection(true);
     }
 }
 
-function clearPlayerAreaDOM(area) { if (!area) { return; } const avatarEl = area.querySelector('.player-avatar'); const nameEl = area.querySelector('.playerName'); const roleEl = area.querySelector('.playerRole'); const infoEl = area.querySelector('.playerInfo'); const cardsEl = area.querySelector('.playerCards'); const handCountEl = area.querySelector('.hand-count-display'); if (avatarEl) { avatarEl.innerHTML = ''; avatarEl.style.backgroundImage = ''; avatarEl.classList.remove('current-turn');} if (nameEl) nameEl.textContent = (area.id === 'playerAreaBottom' && myUsername) ? myUsername + ' (你)' : '空位'; if (roleEl) roleEl.textContent = '[?]'; if (infoEl) infoEl.innerHTML = '总分: 0'; if (cardsEl) { cardsEl.innerHTML = '<span style="color:#888; font-style:italic;">- 等待 -</span>'; } if (handCountEl) handCountEl.remove(); if (area.id === 'playerAreaBottom') { const actionsContainers = area.querySelectorAll('.my-actions-container'); actionsContainers.forEach(ac => ac.classList.add('hidden-view')); const readyBtn = area.querySelector('#readyButton'); if (readyBtn) readyBtn.classList.add('hidden-view'); } }
-function renderPlayerArea(container, playerData, isMe, state, absoluteSlot) { const avatarEl = container.querySelector('.player-avatar'); const nameEl = container.querySelector('.playerName'); const roleEl = container.querySelector('.playerRole'); const infoEl = container.querySelector('.playerInfo'); const cardsEl = container.querySelector('.playerCards'); if (!playerData || !playerData.userId) { clearPlayerAreaDOM(container); return; } if (avatarEl) { avatarEl.innerHTML = ''; avatarEl.style.backgroundImage = `url('${AVATAR_PATHS[absoluteSlot % AVATAR_PATHS.length]}')`; avatarEl.classList.remove('current-turn'); if (state.status === 'playing' && playerData.userId === state.currentPlayerId && !playerData.finished) { avatarEl.classList.add('current-turn'); const alarmImg = document.createElement('img'); alarmImg.src = ALARM_ICON_SRC; alarmImg.alt = '出牌提示'; alarmImg.classList.add('alarm-icon'); avatarEl.appendChild(alarmImg); avatarEl.style.backgroundImage = 'none'; } } if (nameEl) nameEl.textContent = playerData.username + (isMe ? ' (你)' : ''); if (roleEl) roleEl.textContent = playerData.role ? `[${playerData.role}]` : '[?]'; if (infoEl) { let infoText = `总分: ${playerData.score || 0}`; if (state.status === 'waiting' && !isMe) { infoText += playerData.isReady ? ' <span class="ready">[已准备]</span>' : ' <span class="not-ready">[未准备]</span>'; } else if (playerData.finished) { infoText += ' <span class="finished">[已完成]</span>'; } else if (!playerData.connected && state.status !== 'waiting') { infoText += ' <span class="disconnected">[已断线]</span>'; } infoEl.innerHTML = infoText; } if (cardsEl) renderPlayerCards(cardsEl, playerData, isMe, state.status === 'playing' && state.currentPlayerId === myUserId && !playerData.finished); }
+function clearPlayerAreaDOM(area) { 
+    if (!area) { return; } 
+    // 只清理非手牌区域的内容，手牌由renderPlayerCards负责
+    const avatarEl = area.querySelector('.player-avatar'); 
+    const nameEl = area.querySelector('.playerName'); 
+    const roleEl = area.querySelector('.playerRole'); 
+    const infoEl = area.querySelector('.playerInfo'); 
+    const cardsEl = area.querySelector('.playerCards'); // 这个是对手的牌或自己的手牌容器
+    const handCountEl = area.querySelector('.hand-count-display'); 
+    
+    if (avatarEl) { avatarEl.innerHTML = ''; avatarEl.style.backgroundImage = ''; avatarEl.classList.remove('current-turn');} 
+    if (nameEl) nameEl.textContent = (area.id === 'playerAreaBottom' && myUsername) ? myUsername + ' (你)' : '空位'; 
+    if (roleEl) roleEl.textContent = '[?]'; 
+    if (infoEl) infoEl.innerHTML = '总分: 0'; 
+    
+    // 清理对手的牌或自己的手牌容器 - 确保在renderPlayerCards之前它也是干净的
+    if (cardsEl) { cardsEl.innerHTML = '<span style="color:#888; font-style:italic;">- 等待 -</span>'; }
+    
+    if (handCountEl) handCountEl.remove(); 
+    
+    if (area.id === 'playerAreaBottom') { 
+        const actionsContainers = area.querySelectorAll('.my-actions-container'); 
+        actionsContainers.forEach(ac => ac.classList.add('hidden-view')); 
+        const readyBtn = area.querySelector('#readyButton'); 
+        if (readyBtn) readyBtn.classList.add('hidden-view'); 
+    } 
+}
+
+function renderPlayerArea(container, playerData, isMe, state, absoluteSlot) { 
+    const avatarEl = container.querySelector('.player-avatar'); 
+    const nameEl = container.querySelector('.playerName'); 
+    const roleEl = container.querySelector('.playerRole'); 
+    const infoEl = container.querySelector('.playerInfo'); 
+    const cardsEl = container.querySelector('.playerCards'); // 这是手牌的容器
+    
+    if (!playerData || !playerData.userId) { 
+        clearPlayerAreaDOM(container); // 如果没有玩家数据，彻底清理这个区域
+        return; 
+    } 
+    
+    if (avatarEl) { 
+        avatarEl.innerHTML = ''; 
+        avatarEl.style.backgroundImage = `url('${AVATAR_PATHS[absoluteSlot % AVATAR_PATHS.length]}')`; 
+        avatarEl.classList.remove('current-turn'); 
+        if (state.status === 'playing' && playerData.userId === state.currentPlayerId && !playerData.finished) { 
+            avatarEl.classList.add('current-turn'); 
+            const alarmImg = document.createElement('img'); 
+            alarmImg.src = ALARM_ICON_SRC; 
+            alarmImg.alt = '出牌提示'; 
+            alarmImg.classList.add('alarm-icon'); 
+            avatarEl.appendChild(alarmImg); 
+            avatarEl.style.backgroundImage = 'none'; 
+        } 
+    } 
+    if (nameEl) nameEl.textContent = playerData.username + (isMe ? ' (你)' : ''); 
+    if (roleEl) roleEl.textContent = playerData.role ? `[${playerData.role}]` : '[?]'; 
+    if (infoEl) { 
+        let infoText = `总分: ${playerData.score || 0}`; 
+        if (state.status === 'waiting' && !isMe) { 
+            infoText += playerData.isReady ? ' <span class="ready">[已准备]</span>' : ' <span class="not-ready">[未准备]</span>'; 
+        } else if (playerData.finished) { 
+            infoText += ' <span class="finished">[已完成]</span>'; 
+        } else if (!playerData.connected && state.status !== 'waiting') { 
+            infoText += ' <span class="disconnected">[已断线]</span>'; 
+        } 
+        infoEl.innerHTML = infoText; 
+    } 
+    
+    // 调用 renderPlayerCards 来处理手牌的渲染，它会自己清空 cardsEl
+    if (cardsEl) {
+        renderPlayerCards(cardsEl, playerData, isMe, state.status === 'playing' && state.currentPlayerId === myUserId && !playerData.finished); 
+    }
+}
+
 function fanCards(cardContainer, cardElements, areaId) { const numCards = cardElements.length; if (numCards === 0 || areaId === 'playerAreaBottom') { if (areaId === 'playerAreaBottom') { cardElements.forEach((card, i) => { card.style.zIndex = i; card.style.transform = ''; card.style.left = ''; card.style.top = ''; card.style.position = ''; }); } return; } const offsetXPerCard = 1; const offsetYPerCard = 1; const maxVisibleStackedCards = Math.min(numCards, 5); cardElements.forEach((card, i) => { let currentOffsetX = 0; let currentOffsetY = 0; if (i < maxVisibleStackedCards) { currentOffsetX = i * offsetXPerCard; currentOffsetY = i * offsetYPerCard; } else { currentOffsetX = (maxVisibleStackedCards - 1) * offsetXPerCard; currentOffsetY = (maxVisibleStackedCards - 1) * offsetYPerCard; } card.style.transform = `translate(${currentOffsetX}px, ${currentOffsetY}px)`; card.style.zIndex = i; card.style.opacity = (i < maxVisibleStackedCards) ? '1' : '0'; }); }
 function getCardImageFilename(cardData) { if (!cardData || typeof cardData.rank !== 'string' || typeof cardData.suit !== 'string') { console.error("获取卡牌图片文件名时数据无效:", cardData); return null; } let rankStr = cardData.rank.toLowerCase(); if (rankStr === 't') rankStr = '10'; else if (rankStr === 'j') rankStr = 'jack'; else if (rankStr === 'q') rankStr = 'queen'; else if (rankStr === 'k') rankStr = 'king'; else if (rankStr === 'a') rankStr = 'ace'; let suitStr = ''; switch (cardData.suit.toUpperCase()) { case 'S': suitStr = 'spades'; break; case 'H': suitStr = 'hearts'; break; case 'D': suitStr = 'diamonds'; break; case 'C': suitStr = 'clubs'; break; default: console.warn("卡牌图片花色无效:", cardData.suit); return null; } return `${rankStr}_of_${suitStr}.png`; }
 function renderCard(cardData, isHidden, isCenterPileCard = false) { const cardDiv = document.createElement('div'); cardDiv.classList.add('card'); if (isHidden || !cardData) { cardDiv.classList.add('hidden'); } else { cardDiv.classList.add('visible'); const filename = getCardImageFilename(cardData); if (filename) { cardDiv.style.backgroundImage = `url('/images/cards/${filename}')`; cardDiv.dataset.suit = cardData.suit; cardDiv.dataset.rank = cardData.rank; } else { cardDiv.textContent = `${cardData.rank}${cardData.suit}`; cardDiv.style.textAlign = 'center'; cardDiv.style.lineHeight = '140px'; console.error("生成卡牌图片文件名失败:", cardData, "使用文本备用。"); } } return cardDiv; }
@@ -211,12 +303,12 @@ function renderPlayerCards(containerParam, playerData, isMe, isMyTurnAndCanPlay)
         targetContainer = document.getElementById('myHand');
         if (!targetContainer) { console.error("[DEBUG] renderPlayerCards: #myHand 未找到!"); return; }
     }  else {
-        targetContainer = containerParam;
+        targetContainer = containerParam; // 这是对手的 .playerCards 容器
         if (!targetContainer) { console.error(`[DEBUG] renderPlayerCards 对手 (${playerData.username}): 传入的容器为null。`); return; }
     }
-    targetContainer.innerHTML = ''; // **确保每次渲染自己的手牌前清空**
+    targetContainer.innerHTML = ''; // **确保每次渲染前清空目标容器**
 
-    const cardElements = [];
+    const cardElements = []; // 仅用于对手的 fanCards
     if (isMe) {
         let handToRender = [];
         if (playerData && Array.isArray(playerData.hand)) {
@@ -229,41 +321,46 @@ function renderPlayerCards(containerParam, playerData, isMe, isMyTurnAndCanPlay)
              console.warn(`[RenderPlayerCards] 我的手牌不是数组 (用户: ${playerData.username}, 完成状态: ${playerData.finished}). 渲染为空.`);
         }
 
-        if (playerData.finished) { targetContainer.innerHTML = '<span style="color:#888; font-style:italic;">已出完</span>'; }
-        else if (handToRender.length === 0 && currentGameState && currentGameState.status === 'playing') { targetContainer.innerHTML = '<span style="color:#555; font-style:italic;">- 无手牌 -</span>'; }
-        else if (handToRender.length === 0) { targetContainer.innerHTML = '<span style="color:#555; font-style:italic;">- 等待发牌 -</span>'; }
-        else {
+        if (playerData.finished) { 
+            targetContainer.innerHTML = '<span style="color:#888; font-style:italic;">已出完</span>'; 
+        } else if (handToRender.length === 0 && currentGameState && currentGameState.status === 'playing') { 
+            targetContainer.innerHTML = '<span style="color:#555; font-style:italic;">- 无手牌 -</span>'; 
+        } else if (handToRender.length === 0) { 
+            targetContainer.innerHTML = '<span style="color:#555; font-style:italic;">- 等待发牌 -</span>'; 
+        } else {
             if (currentSortMode === 'rank') handToRender.sort(compareSingleCardsClient);
             else handToRender.sort(compareBySuitThenRank);
             
             handToRender.forEach((cardData, index) => {
                 const cardElement = renderCard(cardData, false, false);
-                // 默认样式重置
+                
                 cardElement.style.zIndex = index; 
-                cardElement.style.transform = 'translateY(0) scale(1)'; 
+                // **总是先移除所有交互相关的类和内联transform**
+                cardElement.classList.remove('selected', 'hinted', 'disabled');
+                cardElement.style.transform = ''; // 清除内联transform，让CSS类或基础样式接管
 
                 if (isMyTurnAndCanPlay) {
-                    cardElement.classList.remove('disabled');
+                    // 移除 disabled （如果之前有的话），应用选中/提示样式
                     const isSelected = selectedCards.some(c => c.rank === cardData.rank && c.suit === cardData.suit);
                     const isHinted = currentHint && currentHint.cards.some(c => c.rank === cardData.rank && c.suit === cardData.suit);
                     
-                    if (isSelected) cardElement.classList.add('selected');
-                    else cardElement.classList.remove('selected');
-
-                    if (isHinted && !isSelected) cardElement.classList.add('hinted');
-                    else cardElement.classList.remove('hinted');
-                    
+                    if (isSelected) {
+                        cardElement.classList.add('selected');
+                    } else if (isHinted) {
+                        cardElement.classList.add('hinted');
+                    }
+                    // CSS :hover 会处理悬停效果
                     cardElement.onclick = () => toggleCardSelection(cardData, cardElement);
                 } else {
+                    // 非当前回合，应用 'disabled' 类
+                    // CSS .disabled 类应负责将 transform 重置为 translateY(0) scale(1) !important
+                    // 并设置 cursor: not-allowed; opacity 等
                     cardElement.classList.add('disabled');
-                    cardElement.classList.remove('selected', 'hinted'); 
-                    // 对于非当前回合的卡牌，确保移除交互样式并应用基础的重叠样式
-                    // CSS中 #myHand.myHand .card 的 margin-left 应该仍然生效以保持重叠
                 }
                 targetContainer.appendChild(cardElement);
             });
         }
-    } else { // 对手手牌逻辑 (保持不变)
+    } else { // 对手手牌逻辑 (保持和之前一致)
         if (playerData.finished) { targetContainer.innerHTML = '<span style="color:#888; font-style:italic;">已出完</span>'; }
         else if (playerData.handCount > 0) {
             for (let i = 0; i < playerData.handCount; i++) {
@@ -291,14 +388,15 @@ function clearHintsAndSelection(resetSelectionAndCycle = true) {
         const cardElements = localMyHandArea.querySelectorAll('.card');
         cardElements.forEach(el => {
             el.classList.remove('hinted', 'selected');
-            // 如果不是当前玩家回合，renderPlayerCards会处理transform
-            // 如果是当前玩家回合，transform由 :hover, .selected, .hinted 控制
+            // 当非当前回合时，.disabled 类会通过CSS重置transform
+            // 当是当前回合时，transform由 .selected 或 .hinted 或 :hover 控制
+            // 如果没有这些类，CSS中 #myHand.myHand .card 的基础样式（或无特定transform）生效
         });
     }
 }
 
 
-// --- UI事件处理器 ---
+// --- UI事件处理器 --- (与上一版本相同)
 function handleRegister() { const phone = regPhoneInput.value.trim(); const password = regPasswordInput.value; if (!phone || !password) { displayMessage(authMessage, '请输入手机号和密码。', true); return; } if (password.length < 4) { displayMessage(authMessage, '密码至少需要4位。', true); return; } registerButton.disabled = true; socket.emit('register', { phoneNumber: phone, password }, (response) => { registerButton.disabled = false; displayMessage(authMessage, response.message, !response.success, response.success); if (response.success) { regPhoneInput.value = ''; regPasswordInput.value = ''; } }); }
 function handleLogin() { const phone = loginPhoneInput.value.trim(); const password = loginPasswordInput.value; if (!phone || !password) { displayMessage(authMessage, '请输入手机号和密码。', true); return; } loginButton.disabled = true; socket.emit('login', { phoneNumber: phone, password }, (response) => { loginButton.disabled = false; displayMessage(authMessage, response.message, !response.success, response.success); if (response.success) { myUserId = response.userId; myUsername = response.username; try { localStorage.setItem('kkUserId', myUserId); localStorage.setItem('kkUsername', myUsername); } catch (e) { console.warn('LocalStorage 保存用户会话时出错:', e); } if(lobbyUsername) lobbyUsername.textContent = myUsername; showView('lobbyView'); } }); }
 function handleLogout() { console.log('正在登出...'); try { localStorage.removeItem('kkUserId'); localStorage.removeItem('kkUsername'); } catch (e) { console.warn('LocalStorage 移除用户会话时出错:', e); } myUserId = null; myUsername = null; currentRoomId = null; currentGameState = null; previousGameState = null; isReadyForGame = false; selectedCards = []; currentHint = null; currentHintCycleIndex = 0; if (socket.connected) { socket.disconnect(); } socket.connect(); showView('loginRegisterView'); if(loginPhoneInput) loginPhoneInput.value = ''; if(loginPasswordInput) loginPasswordInput.value = ''; }
@@ -389,7 +487,7 @@ function showGameOver(resultData) {
     showView('gameOverOverlay');
 }
 
-// --- Socket 事件处理器 ---
+// --- Socket 事件处理器 --- (与上一版本相同，确保 gameStateUpdate 中的手牌同步逻辑是最新的)
 socket.on('connect', () => { console.log('[NET] 已连接到服务器! Socket ID:', socket.id); if (gameOverOverlay && !gameOverOverlay.classList.contains('hidden-view')) { gameOverOverlay.classList.add('hidden-view'); gameOverOverlay.classList.remove('view-flex'); } initClientSession(); });
 socket.on('disconnect', (reason) => { console.log('[NET] 与服务器断开连接:', reason); if (currentView !== 'loginRegisterView' && currentView !== 'loadingView') { showView('loadingView'); displayMessage(loadingView.querySelector('p'), `与服务器断开连接: ${reason}. 正在尝试重连...`, true); } });
 socket.on('connect_error', (err) => { console.error('[NET] 连接错误:', err.message); if (currentView !== 'loginRegisterView' && currentView !== 'loadingView') { showView('loadingView'); displayMessage(loadingView.querySelector('p'), `连接错误: ${err.message}. 请检查网络并刷新。`, true); } });
@@ -424,16 +522,12 @@ socket.on('gameStateUpdate', (newState) => {
             // 服务器发送了完整手牌，直接使用
         } else if (myNewPlayerState.finished || myNewPlayerState.handCount === 0) {
             myNewPlayerState.hand = [];
-        } else if (myNewPlayerState.hand === undefined) { // 服务器未发送手牌数组
+        } else if (myNewPlayerState.hand === undefined) { 
             if (myOldHand && myOldPlayerState && myOldPlayerState.handCount === myNewPlayerState.handCount && !myNewPlayerState.finished) {
-                // 手牌数量未变 (例如其他玩家操作)，且本地有旧手牌数据，则保留
                 myNewPlayerState.hand = myOldHand;
             } else if (myOldHand && myOldPlayerState && myOldPlayerState.handCount !== myNewPlayerState.handCount && !myNewPlayerState.finished) {
-                // 手牌数量已变 (通常是自己出牌了)，依赖 handlePlaySelectedCards 中对本地 currentGameState.myPlayer.hand 的更新
-                // 此处 newState 的 myPlayer.hand 是 undefined，我们用本地更新过的 myOldHand (它实际代表了出牌后的手牌)
                 myNewPlayerState.hand = myOldHand;
             } else if (myNewPlayerState.handCount > 0 && !myNewPlayerState.finished) {
-                // 有手牌数量但无数组，且无旧数据可循，这是一个不一致的状态，请求完整状态
                 console.warn("[gameStateUpdate] 手牌数量 > 0，但手牌数组缺失且无本地缓存。请求完整状态。");
                 socket.emit('requestGameState', (fullState) => { 
                     if(fullState) { 
@@ -442,7 +536,7 @@ socket.on('gameStateUpdate', (newState) => {
                     }
                 });
                 return; 
-            } else { // 其他情况（例如，手牌数量为0但finished状态可能还未更新），安全起见设为空
+            } else { 
                 myNewPlayerState.hand = [];
             }
         }
