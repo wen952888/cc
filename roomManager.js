@@ -18,13 +18,13 @@ function init(socket, io) {
         if (!roomName || typeof roomName !== 'string' || roomName.trim().length === 0) {
             return callback({ success: false, message: '需要有效的房间名称。' });
         }
-        if (password && (typeof password !== 'string' || password.length > 20)) { 
+        if (password && (typeof password !== 'string' || password.length > 20)) {
             return callback({ success: false, message: '密码格式无效 (最多20字符)。' });
         }
 
         let roomId = generateRoomId();
         let attempts = 0;
-        while(activeGames[roomId] && attempts < 5) { 
+        while(activeGames[roomId] && attempts < 5) {
             roomId = generateRoomId();
             attempts++;
         }
@@ -33,15 +33,15 @@ function init(socket, io) {
              return callback({success: false, message: "创建房间失败，请稍后再试。"});
         }
 
-        const game = new Game(roomId, 4); 
+        const game = new Game(roomId, 4);
         const newRoom = {
             roomId: roomId,
             roomName: roomName.trim(),
-            password: password || null, 
+            password: password || null,
             creatorId: socket.userId,
-            players: [], 
-            game: game, 
-            status: 'waiting' 
+            players: [],
+            game: game,
+            status: 'waiting'
         };
 
         activeGames[roomId] = newRoom;
@@ -49,12 +49,12 @@ function init(socket, io) {
 
         const joinResult = addPlayerToRoom(newRoom, socket);
         if (joinResult.success) {
-            socket.join(roomId); 
-            socket.roomId = roomId; 
+            socket.join(roomId);
+            socket.roomId = roomId;
             callback({ success: true, roomId: roomId, roomState: getRoomStateForPlayer(newRoom, socket.userId) });
-            broadcastRoomList(); 
+            broadcastRoomList();
         } else {
-            delete activeGames[roomId]; 
+            delete activeGames[roomId];
             callback({ success: false, message: '创建房间后加入失败。' });
         }
     });
@@ -70,7 +70,7 @@ function init(socket, io) {
          if (existingPlayer) {
             if (!existingPlayer.connected) {
                 console.log(`[ROOM] Player ${socket.username} rejoining room ${roomId}`);
-                const reconnectResult = handleReconnect(socket, roomId); 
+                const reconnectResult = handleReconnect(socket, roomId);
                 if (reconnectResult.success) {
                     callback({ success: true, roomId: roomId, roomState: reconnectResult.roomState });
                 } else {
@@ -78,11 +78,11 @@ function init(socket, io) {
                 }
             } else {
                  console.log(`[ROOM] Player ${socket.username} already connected in room ${roomId}`);
-                 socket.join(roomId); 
+                 socket.join(roomId);
                  socket.roomId = roomId;
                  callback({ success: true, roomId: roomId, roomState: getRoomStateForPlayer(room, socket.userId), message: "您已在此房间中。" });
             }
-            return; 
+            return;
          }
 
          if (room.status !== 'waiting') return callback({ success: false, message: '游戏已开始或已结束，无法加入。' });
@@ -94,7 +94,7 @@ function init(socket, io) {
              socket.join(roomId);
              socket.roomId = roomId;
              console.log(`[ROOM] Player ${socket.username} joined room "${room.roomName}" (${roomId})`);
-             socket.to(roomId).emit('playerJoined', { ...joinResult.player, socketId: undefined, score:0, hand:undefined, handCount:0, role:null, finished:false, connected:true }); 
+             socket.to(roomId).emit('playerJoined', { ...joinResult.player, socketId: undefined, score:0, hand:undefined, handCount:0, role:null, finished:false, connected:true });
              callback({ success: true, roomId: roomId, roomState: getRoomStateForPlayer(room, socket.userId) });
              broadcastRoomList();
          } else {
@@ -232,12 +232,15 @@ function init(socket, io) {
 
         if (room.game && (room.status === 'playing' || (room.status === 'waiting' && room.game.gameStarted))) {
             room.game.removePlayer(player.userId);
+            // 当玩家离开时，也通知客户端该玩家停止说话（如果之前在说）
+            ioInstance.to(roomId).emit('playerStoppedSpeaking', { userId: player.userId });
+
 
             const activePlayersInGame = room.game.players.filter(p => p.connected && !p.finished).length;
             if (activePlayersInGame < 2 && room.game.gameStarted && !room.game.gameFinished) {
                 console.log(`[GAME ${roomId}] Game ending due to player leaving. Remaining active: ${activePlayersInGame}`);
                 room.status = 'finished';
-                const scoreResult = room.game.endGame('有玩家离开，游戏结束'); 
+                const scoreResult = room.game.endGame('有玩家离开，游戏结束');
                 ioInstance.to(roomId).emit('gameOver', scoreResult);
             } else if (!room.game.gameFinished) {
                 if (room.game.currentPlayerId === player.userId) {
@@ -283,6 +286,31 @@ function init(socket, io) {
              callback(null);
          }
      });
+
+    // --- 新增语音相关事件处理 ---
+    socket.on('audioChunk', (audioChunk) => {
+        if (socket.userId && socket.roomId && activeGames[socket.roomId]) {
+            // 将音频块广播给房间内除发送者外的其他玩家
+            socket.to(socket.roomId).emit('audioChunk', {
+                userId: socket.userId,
+                username: socket.username, // 方便前端显示谁在说话
+                chunk: audioChunk
+            });
+        }
+    });
+
+    socket.on('playerStartSpeaking', () => {
+        if (socket.userId && socket.roomId && activeGames[socket.roomId]) {
+            socket.to(socket.roomId).emit('playerStartedSpeaking', { userId: socket.userId, username: socket.username });
+        }
+    });
+
+    socket.on('playerStopSpeaking', () => {
+        if (socket.userId && socket.roomId && activeGames[socket.roomId]) {
+            socket.to(socket.roomId).emit('playerStoppedSpeaking', { userId: socket.userId });
+        }
+    });
+    // --- 语音相关事件处理结束 ---
 }
 
 function addPlayerToRoom(room, socket) {
@@ -295,7 +323,7 @@ function addPlayerToRoom(room, socket) {
 
     const playerInfo = {
         userId: socket.userId, username: socket.username, socketId: socket.id,
-        isReady: false, slot: assignedSlot, connected: true, score: 0 
+        isReady: false, slot: assignedSlot, connected: true, score: 0
     };
     room.players.push(playerInfo);
     if (room.game) room.game.addPlayer(playerInfo.userId, playerInfo.username, playerInfo.slot);
@@ -345,7 +373,7 @@ function checkAndStartGame(room) {
 
 function getRoomStateForPlayer(room, requestingUserId, isGameUpdate = false) {
      const gameState = (isGameUpdate || room.status === 'playing' || room.status === 'finished') && room.game
-         ? room.game.getStateForPlayer(requestingUserId) 
+         ? room.game.getStateForPlayer(requestingUserId)
          : null;
 
      const combinedPlayers = room.players.map(roomPlayer => {
@@ -399,6 +427,9 @@ function handleDisconnect(socket) {
      console.log(`[ROOM ${roomId}] Player ${player.username} (ID: ${player.userId}) disconnected via socket ${socket.id}.`);
      player.connected = false;
      player.isReady = false;
+     // 当玩家断线时，也通知客户端该玩家停止说话
+     ioInstance.to(roomId).emit('playerStoppedSpeaking', { userId: player.userId });
+
 
      ioInstance.to(roomId).emit('playerLeft', { userId: player.userId, username: player.username, reason: 'disconnected' });
 
@@ -476,7 +507,7 @@ function handleReconnect(socket, roomId) {
 
       player.socketId = socket.id;
       player.connected = true;
-      
+
       console.log(`[RECONNECT ${roomId}] Player ${player.username} reconnected with new socket ${socket.id}`);
 
       if (room.game && (room.status === 'playing' || room.game.gameStarted) ) {
