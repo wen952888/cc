@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>KK 在线纸牌</title>
-    <link rel="stylesheet" href="style.css?v=1.0.20"> 
+    <link rel="stylesheet" href="style.css?v=1.0.21"> <!-- 版本号更新 -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#e0e0e0"/>
     <link rel="apple-touch-icon" href="/images/icon-192x192.png">
@@ -37,15 +37,42 @@
                 <button id="leaveRoomButton">离开</button>
             </div>
             <div id="playerAreaTop" class="playerArea opponent-area opponent-top">
-                <div class="playerHeader"><div class="player-avatar"></div><div class="player-details"><span class="playerName"></span><span class="playerRole"></span></div></div>
+                <div class="playerHeader">
+                    <div class="voice-indicator-container">
+                        <div class="voice-indicator"></div>
+                    </div>
+                    <div class="player-avatar"></div>
+                    <div class="player-details">
+                        <span class="playerName"></span>
+                        <span class="playerRole"></span>
+                    </div>
+                </div>
                 <div class="playerInfo"></div><div class="playerCards opponentHand"></div>
             </div>
             <div id="playerAreaLeft" class="playerArea opponent-area opponent-left">
-                <div class="playerHeader"><div class="player-avatar"></div><div class="player-details"><span class="playerName"></span><span class="playerRole"></span></div></div>
+                <div class="playerHeader">
+                    <div class="voice-indicator-container">
+                        <div class="voice-indicator"></div>
+                    </div>
+                    <div class="player-avatar"></div>
+                    <div class="player-details">
+                        <span class="playerName"></span>
+                        <span class="playerRole"></span>
+                    </div>
+                </div>
                 <div class="playerInfo"></div><div class="playerCards opponentHand"></div>
             </div>
             <div id="playerAreaRight" class="playerArea opponent-area opponent-right">
-                <div class="playerHeader"><div class="player-avatar"></div><div class="player-details"><span class="playerName"></span><span class="playerRole"></span></div></div>
+                <div class="playerHeader">
+                    <div class="voice-indicator-container">
+                        <div class="voice-indicator"></div>
+                    </div>
+                    <div class="player-avatar"></div>
+                    <div class="player-details">
+                        <span class="playerName"></span>
+                        <span class="playerRole"></span>
+                    </div>
+                </div>
                 <div class="playerInfo"></div><div class="playerCards opponentHand"></div>
             </div>
             <div id="centerArea">
@@ -55,7 +82,17 @@
             <div id="playerAreaBottom" class="playerArea selfArea">
                 <div id="myHand" class="playerCards myHand"></div>
                 <div class="self-player-info-container">
-                    <div class="playerHeader"><div class="player-avatar"></div><div class="player-details"><span class="playerName">你</span><span class="playerRole">[?]</span></div></div>
+                    <div class="playerHeader">
+                         <!-- 自己区域的语音指示器通常由麦克风按钮状态表示，但也可以加一个 -->
+                        <div class="voice-indicator-container" style="display: none;"> <!-- 默认隐藏自己的指示器，因为有micButton -->
+                            <div class="voice-indicator"></div>
+                        </div>
+                        <div class="player-avatar"></div>
+                        <div class="player-details">
+                            <span class="playerName">你</span>
+                            <span class="playerRole">[?]</span>
+                        </div>
+                    </div>
                     <div class="playerInfo">总分: 0</div>
                     <button id="readyButton" class="hidden-view">准备</button>
                 </div>
@@ -64,6 +101,7 @@
                     <button id="hintButton" title="提示">提示</button>
                     <button id="passTurnButton" title="不要">不要</button>
                     <button id="playSelectedCardsButton" title="出牌" disabled>出牌</button>
+                    <button id="micButton" title="麦克风">🎤</button>
                 </div>
             </div>
             <div id="gameStatusDisplay">等待玩家...</div>
@@ -76,6 +114,6 @@
          </div>
     </div>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="client.js?v=1.0.20"></script>
+    <script src="client.js?v=1.0.21"></script> <!-- 版本号更新 -->
 </body>
 </html>
