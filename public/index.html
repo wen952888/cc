@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>KK 在线纸牌</title>
-    <link rel="stylesheet" href="style.css?v=1.0.23"> <!-- 版本号更新 -->
+    <link rel="stylesheet" href="style.css?v=1.0.25"> <!-- 版本号更新 -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#333"/>
     <link rel="apple-touch-icon" href="/images/icon-192x192.png">
 </head>
 <body>
     <!-- 加载视图 -->
-    <div id="loadingView" class="view fullscreen-view flex-center-center"> <!-- 确保 loadingView 有 fullscreen-view 和 flex-center-center -->
+    <div id="loadingView" class="view fullscreen-view flex-center-center">
         <p>连接中...</p>
     </div>
 
@@ -61,8 +61,7 @@
     </div>
 
     <!-- 游戏视图 -->
-    <div id="game-view" class="view hidden-view fullscreen-view"> <!-- game-view 也应该是 fullscreen-view -->
-        <!-- 游戏信息栏：房间名、ID、离开按钮 -->
+    <div id="game-view" class="view hidden-view fullscreen-view">
         <div id="gameInfoBar">
             <div class="room-name-id">
                 房间: <span id="infoBarRoomName">未知</span> (<span id="infoBarRoomId">----</span>)
@@ -71,7 +70,6 @@
             <button id="leaveRoomButton" title="离开房间">离开</button>
         </div>
 
-        <!-- 主要游戏区域 (牌桌主体，不包括自己的手牌和控制按钮) -->
         <div id="gameArea">
             <!-- 对手区域 -->
             <div id="player-top" class="player-area opponent-area opponent-top" data-player-id="">
@@ -108,54 +106,53 @@
                 </div>
             </div>
 
-            <!-- 中央牌堆 -->
             <div id="centerPileArea">
                 <div id="lastHandType" class="last-hand-type">等待出牌</div>
-                <div id="discarded-cards-area">
-                    <!-- 弃牌的卡牌图像将在这里显示 -->
-                </div>
+                <div id="discarded-cards-area"></div>
             </div>
         </div>
 
-        <!-- 自己的区域 (包含头像信息和手牌区) -->
-        <div id="player-bottom" class="player-area self-area" data-player-id="">
-            <!-- 修改：包裹自己的信息和头像 -->
-            <div class="player-area-info-container">
-                <div class="player-avatar-container">
-                    <div class="player-avatar" id="myAvatar"></div>
-                    <div class="voice-indicator-container"><div class="voice-indicator" id="myVoiceIndicator"></div></div>
-                </div>
-                <div class="player-details">
-                    <div class="playerName" id="myPlayerName">我</div>
-                    <div class="playerRole" id="myPlayerRole"></div>
-                    <div class="playerInfo" id="myPlayerStatus">手牌: <span class="card-count">?</span></div>
-                </div>
-            </div>
-            <div id="player-hand-area">
+        <!-- 自己的手牌区域 -->
+        <div id="player-hand-area-wrapper">
+             <div id="player-hand-area">
                 <!-- 玩家手牌的卡牌图像将在这里显示 -->
             </div>
         </div>
 
-        <!-- 游戏控制按钮 -->
-        <div id="game-controls">
+
+        <!-- 新的底部栏：包含个人信息和操作按钮 -->
+        <div id="bottom-bar">
             <button id="hint-button" title="提示">提示</button>
             <button id="pass-button" title="不出 / 过">过</button>
+
+            <!-- 自己的信息区，移到这里 -->
+            <div id="my-info-in-bar" class="player-area self-info-in-bar" data-player-id="">
+                <div class="player-avatar-container">
+                    <div class="player-avatar" id="myAvatar"></div> <!-- JS 会使用 myAvatar ID -->
+                    <div class="voice-indicator-container"><div class="voice-indicator" id="myVoiceIndicator"></div></div>
+                </div>
+                <div class="player-details">
+                    <!-- JS 会使用 myPlayerName 和 myPlayerStatus ID -->
+                    <div class="playerName" id="myPlayerName">我</div>
+                    <div class="playerInfo" id="myPlayerStatus">手牌: <span class="card-count">?</span></div>
+                </div>
+            </div>
+
             <button id="play-button" title="出牌">出牌</button>
             <button id="micButton" title="按住说话">🎤</button>
         </div>
 
-        <!-- 游戏结束遮罩层 -->
         <div id="gameOverOverlay" class="overlay hidden-view flex-center-center">
             <div class="overlay-content">
                 <h3 id="gameOverTitle">游戏结束</h3>
                 <p id="gameOverReasonText"></p>
                 <div id="gameOverScores"></div>
-                <button id="backToLobbyBtn">返回大厅</button> <!-- 这个按钮的事件处理在 client.js 中 -->
+                <button id="backToLobbyBtn">返回大厅</button>
             </div>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="client.js?v=1.0.23"></script> <!-- 版本号更新 -->
+    <script src="client.js?v=1.0.25"></script> <!-- 版本号更新 -->
 </body>
 </html>
