@@ -33,7 +33,7 @@ html, body {
 }
 /* Game view specifically should not have global padding if its children manage it */
 #game-view.fullscreen-view {
-    padding: 0;
+    padding: 0; /* 游戏视图本身不需要内边距，由子元素控制 */
 }
 
 
@@ -63,7 +63,7 @@ html, body {
     padding: 12px;
     border-radius: 6px;
     margin-bottom: 15px;
-    width: calc(100% - 26px);
+    width: calc(100% - 26px); /* Input width considering padding */
     font-size: 1em;
 }
 #auth-view input::placeholder { color: #a5d6a7; }
@@ -74,8 +74,8 @@ html, body {
     width: 100%;
     font-size: 1.05em;
     border: none;
-    border-radius: 6px; /* Added border-radius */
-    cursor: pointer; /* Added cursor */
+    border-radius: 6px;
+    cursor: pointer;
 }
 #auth-view button:hover { background-color: #2e7d32; }
 #auth-view p { font-size: 0.9em; margin-top: 15px; color: #c8e6c9;}
@@ -104,7 +104,7 @@ html, body {
 #createRoomForm { display: flex; flex-direction: column; gap: 10px; padding: 15px; border-radius: 6px; background-color: rgba(0,0,0,0.15); }
 #createRoomForm input { background-color: rgba(200, 230, 201, 0.1); border: 1px solid rgba(165, 214, 167, 0.3); color: #e8f5e9; padding: 10px; border-radius: 4px; }
 #createRoomForm input::placeholder { color: #a5d6a7; }
-#createRoomForm button, #logoutButtonLobby, #rooms li button { /* Common button styles in lobby */
+#createRoomForm button, #logoutButtonLobby, #rooms li button {
     padding: 10px 15px;
     border-radius: 5px;
     border: none;
@@ -137,7 +137,7 @@ html, body {
 #gameInfoBar {
     height: auto;
     min-height: 30px;
-    padding: 5px 10px; /* Reduced padding */
+    padding: 5px 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -146,7 +146,7 @@ html, body {
     color: #a5d6a7;
     font-size: 0.8em;
     border-bottom: 1px solid rgba(129, 199, 132, 0.2);
-    flex-shrink: 0;
+    flex-shrink: 0; /* Prevent shrinking */
 }
 #infoBarRoomName, #infoBarRoomId, #infoBarCurrentTurn { font-weight: bold; color: #e8f5e9;}
 #leaveRoomButton {
@@ -161,23 +161,21 @@ html, body {
     position: relative; /* For absolute positioning of opponents and center pile */
     width: 100%;
     overflow: hidden; /* Important to contain absolute elements */
-    /* background-color: rgba(255,0,0,0.1); /* Debugging: shows gameArea bounds */
 }
 
 /* Player Area (Opponents and Self) Common Styles */
 .player-area {
     display: flex;
-    align-items: center; /* Align avatar and details horizontally */
-    padding: 5px;
+    align-items: center;
+    padding: 5px; /* Small padding around player areas */
     box-sizing: border-box;
     border-radius: 6px;
-    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+    transition: box-shadow 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
     color: #c8e6c9;
-    /* min-width: 120px; /* Ensure some minimum width for details */
 }
 .player-area.current-turn {
-    box-shadow: 0 0 10px 3px #a5d6a7, inset 0 0 0 2px #a5d6a7;
-    background-color: rgba(165, 214, 167, 0.1);
+    box-shadow: 0 0 10px 3px #a5d6a7, inset 0 0 0 2px #a5d6a7; /* Green glow for current turn */
+    background-color: rgba(165, 214, 167, 0.05); /* Slight highlight */
 }
 .player-area.player-disconnected { opacity: 0.6; }
 .player-area.player-finished .playerName::after {
@@ -190,8 +188,8 @@ html, body {
 
 
 .player-avatar-container {
-    position: relative; /* For voice indicator positioning */
-    margin-right: 8px; /* Space between avatar and details */
+    position: relative;
+    margin-right: 8px;
 }
 .player-avatar {
     width: 40px; height: 40px; border-radius: 50%;
@@ -202,24 +200,22 @@ html, body {
     position: absolute;
     bottom: -2px;
     right: -2px;
-    width: 14px; /* Container size */
+    width: 14px;
     height: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    /* background-color: rgba(0,0,0,0.3); /* Optional: Small backdrop for visibility */
-    /* border-radius: 50%; */
 }
 .voice-indicator {
     width: 10px; height: 10px; background-color: #698c69; border-radius: 50%;
     transition: all 0.2s;
 }
 .voice-indicator.speaking {
-    background-color: #81c784; /* Brighter green when speaking */
+    background-color: #81c784;
     box-shadow: 0 0 6px #81c784;
 }
 
-.player-details { text-align: left; font-size: 0.8em; } /* Align text to left for opponents */
+.player-details { text-align: left; font-size: 0.8em; }
 .playerName { font-weight: bold; font-size: 1em; color: #e8f5e9; white-space: nowrap; max-width: 100px; overflow: hidden; text-overflow: ellipsis;}
 .playerRole { font-size: 0.85em; font-style: italic; color: #a5d6a7; }
 .playerInfo { font-size: 0.85em; color: #c8e6c9; }
@@ -228,28 +224,28 @@ html, body {
 /* Opponent Positioning (Absolute within #gameArea) */
 .opponent-area {
     position: absolute;
+    /* background-color: rgba(0,0,0,0.1); /* Optional: slight bg for opponent areas */
 }
 #player-top.opponent-area {
-    top: 10px; /* Closer to the top of gameArea */
+    top: 10px;
     left: 50%;
     transform: translateX(-50%);
     flex-direction: column; /* Avatar above details for top player */
-    align-items: center; /* Center items in column */
+    align-items: center;
 }
 #player-top .player-avatar-container { margin-right: 0; margin-bottom: 5px; }
 #player-top .player-details { text-align: center; }
 
 
 #player-left.opponent-area {
-    left: 10px; /* Closer to the left edge of gameArea */
-    top: 45%; /* Vertically centered in gameArea */
+    left: 10px;
+    top: 45%;
     transform: translateY(-50%);
-    /* flex-direction: row-reverse; /* Avatar on the right for left player if desired */
 }
 
 #player-right.opponent-area {
-    right: 10px; /* Closer to the right edge of gameArea */
-    top: 45%; /* Vertically centered in gameArea */
+    right: 10px;
+    top: 45%;
     transform: translateY(-50%);
     flex-direction: row-reverse; /* Avatar on left, details on right */
 }
@@ -257,87 +253,86 @@ html, body {
 #player-right .player-details { text-align: right; }
 
 
-/* Center Pile Area (Absolute within #gameArea) */
+/* Center Pile Area (Absolute within #gameArea) - YELLOW in sketch */
 #centerPileArea {
     position: absolute;
-    top: 50%; /* Vertically centered in gameArea */
+    top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: auto; /* Allow content to define width */
-    max-width: 60%; /* Max width relative to gameArea */
+    width: auto;
+    max-width: 70%; /* Increased max-width for potentially more cards */
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 5px;
-    min-height: 100px; /* Min height for cards */
-    /* background-color: rgba(0,255,0,0.1); /* Debugging */
+    min-height: 100px;
 }
 #lastHandType { font-size: 0.8em; color: #a5d6a7; margin-bottom: 5px; font-style: italic; text-align: center; }
 #discarded-cards-area {
     display: flex;
-    flex-wrap: nowrap; /* Prevent wrapping, allow horizontal scroll if too many */
+    flex-wrap: nowrap; /* Keep cards in a single line, allow overlap */
     justify-content: center;
     align-items: center;
-    gap: -25px; /* Overlap cards more, adjust as needed */
-    perspective: 600px;
-    min-height: 75px; /* Height of one card */
-    padding: 0 10px; /* Padding for overlapping cards */
+    gap: -25px; /* Negative gap for overlapping, adjust as needed */
+    perspective: 600px; /* For 3D effects if any */
+    min-height: 75px;
+    padding: 0 10px; /* Allow cards to overlap into padding */
 }
 .center-pile-card {
-    width: 50px; height: 75px; /* Smaller cards for center pile */
-    position: relative;
+    width: 50px; height: 75px;
+    position: relative; /* For stacking context if needed */
     border-color: #698c69;
-    flex-shrink: 0; /* Prevent cards from shrinking if gap is negative */
+    flex-shrink: 0;
 }
 
 /* Self Area (#player-bottom) - Flex item in #game-view */
+/* This area contains your avatar/info and your hand (GREEN in sketch for hand) */
 #player-bottom.self-area {
-    /* position: static; /* Remove absolute positioning */
     width: 100%;
     display: flex;
-    flex-direction: column; /* Stack avatar/info above hand */
+    flex-direction: column;
     align-items: center;
-    padding: 5px 0;
-    flex-shrink: 0; /* Prevent shrinking */
-    /* background-color: rgba(0,0,255,0.1); /* Debugging */
+    padding: 5px 0; /* Padding top/bottom, no side padding needed if hand area is centered */
+    flex-shrink: 0;
+    /* background-color: rgba(0,0,255,0.05); /* Debugging blue */
 }
-#player-bottom .player-area-info-container { /* New wrapper for self avatar & details */
+/* New wrapper for self avatar & details */
+#player-bottom .player-area-info-container {
     display: flex;
     align-items: center;
     background-color: rgba(0,0,0,0.2);
     padding: 3px 8px;
     border-radius: 5px;
-    margin-bottom: 5px;
+    margin-bottom: 5px; /* Space between info and hand */
 }
-#player-bottom .player-avatar-container { margin-right: 8px; }
-#player-bottom .player-details { text-align: left; }
+#player-bottom .player-avatar-container { margin-right: 8px; } /* Already styled */
+#player-bottom .player-details { text-align: left; } /* Already styled */
 
 
-#player-hand-area {
+#player-hand-area { /* This is the GREEN area in your sketch */
     display: flex;
     justify-content: center;
-    align-items: flex-end; /* Cards align to bottom */
+    align-items: flex-end;
     width: 100%;
-    max-width: 95vw; /* Limit width on very wide screens */
-    margin: 0 auto;
-    min-height: 95px; /* Ensure space for cards */
-    padding: 5px 0;
-    overflow-x: auto; /* Allow horizontal scrolling for many cards */
+    max-width: 95vw;
+    margin: 0 auto; /* Center the hand area */
+    min-height: 95px;
+    padding: 5px 0; /* Padding for cards that might pop up */
+    overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: #4a704a #255025;
-    /* background-color: rgba(255,255,0,0.1); /* Debugging */
 }
 #player-hand-area::-webkit-scrollbar { height: 6px; }
 #player-hand-area::-webkit-scrollbar-thumb { background-color: #4a704a; border-radius: 3px; }
 #player-hand-area::-webkit-scrollbar-track { background-color: #255025; }
 
 
-/* Game Controls - Flex item at the bottom of #game-view */
+/* Game Controls - Flex item at the bottom of #game-view (BLUE in sketch) */
 #game-controls {
-    height: 50px; /* Reduced height */
+    height: 50px;
     display: flex;
     justify-content: space-around;
     align-items: center;
@@ -346,10 +341,10 @@ html, body {
     width: 100%;
     box-sizing: border-box;
     flex-shrink: 0;
-    z-index: 1100;
+    z-index: 1100; /* Above hand area */
 }
 #game-controls button {
-    padding: 8px 12px; /* Slightly smaller padding */
+    padding: 8px 12px;
     font-size: 0.9em;
     min-width: 60px;
     border-radius: 5px;
@@ -369,7 +364,7 @@ html, body {
 #pass-button:hover:not(:disabled) { background-color: #e0a800;}
 #hint-button { background-color: #009688; border-color: #00796b;}
 #hint-button:hover:not(:disabled) { background-color: #00796b;}
-#micButton { font-size: 1.2em; padding: 6px 10px; /* Slightly smaller padding */ }
+#micButton { font-size: 1.2em; padding: 6px 10px; }
 #micButton.recording { background-color: #d32f2f; border-color: #b71c1c; color:white;}
 
 
@@ -379,34 +374,34 @@ html, body {
     background-size: cover; background-repeat: no-repeat; background-position: center;
     border: 1px solid #698c69;
     border-radius: 5px;
-    display: inline-block; /* Or flex-shrink: 0 if parent is flex */
+    display: inline-block;
     box-shadow: 1px 1px 4px rgba(0,0,0,0.4);
     position: relative;
-    background-color: #e8f5e9; /* Fallback color */
+    background-color: #e8f5e9;
     transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
     user-select: none;
-    flex-shrink: 0; /* Prevent shrinking in flex container */
+    flex-shrink: 0;
 }
 .my-card {
-    margin: 0 -28px; /* Overlap cards in hand */
+    margin: 0 -28px;
 }
-.my-card:first-child { margin-left: 5px; } /* Give first card some space from edge */
-.my-card:last-child { margin-right: 5px; } /* Give last card some space from edge */
+.my-card:first-child { margin-left: 5px; }
+.my-card:last-child { margin-right: 5px; }
 
 .my-card.selectable { cursor: pointer; }
 .my-card.selectable:hover:not(.selected) {
     transform: translateY(-8px) scale(1.03);
-    z-index: 10;
+    z-index: 10; /* Ensure hovered card is on top of siblings */
 }
 .my-card.selected {
     transform: translateY(-15px) scale(1.08);
     box-shadow: 0 0 15px 4px #81c784;
     border-color: #81c784;
-    z-index: 20;
+    z-index: 20; /* Selected card on top */
 }
 .my-card.hinted {
-    box-shadow: 0 0 15px 5px #ffeb3b, inset 0 0 0 2px #ffeb3b; /* Yellow hint */
-    z-index: 15;
+    box-shadow: 0 0 15px 5px #ffeb3b, inset 0 0 0 2px #ffeb3b;
+    z-index: 15; /* Hinted card above normal, below selected */
 }
 
 /* Card Deal Animation */
@@ -423,9 +418,10 @@ html, body {
 #gameOverOverlay {
     background-color: rgba(26, 58, 26, 0.85);
     color: #e8f5e9;
-    position: absolute; /* Ensure it covers game view */
+    position: absolute;
     top:0; left:0; width:100%; height:100%;
     z-index: 2000; /* Highest z-index */
+    /* display:flex is already part of .fullscreen-view and .flex-center-center */
 }
 .overlay-content {
     background-color: rgba(37, 80, 37, 0.95);
@@ -441,7 +437,7 @@ html, body {
 #gameOverScores .score-plus { color: #a5d6a7; }
 #gameOverScores .score-minus { color: #ef9a9a; }
 #gameOverScores .score-zero { color: #90a4ae; }
-#gameOverOverlay #backToLobbyBtn { /* Style for button inside overlay */
+#gameOverOverlay #backToLobbyBtn {
     padding: 10px 20px; font-size: 1em; background-color: #388e3c; border: none; color: #fff;
     border-radius: 5px; cursor: pointer;
 }
@@ -474,7 +470,7 @@ html, body {
     .playerRole, .playerInfo { font-size: 0.7em; }
     #player-bottom .player-area-info-container { padding: 2px 5px; margin-bottom: 3px; }
 
-    .card { width: 40px; height: 60px; border-radius: 3px; } /* Smaller cards */
+    .card { width: 40px; height: 60px; border-radius: 3px; }
     .my-card { margin: 0 -18px; }
     .my-card.selected { transform: translateY(-10px) scale(1.08); }
     .center-pile-card { width: 36px; height: 54px; }
@@ -484,14 +480,14 @@ html, body {
     #game-controls { height: 40px; }
     #game-controls button { padding: 5px 8px; font-size: 0.75em; min-width: 45px; }
     #micButton { font-size: 1em; padding: 5px 7px; }
-    #player-hand-area { min-height: 70px; max-width: 100vw; } /* Full width for hand */
+    #player-hand-area { min-height: 70px; max-width: 100vw; }
     .my-card:first-child { margin-left: 2px; }
     .my-card:last-child { margin-right: 2px; }
     
     #player-top.opponent-area { top: 5px; }
     #player-left.opponent-area { left: 5px; top: 40%; }
     #player-right.opponent-area { right: 5px; top: 40%; }
-    #centerPileArea { top: 45%; }
+    #centerPileArea { top: 45%; } /* Adjusted for smaller cards/screen */
 }
 
 @media (max-height: 450px) and (orientation: landscape) {
@@ -499,7 +495,7 @@ html, body {
     .player-avatar { width: 25px; height: 25px; }
     .voice-indicator-container { width: 8px; height: 8px; }
     .voice-indicator { width: 5px; height: 5px; }
-     #player-bottom .player-area-info-container { margin-bottom: 2px; }
+    #player-bottom .player-area-info-container { margin-bottom: 2px; }
 
     .card { width: 34px; height: 51px; }
     .my-card { margin: 0 -15px; }
@@ -512,7 +508,7 @@ html, body {
     #micButton { font-size: 0.9em; padding: 4px 5px;}
     
     #player-top.opponent-area { top: 2px; }
-    #player-left.opponent-area { left: 2px; top: 40%; } /* Might need to push further from center*/
+    #player-left.opponent-area { left: 2px; top: 40%; }
     #player-right.opponent-area { right: 2px; top: 40%; }
-    #centerPileArea { top: 45%; } /* May need slight adjustment for very short screens */
+    #centerPileArea { top: 45%; }
 }
