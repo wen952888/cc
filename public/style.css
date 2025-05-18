@@ -3,14 +3,14 @@ html, body {
     height: 100%;
     margin: 0;
     padding: 0;
-    overflow: hidden;
+    overflow: hidden; /* 禁止滚动条 */
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     /* 全局绿色主题基调 */
     background-color: #1a3a1a; /* 深绿色背景 */
     color: #c8e6c9; /* 浅绿色文字 */
     font-size: 16px;
     -webkit-tap-highlight-color: transparent;
-    overscroll-behavior: none;
+    overscroll-behavior: none; /* 禁止移动端下拉刷新等行为 */
 }
 
 .hidden-view { display: none !important; }
@@ -19,18 +19,18 @@ html, body {
     width: 100%;
     height: 100%;
     box-sizing: border-box;
-    display: none;
-    position: absolute;
+    display: none; /* 默认隐藏，由JS控制显示 */
+    position: absolute; /* 使视图可以叠加，方便切换 */
     top: 0;
     left: 0;
 }
 
 .fullscreen-view {
-    display: flex;
+    display: flex; /* 改为 flex，方便内部元素布局 */
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 15px;
+    padding: 15px; /* 给非游戏视图一些内边距 */
 }
 
 .flex-center-center {
@@ -113,26 +113,26 @@ html, body {
 /* Game View - Fullscreen Layout & Green Theme */
 #game-view {
     padding: 0;
-    background-color: #255025; /* 深绿色牌桌背景，比body更深一点 */
-    display: flex;
-    flex-direction: column;
+    background-color: #255025; /* 深绿色牌桌背景 */
+    display: flex; /* 主容器使用flex布局 */
+    flex-direction: column; /* 垂直排列子元素 */
 }
 
 #gameInfoBar {
-    position: absolute;
-    top: 0; /* 完全贴顶 */
+    position: absolute; /* 改为绝对定位，悬浮在顶部，不占空间 */
+    top: 0;
     left: 0;
     right: 0;
     height: auto;
-    padding: 6px 12px; /* 略微调整padding */
+    padding: 6px 12px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: rgba(0, 0, 0, 0.4); /* 深色半透明背景 */
-    z-index: 1000;
-    color: #a5d6a7; /* 浅绿色文字 */
-    font-size: 0.8em; /* 调整字体大小 */
-    border-bottom: 1px solid rgba(129, 199, 132, 0.2); /* 淡绿色下边框 */
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 1000; /* 确保在gameArea之上 */
+    color: #a5d6a7;
+    font-size: 0.8em;
+    border-bottom: 1px solid rgba(129, 199, 132, 0.2);
 }
 #infoBarRoomName, #infoBarRoomId, #infoBarCurrentTurn { font-weight: bold; color: #e8f5e9;}
 #leaveRoomButton {
@@ -142,24 +142,19 @@ html, body {
 #leaveRoomButton:hover { background-color: #8c1616; }
 
 #gameArea {
-    flex-grow: 1;
-    position: relative;
-    display: grid;
-    /* 定义网格：顶部对手区，左侧对手区，中间牌堆，右侧对手区，自己的手牌区在最底部由 self-area 控制*/
-    grid-template-areas:
-        "opponent-left opponent-top opponent-right"
-        "opponent-left center-pile opponent-right"
-        "opponent-left self-area-dummy opponent-right"; /* self-area-dummy 是为了让中间列撑开 */
-    grid-template-rows: auto 1fr auto; /* 顶部和底部自适应，中间占满 */
-    grid-template-columns: 1fr 2fr 1fr; /* 左中右比例，可调整 */
-    padding: 40px 5px 5px 5px; /* 顶部为 infoBar 留空间, 底部由 self-area 和 game-controls 控制 */
+    flex-grow: 1; /* 占据 game-view 中除了 gameInfoBar(absolute) 和 game-controls(absolute)之外的【所有】剩余空间 */
+    position: relative; /* 作为内部绝对定位元素的基准 */
+    display: block; /* 不再使用 grid 或 flex，内部元素使用 absolute 定位 */
+    padding-top: 35px; /* 为 gameInfoBar 留出空间 (如果InfoBar不是absolute的话，但现在它是了，这个padding主要为视觉) */
+    /* padding-bottom: 60px + 100px; /* 大致为 game-controls 和 self-area 预留空间，但 self-area 也是 absolute，这个可以不设置或小一点 */
     width: 100%;
     box-sizing: border-box;
-    overflow: hidden;
+    overflow: hidden; /* 避免内容溢出时出现滚动条 */
+    /* background-color: rgba(255,255,0,0.1); /* 调试: gameArea 范围 */
 }
 
 /* 玩家区域通用样式 - 绿色主题 */
-.player-area {
+.player-area { /* 此类现在主要用于对手区域和自己的信息区（如果分离） */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -167,26 +162,24 @@ html, body {
     padding: 5px;
     box-sizing: border-box;
     min-width: 60px;
-    /* background-color: rgba(129, 199, 132, 0.08); /* 淡绿色背景 */
     border-radius: 6px;
     transition: box-shadow 0.3s ease, border-color 0.3s ease;
-    color: #c8e6c9; /* 确保文字颜色对比度 */
+    color: #c8e6c9;
 }
 .player-area.current-turn {
-    box-shadow: 0 0 12px 4px #a5d6a7, inset 0 0 0 2px #a5d6a7; /* 浅绿色高光 */
-    /* border: 1px solid #81c784; */
+    box-shadow: 0 0 12px 4px #a5d6a7, inset 0 0 0 2px #a5d6a7;
 }
 
 .player-avatar-container { display: flex; align-items: center; margin-bottom: 4px; }
 .player-avatar {
     width: 35px; height: 35px; border-radius: 50%;
-    background-color: #4a704a; border: 1px solid #698c69; /* 绿色系头像背景 */
+    background-color: #4a704a; border: 1px solid #698c69;
     background-size: cover; background-position: center;
     margin-right: 5px;
 }
 .voice-indicator-container { width: 12px; height: 12px; display: flex; align-items: center; justify-content: center; }
 .voice-indicator { width: 10px; height: 10px; background-color: #698c69; border-radius: 50%; transition: all 0.2s; }
-.voice-indicator.speaking { background-color: #a5d6a7; box-shadow: 0 0 6px #a5d6a7; } /* 亮绿色说话指示 */
+.voice-indicator.speaking { background-color: #a5d6a7; box-shadow: 0 0 6px #a5d6a7; }
 
 .player-details { text-align: center; }
 .playerName { font-weight: bold; font-size: 0.8em; color: #e8f5e9; white-space: nowrap; max-width: 100px; overflow: hidden; text-overflow: ellipsis;}
@@ -194,21 +187,25 @@ html, body {
 .playerInfo { font-size: 0.7em; color: #c8e6c9; }
 .playerInfo .card-count { font-weight: bold; }
 
-/* 对手位置调整 */
+/* 对手位置调整 - 使用 absolute 定位在 gameArea 内 */
+.opponent-area { /* 给对手区域一个共同的类，方便统一定位方式 */
+    position: absolute;
+    /* background-color: rgba(129, 199, 132, 0.08); /* 对手区域可以保留背景，方便调试 */
+}
 .opponent-top {
-    grid-area: opponent-top;
-    align-self: start; /* 顶部对齐 */
-    justify-self: center; /* 水平居中 */
+    top: 5px; /* 相对于 #gameArea 的顶部 (padding-top 之后) */
+    left: 50%;
+    transform: translateX(-50%);
 }
 .opponent-left {
-    grid-area: opponent-left;
-    align-self: center; /* 垂直居中 */
-    justify-self: start; /* 左侧对齐 */
+    left: 5px; /* 相对于 #gameArea 的左侧 */
+    top: 40%; /* 大致垂直居中，可微调 */
+    transform: translateY(-50%);
 }
 .opponent-right {
-    grid-area: opponent-right;
-    align-self: center; /* 垂直居中 */
-    justify-self: end; /* 右侧对齐 */
+    right: 5px; /* 相对于 #gameArea 的右侧 */
+    top: 40%; /* 大致垂直居中，可微调 */
+    transform: translateY(-50%);
 }
 .opponent-left .player-avatar-container,
 .opponent-right .player-avatar-container {
@@ -220,15 +217,21 @@ html, body {
     margin-left: 5px;
 }
 
-/* 中央牌堆 */
+/* 中央牌堆 - 使用 absolute 定位在 gameArea 内 */
 #centerPileArea {
-    grid-area: center-pile;
+    position: absolute;
+    top: 45%; /* 大致垂直居中，需要根据对手和手牌位置微调 */
+    left: 50%;
+    transform: translate(-50%, -50%); /* 精确居中 */
+    width: 70%; /* 给牌堆一些宽度 */
+    max-width: 300px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 10px;
     min-height: 110px;
+    /* background-color: rgba(0,0,255,0.1); /* 调试用 */
 }
 .last-hand-type { font-size: 0.85em; color: #a5d6a7; margin-bottom: 8px; font-style: italic; text-align: center; }
 #discarded-cards-area {
@@ -236,39 +239,38 @@ html, body {
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
-    gap: -18px; /* 牌之间重叠效果调整 */
+    gap: -18px;
     perspective: 600px;
     min-height: 90px;
 }
 .center-pile-card {
-    width: 50px; height: 75px; /* 调整弃牌区卡牌大小 */
+    width: 50px; height: 75px;
     position: relative;
-    border-color: #698c69; /* 绿色边框 */
+    border-color: #698c69;
 }
 
-/* 自己区域，现在放在 #game-controls 的上方，紧贴底部 */
-#player-bottom.self-area { /* 使用 #player-bottom ID 来定位 */
-    /* 这个元素现在由 HTML 结构决定位置，在 gameArea 的自然流中 */
-    /* 我们需要将它移到屏幕最下方，控制栏之上 */
-    position: absolute; /* 改为绝对定位，相对于 #game-view */
-    bottom: 60px; /* 控制栏的高度，确保手牌区域在其上方 */
+/* 自己区域 (包括头像信息和手牌区) - 定位在屏幕底部，控制栏上方 */
+#player-bottom.self-area {
+    position: absolute; /* 相对于 #game-view 定位 */
+    bottom: 60px;      /* 关键: 控制栏的高度 */
     left: 0;
     right: 0;
-    height: auto; /* 高度由内容决定，主要是手牌区 */
+    width: 100%;
+    height: auto;       /* 高度由内容决定 */
     display: flex;
-    flex-direction: column;
+    flex-direction: column; /* 头像信息在手牌区上方 */
     align-items: center;
-    padding-bottom: 5px; /* 手牌区域底部留一点空间 */
-    z-index: 100; /* 确保在其他 gameArea 内容之上，但在 gameControls 之下（如果 gameControls 也有 z-index） */
+    z-index: 200;       /* 比 gameArea 内容高，但低于 game-controls */
+    /* background-color: rgba(0, 255, 0, 0.05); /* 调试用 */
 }
 
+/* 自己的头像信息部分 */
 .self-area .player-avatar-container {
-    /* 自己的头像信息可以放在手牌上方，或者固定在某个角落 */
-    /* 这里示例为放在手牌区正上方 */
-    margin-bottom: 5px; /* 与手牌区的间距 */
+    margin-bottom: 3px; /* 与手牌区的间距 */
     background-color: rgba(0,0,0,0.25);
-    padding: 4px 8px;
+    padding: 3px 8px;
     border-radius: 5px;
+    /* 这里可以添加更多样式来美化自己的信息显示 */
 }
 
 #player-hand-area {
@@ -276,74 +278,73 @@ html, body {
     justify-content: center;
     align-items: flex-end;
     width: 100%;
-    max-width: 95vw; /* 手牌区域最大宽度，避免太宽 */
-    margin: 0 auto; /* 水平居中 */
-    min-height: 95px; /* 手牌区域最小高度 */
-    padding: 5px 0;
+    max-width: 95vw;
+    margin: 0 auto;
+    min-height: 95px;
+    padding: 5px 0; /* 给手牌上下一点空间 */
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
-    scrollbar-color: #4a704a #255025; /* 绿色滚动条 */
+    scrollbar-color: #4a704a #255025;
 }
 #player-hand-area::-webkit-scrollbar { height: 6px; }
 #player-hand-area::-webkit-scrollbar-thumb { background-color: #4a704a; border-radius: 3px; }
 #player-hand-area::-webkit-scrollbar-track { background-color: #255025; }
 
 
-/* 游戏控制栏 - 绿色主题 */
+/* 游戏控制栏 - 固定在屏幕最底部 */
 #game-controls {
     height: 60px;
     display: flex;
     justify-content: space-around;
     align-items: center;
     padding: 0 10px;
-    background-color: rgba(0, 0, 0, 0.5); /* 深色半透明背景 */
+    background-color: rgba(0, 0, 0, 0.5);
     width: 100%;
     box-sizing: border-box;
-    flex-shrink: 0;
-    position: absolute; /* 固定在底部 */
+    position: absolute; /* 相对于 #game-view 定位 */
     bottom: 0;
     left: 0;
-    z-index: 1100; /* 确保在最上层 */
+    z-index: 1100; /* 最高层 */
 }
 #game-controls button {
     padding: 8px 15px;
     font-size: 0.9em;
     min-width: 70px;
     border-radius: 5px;
-    border: 1px solid rgba(129, 199, 132, 0.3); /* 淡绿色边框 */
-    background-color: rgba(129, 199, 132, 0.15); /* 淡绿色按钮背景 */
-    color: #e8f5e9; /* 亮绿色文字 */
+    border: 1px solid rgba(129, 199, 132, 0.3);
+    background-color: rgba(129, 199, 132, 0.15);
+    color: #e8f5e9;
     transition: background-color 0.2s, transform 0.1s;
 }
 #game-controls button:hover:not(:disabled) { background-color: rgba(129, 199, 132, 0.25); }
 #game-controls button:active:not(:disabled) { transform: scale(0.95); }
 #game-controls button:disabled { background-color: rgba(102, 135, 103, 0.3); color: #81a281; border-color: rgba(102, 135, 103, 0.4); cursor: not-allowed;}
-#play-button { background-color: #4caf50; border-color: #388e3c;} /* 亮绿色 */
+#play-button { background-color: #4caf50; border-color: #388e3c;}
 #play-button:hover:not(:disabled) { background-color: #388e3c;}
-#pass-button { background-color: #ffc107; color: #212529; border-color: #dba000;} /* 黄色通常用于警示或次要操作，这里保留 */
+#pass-button { background-color: #ffc107; color: #212529; border-color: #dba000;}
 #pass-button:hover:not(:disabled) { background-color: #e0a800;}
-#hint-button { background-color: #009688; border-color: #00796b;} /* 青色 */
+#hint-button { background-color: #009688; border-color: #00796b;}
 #hint-button:hover:not(:disabled) { background-color: #00796b;}
 #micButton { font-size: 1.2em; padding: 6px 12px; }
-#micButton.active { background-color: #d32f2f; border-color: #b71c1c;} /* 录音时红色，保持不变 */
+#micButton.active { background-color: #d32f2f; border-color: #b71c1c;}
 
 
 /* 卡牌样式 - 绿色主题调整 */
 .card {
     width: 60px; height: 90px;
     background-size: cover; background-repeat: no-repeat; background-position: center;
-    border: 1px solid #698c69; /* 深绿色边框 */
+    border: 1px solid #698c69;
     border-radius: 5px;
     display: inline-block;
-    box-shadow: 1px 1px 4px rgba(0,0,0,0.4); /* 阴影加深一点 */
+    box-shadow: 1px 1px 4px rgba(0,0,0,0.4);
     position: relative;
-    background-color: #e8f5e9; /* 卡片底色，浅绿 */
+    background-color: #e8f5e9;
     transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
     user-select: none;
 }
-.my-card { margin: 0 -28px; /* 手牌重叠效果调整，确保牌面清晰 */ }
+.my-card { margin: 0 -28px; }
 .my-card:first-child { margin-left: 0; }
 .my-card:last-child { margin-right: 0; }
 
@@ -354,12 +355,12 @@ html, body {
 }
 .my-card.selected {
     transform: translateY(-15px) scale(1.08);
-    box-shadow: 0 0 15px 4px #81c784; /* 亮绿色选中高光 */
+    box-shadow: 0 0 15px 4px #81c784;
     border-color: #81c784;
     z-index: 20;
 }
 .my-card.hinted {
-    box-shadow: 0 0 15px 5px #ffeb3b, inset 0 0 0 2px #ffeb3b; /* 黄色提示，对比度更高 */
+    box-shadow: 0 0 15px 5px #ffeb3b, inset 0 0 0 2px #ffeb3b;
     z-index: 15;
 }
 
@@ -375,11 +376,11 @@ html, body {
 
 /* 游戏结束遮罩 - 绿色主题 */
 #gameOverOverlay {
-    background-color: rgba(26, 58, 26, 0.85); /* 深绿色半透明 */
+    background-color: rgba(26, 58, 26, 0.85);
     color: #e8f5e9;
 }
 .overlay-content {
-    background-color: rgba(37, 80, 37, 0.95); /* 更深的绿色 */
+    background-color: rgba(37, 80, 37, 0.95);
     padding: 25px; border-radius: 10px;
     text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.5);
     width: 90%; max-width: 450px;
@@ -389,42 +390,32 @@ html, body {
 #gameOverScores { margin-bottom: 20px; font-size: 0.9em; text-align: left; }
 #gameOverScores p { margin: 4px 0; border-bottom: 1px solid #4a704a; padding-bottom: 4px; }
 #gameOverScores p:last-child { border-bottom: none; }
-#gameOverScores .score-plus { color: #a5d6a7; } /* 亮绿色加分 */
-#gameOverScores .score-minus { color: #ef9a9a; } /* 淡红色减分，对比度 */
-#gameOverScores .score-zero { color: #90a4ae; } /* 灰色零分 */
+#gameOverScores .score-plus { color: #a5d6a7; }
+#gameOverScores .score-minus { color: #ef9a9a; }
+#gameOverScores .score-zero { color: #90a4ae; }
 #backToLobbyBtn { padding: 10px 20px; font-size: 1em; background-color: #388e3c; border: none; color: #fff;}
 #backToLobbyBtn:hover { background-color: #2e7d32; }
 
 
 /* 响应式调整 */
 @media (max-width: 768px) {
-    #gameArea { padding: 35px 3px 3px 3px; grid-template-columns: auto 1fr auto; /* 调整列宽让中间更大 */}
+    #gameInfoBar { padding-top: 4px; padding-bottom: 4px; font-size: 0.75em;}
+    #gameArea { padding-top: 30px; /* 减少为InfoBar留的空间 */ }
     #game-controls { height: 55px; }
+    #player-bottom.self-area { bottom: 55px; }
     .card { width: 50px; height: 75px; border-radius: 4px; }
     .my-card { margin: 0 -22px; }
     .center-pile-card { width: 45px; height: 67px; }
     .player-avatar { width: 30px; height: 30px; }
     #game-controls button { padding: 7px 12px; font-size: 0.85em; min-width: 60px; }
-    #player-bottom.self-area { bottom: 55px; /* 匹配控制栏高度 */ }
+    #centerPileArea { top: 42%; /* 微调中心牌堆在平板上的垂直位置 */ }
 }
 
 @media (max-width: 480px) {
-    #gameArea {
-        padding: 30px 2px 2px 2px;
-        grid-template-areas: /* 移动端简化布局，对手都在上方 */
-            "opponent-left opponent-top opponent-right"
-            "center-pile center-pile center-pile"; /* 中间牌堆占满横向 */
-        grid-template-rows: auto 1fr; /* 对手区和中间牌堆 */
-        grid-template-columns: 1fr 1fr 1fr; /* 均分给三个对手位置 */
-    }
-    .opponent-left, .opponent-right, .opponent-top { position: relative; transform: none; top:0; left:0; right:0; width: auto; } /* 取消绝对定位，融入网格 */
-    .opponent-top { justify-self: center; }
-    .opponent-left { justify-self: start; }
-    .opponent-right { justify-self: end; }
-
-
-    #gameInfoBar { font-size: 0.7em; padding: 5px 8px;}
+    #gameInfoBar { font-size: 0.7em; padding: 3px 6px;}
+    #gameArea { padding-top: 25px; /* 再减少一点 */ }
     #game-controls { height: 50px; }
+    #player-bottom.self-area { bottom: 50px; }
     .card { width: 38px; height: 57px; border-radius: 3px; }
     .my-card { margin: 0 -18px; }
     .my-card.selected { transform: translateY(-10px) scale(1.08); }
@@ -435,17 +426,21 @@ html, body {
     .playerRole, .playerInfo { font-size: 0.55em; }
     #game-controls button { padding: 6px 8px; font-size: 0.75em; min-width: 45px; }
     #player-hand-area { min-height: 70px; max-width: 100vw; }
-    #player-bottom.self-area { bottom: 50px; /* 匹配控制栏高度 */ }
     .voice-indicator-container { width:8px; height:8px; }
     .voice-indicator { width:6px; height:6px; }
+    .opponent-left { top: 35%; } /* 手机上对手位置可能需要更靠上或调整比例 */
+    .opponent-right { top: 35%; }
+    #centerPileArea { top: 40%; width: 85%; /* 手机上牌堆区更宽，更靠上 */}
 }
 
 @media (max-height: 450px) and (orientation: landscape) {
-    #gameArea { padding-top: 30px; }
+    #gameInfoBar { padding-top: 3px; padding-bottom: 3px; font-size: 0.65em;}
+    #gameArea { padding-top: 22px; }
     #game-controls { height: 45px; }
+    #player-bottom.self-area { bottom: 45px; }
     .card { width: 34px; height: 51px; }
     .my-card { margin: 0 -16px; }
     #player-hand-area { min-height: 60px; }
-    .self-area .player-avatar-container { bottom: calc(100% + 1px); padding: 1px 4px; font-size: 0.8em;}
-    #player-bottom.self-area { bottom: 45px; /* 匹配控制栏高度 */ }
+    .self-area .player-avatar-container { margin-bottom: 1px; padding: 1px 4px; font-size: 0.8em;}
+    #centerPileArea { top: 40%; /* 横屏手机上牌堆位置 */ }
 }
