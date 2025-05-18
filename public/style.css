@@ -5,7 +5,6 @@ html, body {
     padding: 0;
     overflow: hidden; /* 禁止滚动条 */
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    /* 全局绿色主题基调 */
     background-color: #1a3a1a; /* 深绿色背景 */
     color: #c8e6c9; /* 浅绿色文字 */
     font-size: 16px;
@@ -20,18 +19,23 @@ html, body {
     height: 100%;
     box-sizing: border-box;
     display: none; /* 默认隐藏，由JS控制显示 */
-    position: absolute; /* 使视图可以叠加，方便切换 */
+    position: absolute;
     top: 0;
     left: 0;
 }
 
 .fullscreen-view {
-    display: flex; /* 改为 flex，方便内部元素布局 */
+    display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 15px; /* 给非游戏视图一些内边距 */
+    padding: 15px;
 }
+/* Game view specifically should not have global padding if its children manage it */
+#game-view.fullscreen-view {
+    padding: 0;
+}
+
 
 .flex-center-center {
     align-items: center;
@@ -43,7 +47,7 @@ html, body {
 #loadingView p { font-size: 1.2em; color: #a5d6a7; }
 
 .auth-form-container {
-    background-color: rgba(102, 187, 106, 0.1); /* 淡绿色半透明 */
+    background-color: rgba(102, 187, 106, 0.1);
     padding: 25px 30px;
     border-radius: 12px;
     box-shadow: 0 5px 25px rgba(0, 0, 0, 0.4);
@@ -53,8 +57,8 @@ html, body {
 #auth-view h2 { color: #e8f5e9; margin-bottom: 20px; }
 #auth-view input[type="text"],
 #auth-view input[type="password"] {
-    background-color: rgba(200, 230, 201, 0.15); /* 更淡的绿色输入框背景 */
-    border: 1px solid rgba(165, 214, 167, 0.4); /* 绿色边框 */
+    background-color: rgba(200, 230, 201, 0.15);
+    border: 1px solid rgba(165, 214, 167, 0.4);
     color: #e8f5e9;
     padding: 12px;
     border-radius: 6px;
@@ -64,16 +68,18 @@ html, body {
 }
 #auth-view input::placeholder { color: #a5d6a7; }
 #auth-view button {
-    background-color: #388e3c; /* 中绿色按钮 */
+    background-color: #388e3c;
     color: #fff;
     padding: 12px 18px;
     width: 100%;
     font-size: 1.05em;
     border: none;
+    border-radius: 6px; /* Added border-radius */
+    cursor: pointer; /* Added cursor */
 }
 #auth-view button:hover { background-color: #2e7d32; }
 #auth-view p { font-size: 0.9em; margin-top: 15px; color: #c8e6c9;}
-#auth-view a { color: #81c784; text-decoration: none; } /* 亮绿色链接 */
+#auth-view a { color: #81c784; text-decoration: none; }
 #auth-view a:hover { text-decoration: underline; }
 
 .message { margin-top: 12px; font-weight: bold; text-align: center; font-size: 0.85em; min-height: 1.1em; padding: 8px; border-radius: 4px; }
@@ -82,7 +88,7 @@ html, body {
 
 
 .lobby-content {
-    background-color: rgba(67, 160, 71, 0.1); /* 淡绿色半透明 */
+    background-color: rgba(67, 160, 71, 0.1);
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 3px 15px rgba(0,0,0,0.3);
@@ -98,200 +104,240 @@ html, body {
 #createRoomForm { display: flex; flex-direction: column; gap: 10px; padding: 15px; border-radius: 6px; background-color: rgba(0,0,0,0.15); }
 #createRoomForm input { background-color: rgba(200, 230, 201, 0.1); border: 1px solid rgba(165, 214, 167, 0.3); color: #e8f5e9; padding: 10px; border-radius: 4px; }
 #createRoomForm input::placeholder { color: #a5d6a7; }
-#createRoomForm button { background-color: #4caf50; color: #fff; border: none;} /* 亮绿色按钮 */
+#createRoomForm button, #logoutButtonLobby, #rooms li button { /* Common button styles in lobby */
+    padding: 10px 15px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+#createRoomForm button { background-color: #4caf50; color: #fff;}
 #createRoomForm button:hover { background-color: #388e3c; }
+
 #roomList { background-color: rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; max-height: 40vh; overflow-y: auto; }
 #roomList h3 { display: flex; justify-content: space-between; align-items: center; color: #c8e6c9; margin-bottom: 8px; font-size: 1em; }
 #refreshRoomListButton { background: none; border: none; color: #81c784; font-size: 1.3em; cursor: pointer; padding: 0 5px;}
 #rooms { list-style: none; padding: 0; margin: 0; }
 #rooms li { background-color: rgba(165, 214, 167, 0.1); padding: 10px 12px; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 0.9em; color: #c8e6c9;}
-#rooms li button { font-size: 0.85em; padding: 6px 10px; background-color: #388e3c; color: #fff; border: none;}
+#rooms li button { font-size: 0.85em; padding: 6px 10px; background-color: #388e3c; color: #fff;}
 #rooms li button:hover { background-color: #2e7d32; }
-#logoutButtonLobby { background-color: #d32f2f; color: #fff; margin-top: 10px; padding: 8px 15px; border: none;} /* 红色退出按钮 */
+#logoutButtonLobby { background-color: #d32f2f; color: #fff; margin-top: 10px; }
+#logoutButtonLobby:hover { background-color: #b71c1c; }
 
 
 /* Game View - Fullscreen Layout & Green Theme */
 #game-view {
-    padding: 0; /* 全屏不需要外边距 */
-    background-color: #356035; /* 深绿色牌桌背景 */
+    background-color: #356035; /* Deep green felt background */
     display: flex;
     flex-direction: column;
+    /* No padding here, children will manage spacing */
 }
 
 #gameInfoBar {
-    /* position: absolute; /* 它不是 absolute，是 flex item */
     height: auto;
-    min-height: 30px; /* 信息栏最小高度 */
-    padding: 6px 12px;
+    min-height: 30px;
+    padding: 5px 10px; /* Reduced padding */
     display: flex;
     justify-content: space-between;
     align-items: center;
     background-color: rgba(0, 0, 0, 0.4);
-    z-index: 1000; /* 确保在gameArea之上 */
+    z-index: 1000;
     color: #a5d6a7;
     font-size: 0.8em;
     border-bottom: 1px solid rgba(129, 199, 132, 0.2);
-    flex-shrink: 0; /* 防止被压缩 */
+    flex-shrink: 0;
 }
 #infoBarRoomName, #infoBarRoomId, #infoBarCurrentTurn { font-weight: bold; color: #e8f5e9;}
 #leaveRoomButton {
     padding: 5px 10px; font-size: 0.9em; background-color: #b71c1c; color: white;
-    border: none; border-radius: 4px; flex-shrink: 0;
+    border: none; border-radius: 4px; flex-shrink: 0; cursor: pointer;
 }
 #leaveRoomButton:hover { background-color: #8c1616; }
 
+/* #gameArea is the main tabletop, excluding self hand and controls */
 #gameArea {
-    flex-grow: 1; /* 占据 game-view 中除去 gameInfoBar 和 game-controls 的空间 */
-    position: relative; /* 作为内部绝对定位元素的基准 */
-    display: block; /* 内部元素使用 absolute */
+    flex-grow: 1; /* Takes up space between info bar and self-area/controls */
+    position: relative; /* For absolute positioning of opponents and center pile */
     width: 100%;
-    box-sizing: border-box;
-    overflow: hidden;
-    padding: 0; /* 内部元素与 gameArea 边缘的间距 */
-    /* background-color: rgba(255,255,0,0.05); /* 调试: gameArea 范围 */
+    overflow: hidden; /* Important to contain absolute elements */
+    /* background-color: rgba(255,0,0,0.1); /* Debugging: shows gameArea bounds */
 }
 
-/* 玩家区域通用样式 - 绿色主题 */
+/* Player Area (Opponents and Self) Common Styles */
 .player-area {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
+    align-items: center; /* Align avatar and details horizontally */
+    padding: 5px;
     box-sizing: border-box;
-    min-width: 60px;
     border-radius: 6px;
     transition: box-shadow 0.3s ease, border-color 0.3s ease;
     color: #c8e6c9;
+    /* min-width: 120px; /* Ensure some minimum width for details */
 }
 .player-area.current-turn {
-    box-shadow: 0 0 12px 4px #a5d6a7, inset 0 0 0 2px #a5d6a7;
+    box-shadow: 0 0 10px 3px #a5d6a7, inset 0 0 0 2px #a5d6a7;
+    background-color: rgba(165, 214, 167, 0.1);
+}
+.player-area.player-disconnected { opacity: 0.6; }
+.player-area.player-finished .playerName::after {
+    content: " (已出完)";
+    font-style: italic;
+    font-size: 0.9em;
+    color: #a5d6a7;
+    margin-left: 4px;
 }
 
-.player-avatar-container { display: flex; align-items: center; margin-bottom: 4px; }
+
+.player-avatar-container {
+    position: relative; /* For voice indicator positioning */
+    margin-right: 8px; /* Space between avatar and details */
+}
 .player-avatar {
-    width: 35px; height: 35px; border-radius: 50%;
+    width: 40px; height: 40px; border-radius: 50%;
     background-color: #4a704a; border: 1px solid #698c69;
     background-size: cover; background-position: center;
-    margin-right: 5px;
 }
-.voice-indicator-container { width: 12px; height: 12px; display: flex; align-items: center; justify-content: center; }
-.voice-indicator { width: 10px; height: 10px; background-color: #698c69; border-radius: 50%; transition: all 0.2s; }
-.voice-indicator.speaking { background-color: #a5d6a7; box-shadow: 0 0 6px #a5d6a7; }
+.voice-indicator-container {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 14px; /* Container size */
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* background-color: rgba(0,0,0,0.3); /* Optional: Small backdrop for visibility */
+    /* border-radius: 50%; */
+}
+.voice-indicator {
+    width: 10px; height: 10px; background-color: #698c69; border-radius: 50%;
+    transition: all 0.2s;
+}
+.voice-indicator.speaking {
+    background-color: #81c784; /* Brighter green when speaking */
+    box-shadow: 0 0 6px #81c784;
+}
 
-.player-details { text-align: center; }
-.playerName { font-weight: bold; font-size: 0.8em; color: #e8f5e9; white-space: nowrap; max-width: 100px; overflow: hidden; text-overflow: ellipsis;}
-.playerRole { font-size: 0.7em; font-style: italic; color: #a5d6a7; }
-.playerInfo { font-size: 0.7em; color: #c8e6c9; }
+.player-details { text-align: left; font-size: 0.8em; } /* Align text to left for opponents */
+.playerName { font-weight: bold; font-size: 1em; color: #e8f5e9; white-space: nowrap; max-width: 100px; overflow: hidden; text-overflow: ellipsis;}
+.playerRole { font-size: 0.85em; font-style: italic; color: #a5d6a7; }
+.playerInfo { font-size: 0.85em; color: #c8e6c9; }
 .playerInfo .card-count { font-weight: bold; }
 
-/* 对手位置调整 - 使用 absolute 定位在 gameArea 内 */
+/* Opponent Positioning (Absolute within #gameArea) */
 .opponent-area {
     position: absolute;
 }
-.opponent-top {
-    top: 0; /* 相对于 #gameArea 的顶部 (已包含 gameArea padding) */
+#player-top.opponent-area {
+    top: 10px; /* Closer to the top of gameArea */
     left: 50%;
     transform: translateX(-50%);
+    flex-direction: column; /* Avatar above details for top player */
+    align-items: center; /* Center items in column */
 }
-.opponent-left {
-    left: 0; /* 相对于 #gameArea 的左侧 */
-    top: 40%;
+#player-top .player-avatar-container { margin-right: 0; margin-bottom: 5px; }
+#player-top .player-details { text-align: center; }
+
+
+#player-left.opponent-area {
+    left: 10px; /* Closer to the left edge of gameArea */
+    top: 45%; /* Vertically centered in gameArea */
     transform: translateY(-50%);
-}
-.opponent-right {
-    right: 0; /* 相对于 #gameArea 的右侧 */
-    top: 40%;
-    transform: translateY(-50%);
-}
-.opponent-left .player-avatar-container,
-.opponent-right .player-avatar-container {
-    flex-direction: row-reverse;
-}
-.opponent-left .player-avatar,
-.opponent-right .player-avatar {
-    margin-right: 0;
-    margin-left: 5px;
+    /* flex-direction: row-reverse; /* Avatar on the right for left player if desired */
 }
 
-/* 中央牌堆 - 使用 absolute 定位在 gameArea 内 */
+#player-right.opponent-area {
+    right: 10px; /* Closer to the right edge of gameArea */
+    top: 45%; /* Vertically centered in gameArea */
+    transform: translateY(-50%);
+    flex-direction: row-reverse; /* Avatar on left, details on right */
+}
+#player-right .player-avatar-container { margin-right: 0; margin-left: 8px;}
+#player-right .player-details { text-align: right; }
+
+
+/* Center Pile Area (Absolute within #gameArea) */
 #centerPileArea {
     position: absolute;
-    top: 45%; /* 大致垂直居中 */
+    top: 50%; /* Vertically centered in gameArea */
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 70%;
-    max-width: 300px;
+    width: auto; /* Allow content to define width */
+    max-width: 60%; /* Max width relative to gameArea */
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 10px;
-    min-height: 110px;
+    padding: 5px;
+    min-height: 100px; /* Min height for cards */
+    /* background-color: rgba(0,255,0,0.1); /* Debugging */
 }
-.last-hand-type { font-size: 0.85em; color: #a5d6a7; margin-bottom: 8px; font-style: italic; text-align: center; }
+#lastHandType { font-size: 0.8em; color: #a5d6a7; margin-bottom: 5px; font-style: italic; text-align: center; }
 #discarded-cards-area {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap; /* Prevent wrapping, allow horizontal scroll if too many */
     justify-content: center;
     align-items: center;
-    gap: -18px;
+    gap: -25px; /* Overlap cards more, adjust as needed */
     perspective: 600px;
-    min-height: 90px;
+    min-height: 75px; /* Height of one card */
+    padding: 0 10px; /* Padding for overlapping cards */
 }
 .center-pile-card {
-    width: 50px; height: 75px;
+    width: 50px; height: 75px; /* Smaller cards for center pile */
     position: relative;
     border-color: #698c69;
+    flex-shrink: 0; /* Prevent cards from shrinking if gap is negative */
 }
 
-/* 自己区域 (包括头像信息和手牌区) - HTML中它仍在gameArea内，所以相对于gameArea底部定位 */
+/* Self Area (#player-bottom) - Flex item in #game-view */
 #player-bottom.self-area {
-    position: absolute;
- bottom: 0; /* 相对于 #gameArea 的底部 */
-    left: 0;
-    left: 0;
-    right: 0;
+    /* position: static; /* Remove absolute positioning */
     width: 100%;
-    height: auto;
     display: flex;
-    flex-direction: column;
+    flex-direction: column; /* Stack avatar/info above hand */
     align-items: center;
-    padding-bottom: 5px; /* 底部留一点空隙 */
-    z-index: 100; /* 在对手和牌堆之上 */
-    /* background-color: rgba(0, 255, 0, 0.05); /* 调试用 */
+    padding: 5px 0;
+    flex-shrink: 0; /* Prevent shrinking */
+    /* background-color: rgba(0,0,255,0.1); /* Debugging */
 }
-
-.self-area .player-avatar-container {
-    margin-bottom: 3px;
-    background-color: rgba(0,0,0,0.25);
+#player-bottom .player-area-info-container { /* New wrapper for self avatar & details */
+    display: flex;
+    align-items: center;
+    background-color: rgba(0,0,0,0.2);
     padding: 3px 8px;
     border-radius: 5px;
+    margin-bottom: 5px;
 }
+#player-bottom .player-avatar-container { margin-right: 8px; }
+#player-bottom .player-details { text-align: left; }
+
 
 #player-hand-area {
     display: flex;
     justify-content: center;
-    align-items: flex-end;
+    align-items: flex-end; /* Cards align to bottom */
     width: 100%;
-    max-width: 95vw;
+    max-width: 95vw; /* Limit width on very wide screens */
     margin: 0 auto;
-    min-height: 95px;
+    min-height: 95px; /* Ensure space for cards */
     padding: 5px 0;
-    overflow-x: auto;
+    overflow-x: auto; /* Allow horizontal scrolling for many cards */
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: #4a704a #255025;
+    /* background-color: rgba(255,255,0,0.1); /* Debugging */
 }
 #player-hand-area::-webkit-scrollbar { height: 6px; }
 #player-hand-area::-webkit-scrollbar-thumb { background-color: #4a704a; border-radius: 3px; }
 #player-hand-area::-webkit-scrollbar-track { background-color: #255025; }
 
 
-/* 游戏控制栏 - 是 #game-view 的子元素，flex布局中最后一个 */
+/* Game Controls - Flex item at the bottom of #game-view */
 #game-controls {
-    height: 60px;
+    height: 50px; /* Reduced height */
     display: flex;
     justify-content: space-around;
     align-items: center;
@@ -299,48 +345,53 @@ html, body {
     background-color: rgba(0, 0, 0, 0.5);
     width: 100%;
     box-sizing: border-box;
-    flex-shrink: 0; /* 防止被压缩 */
-    z-index: 1100; /* 比 self-area 高 */
+    flex-shrink: 0;
+    z-index: 1100;
 }
 #game-controls button {
-    padding: 8px 15px;
+    padding: 8px 12px; /* Slightly smaller padding */
     font-size: 0.9em;
-    min-width: 70px;
+    min-width: 60px;
     border-radius: 5px;
     border: 1px solid rgba(129, 199, 132, 0.3);
     background-color: rgba(129, 199, 132, 0.15);
     color: #e8f5e9;
     transition: background-color 0.2s, transform 0.1s;
+    cursor: pointer;
 }
 #game-controls button:hover:not(:disabled) { background-color: rgba(129, 199, 132, 0.25); }
 #game-controls button:active:not(:disabled) { transform: scale(0.95); }
 #game-controls button:disabled { background-color: rgba(102, 135, 103, 0.3); color: #81a281; border-color: rgba(102, 135, 103, 0.4); cursor: not-allowed;}
+
 #play-button { background-color: #4caf50; border-color: #388e3c;}
 #play-button:hover:not(:disabled) { background-color: #388e3c;}
 #pass-button { background-color: #ffc107; color: #212529; border-color: #dba000;}
 #pass-button:hover:not(:disabled) { background-color: #e0a800;}
 #hint-button { background-color: #009688; border-color: #00796b;}
 #hint-button:hover:not(:disabled) { background-color: #00796b;}
-#micButton { font-size: 1.2em; padding: 6px 12px; }
-#micButton.active { background-color: #d32f2f; border-color: #b71c1c;}
+#micButton { font-size: 1.2em; padding: 6px 10px; /* Slightly smaller padding */ }
+#micButton.recording { background-color: #d32f2f; border-color: #b71c1c; color:white;}
 
 
-/* 卡牌样式 - 绿色主题调整 */
+/* Card Styles */
 .card {
     width: 60px; height: 90px;
     background-size: cover; background-repeat: no-repeat; background-position: center;
     border: 1px solid #698c69;
     border-radius: 5px;
-    display: inline-block;
+    display: inline-block; /* Or flex-shrink: 0 if parent is flex */
     box-shadow: 1px 1px 4px rgba(0,0,0,0.4);
     position: relative;
-    background-color: #e8f5e9;
+    background-color: #e8f5e9; /* Fallback color */
     transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
     user-select: none;
+    flex-shrink: 0; /* Prevent shrinking in flex container */
 }
-.my-card { margin: 0 -28px; }
-.my-card:first-child { margin-left: 0; }
-.my-card:last-child { margin-right: 0; }
+.my-card {
+    margin: 0 -28px; /* Overlap cards in hand */
+}
+.my-card:first-child { margin-left: 5px; } /* Give first card some space from edge */
+.my-card:last-child { margin-right: 5px; } /* Give last card some space from edge */
 
 .my-card.selectable { cursor: pointer; }
 .my-card.selectable:hover:not(.selected) {
@@ -354,11 +405,11 @@ html, body {
     z-index: 20;
 }
 .my-card.hinted {
-    box-shadow: 0 0 15px 5px #ffeb3b, inset 0 0 0 2px #ffeb3b;
+    box-shadow: 0 0 15px 5px #ffeb3b, inset 0 0 0 2px #ffeb3b; /* Yellow hint */
     z-index: 15;
 }
 
-/* 卡牌发牌动画 */
+/* Card Deal Animation */
 .card.card-in-hand {
     opacity: 0;
     transform: translateY(60px) translateX(0px) rotate(15deg) scale(0.5);
@@ -368,10 +419,13 @@ html, body {
     transform: translateY(0) translateX(0) rotate(0deg) scale(1);
 }
 
-/* 游戏结束遮罩 - 绿色主题 */
+/* Game Over Overlay */
 #gameOverOverlay {
     background-color: rgba(26, 58, 26, 0.85);
     color: #e8f5e9;
+    position: absolute; /* Ensure it covers game view */
+    top:0; left:0; width:100%; height:100%;
+    z-index: 2000; /* Highest z-index */
 }
 .overlay-content {
     background-color: rgba(37, 80, 37, 0.95);
@@ -387,76 +441,78 @@ html, body {
 #gameOverScores .score-plus { color: #a5d6a7; }
 #gameOverScores .score-minus { color: #ef9a9a; }
 #gameOverScores .score-zero { color: #90a4ae; }
-#backToLobbyBtn { padding: 10px 20px; font-size: 1em; background-color: #388e3c; border: none; color: #fff;}
-#backToLobbyBtn:hover { background-color: #2e7d32; }
+#gameOverOverlay #backToLobbyBtn { /* Style for button inside overlay */
+    padding: 10px 20px; font-size: 1em; background-color: #388e3c; border: none; color: #fff;
+    border-radius: 5px; cursor: pointer;
+}
+#gameOverOverlay #backToLobbyBtn:hover { background-color: #2e7d32; }
 
 
-/* 响应式调整 */
+/* Responsive Adjustments */
 @media (max-width: 768px) {
-    #gameInfoBar { padding-top: 4px; padding-bottom: 4px; font-size: 0.75em;}
-    /* #gameArea { padding-top: 30px; } /* gameArea 的 padding-top 根据 infoBar 高度调整 */
-    #game-controls { height: 55px; }
-    /* #player-bottom.self-area 仍然相对于 #gameArea 底部定位，不需要改 bottom */
+    .player-avatar { width: 35px; height: 35px; }
+    .voice-indicator-container { width: 12px; height: 12px; }
+    .voice-indicator { width: 8px; height: 8px; }
+    .playerName { font-size: 0.9em; }
+    .playerRole, .playerInfo { font-size: 0.8em; }
     .card { width: 50px; height: 75px; border-radius: 4px; }
     .my-card { margin: 0 -22px; }
     .center-pile-card { width: 45px; height: 67px; }
-    .player-avatar { width: 30px; height: 30px; }
-    #game-controls button { padding: 7px 12px; font-size: 0.85em; min-width: 60px; }
-    #centerPileArea { top: 42%; }
+    #discarded-cards-area { gap: -20px; }
+    #game-controls { height: 45px; }
+    #game-controls button { padding: 7px 10px; font-size: 0.85em; min-width: 55px; }
+    #micButton { font-size: 1.1em; padding: 6px 8px; }
+    #player-hand-area { min-height: 85px; }
 }
 
 @media (max-width: 480px) {
-    #gameInfoBar { font-size: 0.7em; padding: 3px 6px;}
-    /* #gameArea { padding-top: 25px; } */
-    #game-controls { height: 50px; }
-    .card { width: 38px; height: 57px; border-radius: 3px; }
+    #gameInfoBar { font-size: 0.7em; padding: 3px 6px; min-height: 25px; }
+    .player-avatar { width: 30px; height: 30px; }
+    .voice-indicator-container { width: 10px; height: 10px; }
+    .voice-indicator { width: 7px; height: 7px; }
+    .playerName { font-size: 0.8em; max-width: 80px; }
+    .playerRole, .playerInfo { font-size: 0.7em; }
+    #player-bottom .player-area-info-container { padding: 2px 5px; margin-bottom: 3px; }
+
+    .card { width: 40px; height: 60px; border-radius: 3px; } /* Smaller cards */
     .my-card { margin: 0 -18px; }
     .my-card.selected { transform: translateY(-10px) scale(1.08); }
-    .center-pile-card { width: 34px; height: 51px; }
-    #discarded-cards-area { gap: -12px; min-height: 60px; }
-    .player-avatar { width: 25px; height: 25px; }
-    .playerName { font-size: 0.65em; }
-    .playerRole, .playerInfo { font-size: 0.55em; }
-    #game-controls button { padding: 6px 8px; font-size: 0.75em; min-width: 45px; }
-    #player-hand-area { min-height: 70px; max-width: 100vw; }
-    .voice-indicator-container { width:8px; height:8px; }
-    .voice-indicator { width:6px; height:6px; }
-    .opponent-left { top: 35%; left: 2px; }
-    .opponent-right { top: 35%; right: 2px; }
-    .opponent-top { top: 2px; }
-    #centerPileArea { top: 40%; width: 85%; }
+    .center-pile-card { width: 36px; height: 54px; }
+    #discarded-cards-area { gap: -15px; min-height: 60px; }
+    #lastHandType { font-size: 0.75em; }
+
+    #game-controls { height: 40px; }
+    #game-controls button { padding: 5px 8px; font-size: 0.75em; min-width: 45px; }
+    #micButton { font-size: 1em; padding: 5px 7px; }
+    #player-hand-area { min-height: 70px; max-width: 100vw; } /* Full width for hand */
+    .my-card:first-child { margin-left: 2px; }
+    .my-card:last-child { margin-right: 2px; }
+    
+    #player-top.opponent-area { top: 5px; }
+    #player-left.opponent-area { left: 5px; top: 40%; }
+    #player-right.opponent-area { right: 5px; top: 40%; }
+    #centerPileArea { top: 45%; }
 }
 
 @media (max-height: 450px) and (orientation: landscape) {
-    #gameInfoBar { padding-top: 3px; padding-bottom: 3px; font-size: 0.65em;}
-    /* #gameArea { padding-top: 22px; } */
-    #game-controls { height: 45px; }
+    #gameInfoBar { min-height: 22px; font-size: 0.65em;}
+    .player-avatar { width: 25px; height: 25px; }
+    .voice-indicator-container { width: 8px; height: 8px; }
+    .voice-indicator { width: 5px; height: 5px; }
+     #player-bottom .player-area-info-container { margin-bottom: 2px; }
+
     .card { width: 34px; height: 51px; }
-    .my-card { margin: 0 -16px; }
+    .my-card { margin: 0 -15px; }
     #player-hand-area { min-height: 60px; }
-    .self-area .player-avatar-container { margin-bottom: 1px; padding: 1px 4px; font-size: 0.8em;}
-    #centerPileArea { top: 40%; }
-}
+    .center-pile-card { width: 30px; height: 45px; }
+    #discarded-cards-area { gap: -12px; min-height: 50px; }
 
-/* 为录音按钮添加样式 */
-#micButton.recording {
- background-color: rgba(255, 0, 0, 0.5); /* 录音时变为半透明红色 */
- box-shadow: 0 0 10px rgba(255, 0, 0, 0.7); /* 添加红色光晕效果 */
-}
-
-/* 为语音指示器添加样式 */
-.voice-indicator {
- width: 15px; /* 指示器大小 */
- height: 15px;
- border-radius: 50%; /* 圆形 */
- background-color: rgba(0, 128, 0, 0.3); /* 默认半透明绿色 */
- margin-left: 5px;
- display: inline-block; /* 使其能在文本旁边显示 */
- vertical-align: middle;
- transition: background-color 0.2s, box-shadow 0.2s; /* 添加过渡效果 */
-}
-
-.voice-indicator.active {
- background-color: rgba(0, 255, 0, 0.7); /* 活跃时变为更亮的绿色 */
- box-shadow: 0 0 8px rgba(0, 255, 0, 0.9); /* 添加绿色光晕效果 */
+    #game-controls { height: 35px; }
+    #game-controls button { padding: 4px 6px; font-size: 0.7em; min-width: 40px;}
+    #micButton { font-size: 0.9em; padding: 4px 5px;}
+    
+    #player-top.opponent-area { top: 2px; }
+    #player-left.opponent-area { left: 2px; top: 40%; } /* Might need to push further from center*/
+    #player-right.opponent-area { right: 2px; top: 40%; }
+    #centerPileArea { top: 45%; } /* May need slight adjustment for very short screens */
 }
