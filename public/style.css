@@ -112,18 +112,16 @@ html, body {
 
 /* Game View - Fullscreen Layout & Green Theme */
 #game-view {
-    padding: 0;
+    padding: 0; /* 全屏不需要外边距 */
     background-color: #255025; /* 深绿色牌桌背景 */
-    display: flex; /* 主容器使用flex布局 */
-    flex-direction: column; /* 垂直排列子元素 */
+    display: flex;
+    flex-direction: column;
 }
 
 #gameInfoBar {
-    position: absolute; /* 改为绝对定位，悬浮在顶部，不占空间 */
-    top: 0;
-    left: 0;
-    right: 0;
+    /* position: absolute; /* 它不是 absolute，是 flex item */
     height: auto;
+    min-height: 30px; /* 信息栏最小高度 */
     padding: 6px 12px;
     display: flex;
     justify-content: space-between;
@@ -133,6 +131,7 @@ html, body {
     color: #a5d6a7;
     font-size: 0.8em;
     border-bottom: 1px solid rgba(129, 199, 132, 0.2);
+    flex-shrink: 0; /* 防止被压缩 */
 }
 #infoBarRoomName, #infoBarRoomId, #infoBarCurrentTurn { font-weight: bold; color: #e8f5e9;}
 #leaveRoomButton {
@@ -142,19 +141,18 @@ html, body {
 #leaveRoomButton:hover { background-color: #8c1616; }
 
 #gameArea {
-    flex-grow: 1; /* 占据 game-view 中除了 gameInfoBar(absolute) 和 game-controls(absolute)之外的【所有】剩余空间 */
+    flex-grow: 1; /* 占据 game-view 中除去 gameInfoBar 和 game-controls 的空间 */
     position: relative; /* 作为内部绝对定位元素的基准 */
-    display: block; /* 不再使用 grid 或 flex，内部元素使用 absolute 定位 */
-    padding-top: 35px; /* 为 gameInfoBar 留出空间 (如果InfoBar不是absolute的话，但现在它是了，这个padding主要为视觉) */
-    /* padding-bottom: 60px + 100px; /* 大致为 game-controls 和 self-area 预留空间，但 self-area 也是 absolute，这个可以不设置或小一点 */
+    display: block; /* 内部元素使用 absolute */
     width: 100%;
     box-sizing: border-box;
-    overflow: hidden; /* 避免内容溢出时出现滚动条 */
-    /* background-color: rgba(255,255,0,0.1); /* 调试: gameArea 范围 */
+    overflow: hidden;
+    padding: 5px; /* 内部元素与 gameArea 边缘的间距 */
+    /* background-color: rgba(255,255,0,0.05); /* 调试: gameArea 范围 */
 }
 
 /* 玩家区域通用样式 - 绿色主题 */
-.player-area { /* 此类现在主要用于对手区域和自己的信息区（如果分离） */
+.player-area {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -188,23 +186,22 @@ html, body {
 .playerInfo .card-count { font-weight: bold; }
 
 /* 对手位置调整 - 使用 absolute 定位在 gameArea 内 */
-.opponent-area { /* 给对手区域一个共同的类，方便统一定位方式 */
+.opponent-area {
     position: absolute;
-    /* background-color: rgba(129, 199, 132, 0.08); /* 对手区域可以保留背景，方便调试 */
 }
 .opponent-top {
-    top: 5px; /* 相对于 #gameArea 的顶部 (padding-top 之后) */
+    top: 0; /* 相对于 #gameArea 的顶部 (已包含 gameArea padding) */
     left: 50%;
     transform: translateX(-50%);
 }
 .opponent-left {
-    left: 5px; /* 相对于 #gameArea 的左侧 */
-    top: 40%; /* 大致垂直居中，可微调 */
+    left: 0; /* 相对于 #gameArea 的左侧 */
+    top: 40%;
     transform: translateY(-50%);
 }
 .opponent-right {
-    right: 5px; /* 相对于 #gameArea 的右侧 */
-    top: 40%; /* 大致垂直居中，可微调 */
+    right: 0; /* 相对于 #gameArea 的右侧 */
+    top: 40%;
     transform: translateY(-50%);
 }
 .opponent-left .player-avatar-container,
@@ -220,10 +217,10 @@ html, body {
 /* 中央牌堆 - 使用 absolute 定位在 gameArea 内 */
 #centerPileArea {
     position: absolute;
-    top: 45%; /* 大致垂直居中，需要根据对手和手牌位置微调 */
+    top: 45%; /* 大致垂直居中 */
     left: 50%;
-    transform: translate(-50%, -50%); /* 精确居中 */
-    width: 70%; /* 给牌堆一些宽度 */
+    transform: translate(-50%, -50%);
+    width: 70%;
     max-width: 300px;
     display: flex;
     flex-direction: column;
@@ -231,7 +228,6 @@ html, body {
     justify-content: center;
     padding: 10px;
     min-height: 110px;
-    /* background-color: rgba(0,0,255,0.1); /* 调试用 */
 }
 .last-hand-type { font-size: 0.85em; color: #a5d6a7; margin-bottom: 8px; font-style: italic; text-align: center; }
 #discarded-cards-area {
@@ -249,28 +245,27 @@ html, body {
     border-color: #698c69;
 }
 
-/* 自己区域 (包括头像信息和手牌区) - 定位在屏幕底部，控制栏上方 */
+/* 自己区域 (包括头像信息和手牌区) - HTML中它仍在gameArea内，所以相对于gameArea底部定位 */
 #player-bottom.self-area {
-    position: absolute; /* 相对于 #game-view 定位 */
-    bottom: 60px;      /* 关键: 控制栏的高度 */
+    position: absolute;
+    bottom: 0; /* 相对于 #gameArea 的底部 */
     left: 0;
     right: 0;
     width: 100%;
-    height: auto;       /* 高度由内容决定 */
+    height: auto;
     display: flex;
-    flex-direction: column; /* 头像信息在手牌区上方 */
+    flex-direction: column;
     align-items: center;
-    z-index: 200;       /* 比 gameArea 内容高，但低于 game-controls */
+    padding-bottom: 5px; /* 底部留一点空隙 */
+    z-index: 100; /* 在对手和牌堆之上 */
     /* background-color: rgba(0, 255, 0, 0.05); /* 调试用 */
 }
 
-/* 自己的头像信息部分 */
 .self-area .player-avatar-container {
-    margin-bottom: 3px; /* 与手牌区的间距 */
+    margin-bottom: 3px;
     background-color: rgba(0,0,0,0.25);
     padding: 3px 8px;
     border-radius: 5px;
-    /* 这里可以添加更多样式来美化自己的信息显示 */
 }
 
 #player-hand-area {
@@ -281,7 +276,7 @@ html, body {
     max-width: 95vw;
     margin: 0 auto;
     min-height: 95px;
-    padding: 5px 0; /* 给手牌上下一点空间 */
+    padding: 5px 0;
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
@@ -293,7 +288,7 @@ html, body {
 #player-hand-area::-webkit-scrollbar-track { background-color: #255025; }
 
 
-/* 游戏控制栏 - 固定在屏幕最底部 */
+/* 游戏控制栏 - 是 #game-view 的子元素，flex布局中最后一个 */
 #game-controls {
     height: 60px;
     display: flex;
@@ -303,10 +298,8 @@ html, body {
     background-color: rgba(0, 0, 0, 0.5);
     width: 100%;
     box-sizing: border-box;
-    position: absolute; /* 相对于 #game-view 定位 */
-    bottom: 0;
-    left: 0;
-    z-index: 1100; /* 最高层 */
+    flex-shrink: 0; /* 防止被压缩 */
+    z-index: 1100; /* 比 self-area 高 */
 }
 #game-controls button {
     padding: 8px 15px;
@@ -400,22 +393,21 @@ html, body {
 /* 响应式调整 */
 @media (max-width: 768px) {
     #gameInfoBar { padding-top: 4px; padding-bottom: 4px; font-size: 0.75em;}
-    #gameArea { padding-top: 30px; /* 减少为InfoBar留的空间 */ }
+    /* #gameArea { padding-top: 30px; } /* gameArea 的 padding-top 根据 infoBar 高度调整 */
     #game-controls { height: 55px; }
-    #player-bottom.self-area { bottom: 55px; }
+    /* #player-bottom.self-area 仍然相对于 #gameArea 底部定位，不需要改 bottom */
     .card { width: 50px; height: 75px; border-radius: 4px; }
     .my-card { margin: 0 -22px; }
     .center-pile-card { width: 45px; height: 67px; }
     .player-avatar { width: 30px; height: 30px; }
     #game-controls button { padding: 7px 12px; font-size: 0.85em; min-width: 60px; }
-    #centerPileArea { top: 42%; /* 微调中心牌堆在平板上的垂直位置 */ }
+    #centerPileArea { top: 42%; }
 }
 
 @media (max-width: 480px) {
     #gameInfoBar { font-size: 0.7em; padding: 3px 6px;}
-    #gameArea { padding-top: 25px; /* 再减少一点 */ }
+    /* #gameArea { padding-top: 25px; } */
     #game-controls { height: 50px; }
-    #player-bottom.self-area { bottom: 50px; }
     .card { width: 38px; height: 57px; border-radius: 3px; }
     .my-card { margin: 0 -18px; }
     .my-card.selected { transform: translateY(-10px) scale(1.08); }
@@ -428,19 +420,19 @@ html, body {
     #player-hand-area { min-height: 70px; max-width: 100vw; }
     .voice-indicator-container { width:8px; height:8px; }
     .voice-indicator { width:6px; height:6px; }
-    .opponent-left { top: 35%; } /* 手机上对手位置可能需要更靠上或调整比例 */
-    .opponent-right { top: 35%; }
-    #centerPileArea { top: 40%; width: 85%; /* 手机上牌堆区更宽，更靠上 */}
+    .opponent-left { top: 35%; left: 2px; }
+    .opponent-right { top: 35%; right: 2px; }
+    .opponent-top { top: 2px; }
+    #centerPileArea { top: 40%; width: 85%; }
 }
 
 @media (max-height: 450px) and (orientation: landscape) {
     #gameInfoBar { padding-top: 3px; padding-bottom: 3px; font-size: 0.65em;}
-    #gameArea { padding-top: 22px; }
+    /* #gameArea { padding-top: 22px; } */
     #game-controls { height: 45px; }
-    #player-bottom.self-area { bottom: 45px; }
     .card { width: 34px; height: 51px; }
     .my-card { margin: 0 -16px; }
     #player-hand-area { min-height: 60px; }
     .self-area .player-avatar-container { margin-bottom: 1px; padding: 1px 4px; font-size: 0.8em;}
-    #centerPileArea { top: 40%; /* 横屏手机上牌堆位置 */ }
+    #centerPileArea { top: 40%; }
 }
