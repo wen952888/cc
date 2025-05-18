@@ -14,7 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentHint = null;
     let currentHintIndexFromServer = 0;
     let initialReauthAttempted = false;
-    let amIReady = false; // Track my ready state locally
 
     // Views
     const loadingView = document.getElementById('loadingView');
@@ -38,12 +37,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Lobby elements
     const roomNameInput = document.getElementById('roomNameInput');
+    const roomPasswordInput = document.getElementById('roomPasswordInput');
     const createRoomButton = document.getElementById('createRoomButton');
     const roomsListUl = document.getElementById('rooms');
     const lobbyUsernameSpan = document.getElementById('lobbyUsername');
     const refreshRoomListButton = document.getElementById('refreshRoomListButton');
     const logoutButtonLobby = document.getElementById('logoutButtonLobby');
-    const roomPasswordInput = document.getElementById('roomPasswordInput');
 
     // Game elements
     const playerHandArea = document.getElementById('player-hand-area');
@@ -53,8 +52,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const hintButton = document.getElementById('hint-button');
     const micButton = document.getElementById('micButton');
     const leaveRoomButton = document.getElementById('leaveRoomButton');
-    const readyButton = document.getElementById('ready-button'); // New ready button
+    const readyButton = document.getElementById('ready-button');
+    const infoBarRoomStatus = document.getElementById('infoBarRoomStatus');
 
+    // Game Over Overlay elements
     const gameOverOverlay = document.getElementById('gameOverOverlay');
     const gameOverTitle = document.getElementById('gameOverTitle');
     const gameOverReasonText = document.getElementById('gameOverReasonText');
@@ -71,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (view) {
                 if (view.id === targetViewId) {
                     view.classList.remove('hidden-view');
-                    view.style.display = (view.id === 'game-view' || view.id === 'loadingView' || view.id === 'auth-view' || view.id === 'lobby-view') ? 'flex' : 'block';
+                    view.style.display = 'flex'; // All main views are flex now
                     if (view.id === 'game-view') view.style.flexDirection = 'column';
                 } else {
                     view.classList.add('hidden-view');
@@ -80,6 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
     switchToView('loadingView');
 
     const storedUserId = localStorage.getItem('userId');
@@ -127,42 +129,56 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function handleAuthSuccess(data) {
-        if (myUserId === data.userId && currentRoomId === data.roomState?.roomId && lobbyView.style.display === 'none' && authView.style.display === 'none') {
-            if (data.roomState) currentRoomState = data.roomState;
-            console.log(`Auth success (already authenticated or state consistent) for user: ${data.username} (ID: ${data.userId})`);
-            if(currentRoomState) displayGameState(currentRoomState); // Re-render in case small details changed
+        if (myUserId === data.userId && currentRoomId === data.roomState?.roomId && authView.style.display === 'none' && loadingView.style.display === 'none') {
+             if (data.roomState) {
+                currentRoomState = data.roomState; // Still update state if minor changes
+                // displayGameState(currentRoomState); // Optionally re-render
+            }
+            console.log(`Auth success (state potentially consistent) for user: ${data.username} (ID: ${data.userId})`);
+            // If already in game or lobby, ensure the view is correct
+            if (currentRoomId && gameView.style.display === 'none') switchToView('game-view');
+            else if (!currentRoomId && lobbyView.style.display === 'none') switchToView('lobby-view');
             return;
         }
-        myUserId = data.userId; myUsername = data.username; localStorage.setItem('userId', data.userId);
-        console.log(`Auth success for user: ${myUsername} (ID: ${myUserId})`);
-        if(lobbyUsernameSpan) lobbyUsernameSpan.textContent = myUsername; clearAuthError();
+
+        myUserId = data.userId; myUsername = data.username;
+        localStorage.setItem('userId', data.userId);
+        if(lobbyUsernameSpan) lobbyUsernameSpan.textContent = myUsername;
+        clearAuthError(); console.log(`Auth success for user: ${myUsername} (ID: ${myUserId})`);
+
         if (data.roomState && data.roomState.roomId) {
             currentRoomId = data.roomState.roomId;
+            console.log(`User was in room ${currentRoomId}, displaying game state.`);
             displayGameState(data.roomState, true); switchToView('game-view');
         } else {
             if (currentRoomId) { currentRoomId = null; currentRoomState = null; }
+            console.log('User not in a room, switching to lobby.');
             switchToView('lobby-view'); socket.emit('listRooms', updateRoomList);
         }
     }
     function handleAuthResponse(response) {
         if (response.success) handleAuthSuccess(response);
-        else showAuthError(response.message || "认证失败，请重试。");
+        else { showAuthError(response.message || "认证失败，请重试。"); localStorage.removeItem('userId');}
     }
 
     socket.on('connect', () => {
         console.log('Connected to server with ID:', socket.id);
         const lsUserId = localStorage.getItem('userId');
         if (!initialReauthAttempted && !myUserId && lsUserId) {
+            console.log("Connect event: Re-emitting reauthenticate");
             initialReauthAttempted = true;
             socket.emit('reauthenticate', lsUserId, (response) => {
                 if (response.success) handleAuthSuccess(response);
                 else {
                     localStorage.removeItem('userId'); localStorage.removeItem('username');
-                    if (authView.style.display === 'none' && gameView.style.display === 'none' && lobbyView.style.display === 'none') switchToView('auth-view');
+                    if (authView.style.display === 'none' && gameView.style.display === 'none' && lobbyView.style.display === 'none') {
+                        switchToView('auth-view');
+                    }
                 }
             });
         } else if (loadingView.style.display !== 'none' && !myUserId && !lsUserId) switchToView('auth-view');
         else if (myUserId) {
+            console.log("Socket reconnected, user was logged in. Requesting sync data.");
             if (currentRoomId) {
                 socket.emit('requestGameState', (state) => {
                     if (state) { currentRoomState = state; displayGameState(state); }
@@ -173,222 +189,206 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (authView.style.display !== 'none' || loadingView.style.display !== 'none') switchToView('lobby-view');
             }
         }
+         initialReauthAttempted = true; // After connect, always mark initial reauth as "done" for this connection lifecycle
     });
-    socket.on('disconnect', (reason) => { console.log('Disconnected:', reason); alert('与服务器断开: ' + reason); switchToView('loadingView'); const p=loadingView.querySelector('p'); if(p)p.textContent='已断开';});
-    socket.on('connect_error', (err) => { console.error('Connection error:', err.message); switchToView('loadingView'); const p=loadingView.querySelector('p'); if(p)p.textContent=`连接错误: ${err.message}`; });
-    if (createRoomButton) createRoomButton.addEventListener('click', () => { /* ... (保持不变) ... */ });
+    socket.on('disconnect', (reason) => { console.log('Disconnected from server:', reason); alert('与服务器断开连接: ' + reason + ". 请刷新页面重试。"); switchToView('loadingView'); const p=loadingView.querySelector('p'); if(p)p.textContent='已断开连接...'; initialReauthAttempted = false; /* Allow reauth on next connect */ });
+    socket.on('connect_error', (err) => { console.error('Connection error:', err.message); switchToView('loadingView'); const p=loadingView.querySelector('p'); if(p)p.textContent=`连接错误: ${err.message}.`; });
+
+    if (createRoomButton) createRoomButton.addEventListener('click', () => { /* ... (Lobby logic - unchanged) ... */ });
     socket.on('roomListUpdate', updateRoomList);
-    function updateRoomList(rooms) { /* ... (保持不变, 但可以考虑在房间信息中显示准备人数) ... */ }
-    if (refreshRoomListButton) refreshRoomListButton.addEventListener('click', () => socket.emit('listRooms', updateRoomList));
-    if (logoutButtonLobby) logoutButtonLobby.addEventListener('click', () => { /* ... initialReauthAttempted = false; ... */ });
+    function updateRoomList(rooms) { /* ... (Lobby logic - unchanged) ... */ }
+    if (refreshRoomListButton) refreshRoomListButton.addEventListener('click', () => socket.emit('listRooms', updateRoomList) );
+    if (logoutButtonLobby) logoutButtonLobby.addEventListener('click', () => { /* ... (Lobby logic - set initialReauthAttempted to false) ... */ localStorage.removeItem('userId'); localStorage.removeItem('username'); myUserId = null; myUsername = null; currentRoomId = null; currentRoomState = null; if(loginForm) loginForm.reset(); if(registerForm) registerForm.reset(); switchToView('auth-view'); initialReauthAttempted = false; });
 
-    socket.on('gameStarted', (gameState) => {
-        console.log('Game started event received!', gameState);
-        amIReady = false; // Reset ready state on game start
-        currentRoomState = gameState;
-        displayGameState(gameState, true);
-        switchToView('game-view');
-        const myPlayer = gameState.players.find(p => p.userId === myUserId);
-        alert("游戏开始！" + (myPlayer && myPlayer.role ? `你的身份是: ${myPlayer.role}` : ''));
-    });
-    socket.on('gameStateUpdate', (gameState) => { /* ... (保持不变) ... */ });
-    socket.on('allPlayersResetReady', () => { // Server might send this if game start failed
-        console.log("All players readiness reset by server.");
-        amIReady = false;
-        if (currentRoomState && currentRoomState.players) {
-            currentRoomState.players.forEach(p => p.isReady = false);
-            displayGameState(currentRoomState);
-        }
-    });
+    if (readyButton) {
+        readyButton.addEventListener('click', () => {
+            if (!currentRoomState || !myUserId) return;
+            const myPlayer = currentRoomState.players.find(p => p.userId === myUserId);
+            if (!myPlayer || currentRoomState.status !== 'waiting') return; // Can only ready up in 'waiting' state
+            const newReadyState = !myPlayer.isReady;
+            socket.emit('playerReady', newReadyState, (response) => {
+                if (!response || !response.success) alert(`设置准备状态失败: ${response ? response.message : '未知错误'}`);
+            });
+        });
+    }
 
-
+    socket.on('gameStarted', (gameState) => { console.log('Game started!', gameState); currentRoomState = gameState; displayGameState(gameState, true); switchToView('game-view'); const mp=gameState.players.find(p=>p.userId===myUserId); alert("游戏开始！"+(mp&&mp.role?`你的身份是: ${mp.role}`:'')); });
+    socket.on('gameStateUpdate', (gameState) => { console.log('Game state update:', gameState); currentRoomState = gameState; displayGameState(gameState, false); });
     socket.on('playerReadyUpdate', ({ userId, isReady }) => {
-        console.log(`Player ${userId} ready status: ${isReady}`);
+        console.log(`Player ${userId} ready: ${isReady}`);
         if (currentRoomState && currentRoomState.players) {
             const player = currentRoomState.players.find(p => p.userId === userId);
-            if (player) player.isReady = isReady;
-            if (userId === myUserId) amIReady = isReady; // Update local tracked ready state
-            displayGameState(currentRoomState);
+            if (player) {
+                player.isReady = isReady;
+                updatePlayerReadyStatusUI(player.userId, isReady); // Use userId for robust update
+                if (userId === myUserId && readyButton) {
+                    readyButton.textContent = isReady ? "取消" : "准备"; // Shorter text
+                    readyButton.classList.toggle('cancel-ready', isReady);
+                }
+            }
+        }
+    });
+    socket.on('allPlayersResetReady', () => {
+        console.log('All players readiness reset');
+        if (currentRoomState && currentRoomState.players) {
+            currentRoomState.players.forEach(p => { p.isReady = false; updatePlayerReadyStatusUI(p.userId, false); });
+            if (myUserId && readyButton) { readyButton.textContent = "准备"; readyButton.classList.remove('cancel-ready'); }
         }
     });
 
-    socket.on('invalidPlay', (data) => alert(`无效操作: ${data.message}`));
-    socket.on('gameOver', (data) => {
-        console.log('Game Over:', data);
-        amIReady = false; // Reset ready state on game over, for next game
-        currentRoomState = { ...(currentRoomState || {}), ...data, gameFinished: true, gameStarted: false, currentPlayerId: null };
-        displayGameState(currentRoomState);
-    });
-
-    function handleLeaveRoomAndReturnToLobby() { /* ... amIReady = false; ... */ }
+    socket.on('invalidPlay', (data) => alert(`无效操作: ${data.message}`) );
+    socket.on('gameOver', (data) => { console.log('Game Over:', data); currentRoomState = { ...(currentRoomState || {}), ...data, gameFinished: true, gameStarted: false, currentPlayerId: null }; displayGameState(currentRoomState); });
+    function handleLeaveRoomAndReturnToLobby() { /* ... (Game logic - unchanged) ... */ }
     if (leaveRoomButton) leaveRoomButton.addEventListener('click', handleLeaveRoomAndReturnToLobby);
     if (backToLobbyBtnOverlay) backToLobbyBtnOverlay.addEventListener('click', handleLeaveRoomAndReturnToLobby);
 
-    if (readyButton) readyButton.addEventListener('click', () => {
-        if (!currentRoomId) {
-            alert("请先加入一个房间。");
-            return;
-        }
-        if (currentRoomState && (currentRoomState.status === 'playing' || currentRoomState.status === 'finished')) {
-            // If game is over and we want "ready for next game"
-            if (currentRoomState.status === 'finished') {
-                 socket.emit('playerReady', !amIReady, (response) => { // Toggle ready for next game
-                    if (!response.success) alert("操作失败: " + response.message);
-                    // amIReady will be updated via 'playerReadyUpdate'
-                });
-            } else {
-                alert("游戏已开始，无法更改准备状态。");
-            }
-            return;
-        }
-
-        // Default behavior: toggle ready state for waiting room
-        socket.emit('playerReady', !amIReady, (response) => {
-            if (response.success) {
-                // amIReady = !amIReady; // State will be updated by server via 'playerReadyUpdate'
-                // updateReadyButtonVisuals(); // Update button immediately or wait for server event
-            } else {
-                alert("操作失败: " + response.message);
-            }
-        });
-    });
-
-
-    if (playButton) playButton.addEventListener('click', () => { /* ... (保持不变) ... */ });
-    if (passButton) passButton.addEventListener('click', () => { /* ... (保持不变) ... */ });
-    if (hintButton) hintButton.addEventListener('click', () => { /* ... (保持不变) ... */ });
+    if (playButton) playButton.addEventListener('click', () => { /* ... (Game logic - unchanged) ... */ });
+    if (passButton) passButton.addEventListener('click', () => { /* ... (Game logic - unchanged) ... */ });
+    if (hintButton) hintButton.addEventListener('click', () => { /* ... (Game logic - unchanged) ... */ });
 
     function cardObjectToKey(card) { return `${card.rank}${card.suit}`; }
-    function highlightHintedCards(hintedCardsArray) { /* ... (保持不变) ... */ }
+    function highlightHintedCards(hintedCardsArray) { /* ... (Game logic - unchanged) ... */ }
 
     function displayGameState(state, animateHandOnDisplay = false) {
-        if (!state) { /* ... (保持不变) ... */ }
+        if (!state) { console.warn("displayGameState: null state"); if(myUserId)switchToView('lobby-view');else switchToView('auth-view'); return; }
         currentRoomState = state;
         const myPlayer = state.players ? state.players.find(p => p.userId === myUserId) : null;
 
-        const infoBarRoomName = document.getElementById('infoBarRoomName');
-        const infoBarRoomId = document.getElementById('infoBarRoomId');
-        const infoBarRoomStatus = document.getElementById('infoBarRoomStatus'); // New
-        const infoBarCurrentTurn = document.getElementById('infoBarCurrentTurn');
-        if (infoBarRoomName) infoBarRoomName.textContent = state.roomName || '未知';
-        if (infoBarRoomId) infoBarRoomId.textContent = state.roomId || '----';
-        if (infoBarRoomStatus) infoBarRoomStatus.textContent = state.status === 'waiting' ? '等待中' : (state.status === 'playing' ? '游戏中' : '已结束'); // New
-        let currentTurnPlayerName = "N/A";
-        if (state.currentPlayerId && !state.gameFinished) { /* ... (保持不变) ... */ }
-        if (infoBarCurrentTurn) infoBarCurrentTurn.textContent = currentTurnPlayerName;
+        if (infoBarRoomStatus) infoBarRoomStatus.textContent = state.status === 'waiting' ? '等待中' : (state.status === 'playing' ? '游戏中' : (state.gameFinished ? '已结束' : state.status));
+        const infoBarCurrent = document.getElementById('infoBarCurrentTurn');
+        if(infoBarCurrent) {
+            const cPlayer = state.players.find(p => p.userId === state.currentPlayerId);
+            infoBarCurrent.textContent = cPlayer ? cPlayer.username : (state.gameFinished ? '游戏结束' : 'N/A');
+        }
 
-        // Update My Info (including ready status)
+
         const myInfoInBar = document.getElementById('my-info-in-bar');
         if (myInfoInBar && myPlayer) {
             myInfoInBar.dataset.playerId = myPlayer.userId;
             const myNameEl = myInfoInBar.querySelector('#myPlayerName');
             const myStatusEl = myInfoInBar.querySelector('#myPlayerStatus .card-count');
-            const myReadyStatusEl = myInfoInBar.querySelector('#myPlayerStatus .player-ready-status'); // New
+            const myReadyEl = myInfoInBar.querySelector('.player-ready-status');
             if (myNameEl) myNameEl.textContent = myPlayer.username;
             if (myStatusEl) myStatusEl.textContent = myPlayer.handCount !== undefined ? myPlayer.handCount : '?';
-            if (myReadyStatusEl) { // New
-                myReadyStatusEl.textContent = myPlayer.isReady ? "(已准备)" : "(未准备)";
-                myReadyStatusEl.className = myPlayer.isReady ? 'player-ready-status ready' : 'player-ready-status';
+            if (myReadyEl) {
+                myReadyEl.textContent = myPlayer.isReady ? "✓ 已准备" : "✗ 未准备";
+                myReadyEl.className = `player-ready-status ${myPlayer.isReady ? 'ready' : 'not-ready'}`;
+                myReadyEl.style.display = state.status === 'waiting' ? 'inline-block' : 'none';
             }
             myInfoInBar.classList.toggle('current-turn', state.currentPlayerId === myPlayer.userId && !state.gameFinished);
             myInfoInBar.classList.toggle('player-finished', !!myPlayer.finished);
             myInfoInBar.classList.toggle('player-disconnected', !myPlayer.connected);
         }
 
-        // Update Opponents UI (including ready status)
-        if (myPlayer && state.players && state.players.length === 4) { /* ... */ }
-        else { /* ... */ }
-        const opponentAreas = [document.getElementById('player-top'), document.getElementById('player-left'), document.getElementById('player-right')];
-        const otherPlayers = state.players ? state.players.filter(p => p.userId !== myUserId) : [];
-
-        // Simplified assignment for now, refine with slot logic later if needed
-        opponentAreas.forEach((area, index) => {
-            if (area) {
-                updateOpponentUIElement(area, otherPlayers[index], state.currentPlayerId, state.gameFinished);
+        const opponentSlotMap = {}; // { 'player-top': playerObj, ... }
+        if (myPlayer && state.players.length === 4) {
+            const mySlot = myPlayer.slot;
+            const numPlayers = 4;
+            const relativeSlots = { top: (mySlot + 2) % numPlayers, left: (mySlot + 3) % numPlayers, right: (mySlot + 1) % numPlayers };
+            for (const posKey in relativeSlots) {
+                opponentSlotMap[posKey] = state.players.find(p => p.slot === relativeSlots[posKey] && p.userId !== myUserId);
             }
+        } else { // Fallback if not 4 players or myPlayer missing
+            const otherPlayers = state.players.filter(p => p.userId !== myUserId);
+            if (otherPlayers[0]) opponentSlotMap['top'] = otherPlayers[0];
+            if (otherPlayers[1]) opponentSlotMap['left'] = otherPlayers[1];
+            if (otherPlayers[2]) opponentSlotMap['right'] = otherPlayers[2];
+        }
+        ['top', 'left', 'right'].forEach(posKey => {
+            const areaElement = document.getElementById(`player-${posKey}`);
+            updateOpponentUIElement(areaElement, opponentSlotMap[posKey], state.currentPlayerId, state.gameFinished, state.status);
         });
 
 
-        // Update button states based on game status
-        if (readyButton) {
-            if (state.status === 'waiting') {
-                readyButton.disabled = false;
-                readyButton.textContent = amIReady ? "取消准备" : "准备";
-                readyButton.classList.toggle('is-ready', amIReady);
-            } else if (state.status === 'finished') {
-                // For "ready for next game" logic if implemented
-                // readyButton.disabled = false;
-                // readyButton.textContent = amIReady ? "取消下局" : "准备下局";
-                // readyButton.classList.toggle('is-ready', amIReady);
-                 readyButton.disabled = true; // Temporarily disable after game over, until explicit "new game" flow
-                 readyButton.textContent = "准备";
-                 readyButton.classList.remove('is-ready');
-            } else { // Playing
-                readyButton.disabled = true;
-                readyButton.textContent = "准备";
-                readyButton.classList.remove('is-ready');
-            }
-        }
-
         if (myPlayer) {
-            const canPlay = state.currentPlayerId === myUserId && !state.gameFinished && myPlayer.connected && !myPlayer.finished;
-            if (playButton) playButton.style.display = (state.status === 'playing' && canPlay) ? 'inline-block' : 'none';
-            if (passButton) passButton.style.display = (state.status === 'playing' && canPlay && !state.isFirstTurn && state.lastHandInfo && state.lastPlayerWhoPlayedId !== myUserId) ? 'inline-block' : 'none';
-            if (hintButton) hintButton.style.display = (state.status === 'playing' && canPlay) ? 'inline-block' : 'none';
+            updatePlayerHandUI(myPlayer.hand, state.status === 'playing' && state.currentPlayerId === myUserId && myPlayer.connected && !myPlayer.finished, animateHandOnDisplay);
+            const isWaiting = state.status === 'waiting';
+            const isPlaying = state.status === 'playing';
+            if(readyButton) {
+                readyButton.style.display = isWaiting && !state.gameFinished ? 'inline-block' : 'none';
+                readyButton.disabled = state.gameFinished || (state.players.length < 2 && isWaiting); // Example: disable if not enough players
+                readyButton.textContent = myPlayer.isReady ? "取消" : "准备";
+                readyButton.classList.toggle('cancel-ready', myPlayer.isReady);
+            }
+            if (hintButton) hintButton.style.display = isPlaying ? 'inline-block' : 'none';
+            if (passButton) passButton.style.display = isPlaying ? 'inline-block' : 'none';
+            if (playButton) playButton.style.display = isPlaying ? 'inline-block' : 'none';
+
+            if (playButton) playButton.disabled = !(isPlaying && state.currentPlayerId === myUserId && myPlayer.connected && !myPlayer.finished);
+            if (passButton) passButton.disabled = !(isPlaying && state.currentPlayerId === myUserId && myPlayer.connected && !myPlayer.finished && !state.isFirstTurn && state.lastHandInfo && state.lastPlayerWhoPlayedId !== myUserId);
+            if (hintButton) hintButton.disabled = !(isPlaying && state.currentPlayerId === myUserId && myPlayer.connected && !myPlayer.finished);
             if (micButton) micButton.disabled = state.gameFinished || !myPlayer.connected;
-            updatePlayerHandUI(myPlayer.hand, canPlay, animateHandOnDisplay);
         } else {
             updatePlayerHandUI([], false, false);
-            if (playButton) playButton.style.display = 'none';
-            if (passButton) passButton.style.display = 'none';
-            if (hintButton) hintButton.style.display = 'none';
-            if (micButton) micButton.disabled = true;
+            [readyButton, hintButton, passButton, playButton, micButton].forEach(btn => { if(btn) {btn.style.display = 'none'; btn.disabled = true;} });
         }
-        if(playButton && state.status !== 'playing') playButton.style.display = 'none';
-        if(passButton && state.status !== 'playing') passButton.style.display = 'none';
-        if(hintButton && state.status !== 'playing') hintButton.style.display = 'none';
-
 
         updateCenterPileUI(state.centerPile, state.lastHandInfo);
-
-        if (state.gameFinished) { /* ... (Game Over Overlay logic - 保持不变) ... */ }
-        else { /* ... */ }
+        if (gameOverOverlay) { /* ... (Game Over Overlay logic - unchanged) ... */ }
     }
 
-    function updateOpponentUIElement(areaElement, playerData, currentTurnPlayerId, isGameFinished) {
+    function updateOpponentUIElement(areaElement, playerData, currentTurnPlayerId, isGameFinished, roomStatus) {
         if (!areaElement) return;
-        const nameElement = areaElement.querySelector('.playerName');
-        const roleElement = areaElement.querySelector('.playerRole');
-        const countElement = areaElement.querySelector('.playerInfo .card-count');
-        const readyStatusEl = areaElement.querySelector('.playerInfo .player-ready-status'); // New
+        const nameEl = areaElement.querySelector('.playerName');
+        const roleEl = areaElement.querySelector('.playerRole');
+        const countEl = areaElement.querySelector('.playerInfo .card-count');
+        const readyEl = areaElement.querySelector('.player-ready-status');
 
         if (playerData) {
             areaElement.dataset.playerId = playerData.userId;
-            if (nameElement) nameElement.textContent = playerData.username;
-            if (roleElement) roleElement.textContent = playerData.role ? `(${playerData.role})` : '';
-            if (countElement) countElement.textContent = playerData.handCount !== undefined ? playerData.handCount : '?';
-            if (readyStatusEl) { // New
-                readyStatusEl.textContent = playerData.isReady ? "(已准备)" : "(未准备)";
-                readyStatusEl.className = playerData.isReady ? 'player-ready-status ready' : 'player-ready-status';
+            if(nameEl) nameEl.textContent = playerData.username;
+            if(roleEl) roleEl.textContent = playerData.role ? `(${playerData.role})` : '';
+            if(countEl) countEl.textContent = playerData.handCount !== undefined ? playerData.handCount : '?';
+            if(readyEl) {
+                readyEl.textContent = playerData.isReady ? "✓ 已准备" : "✗ 未准备";
+                readyEl.className = `player-ready-status ${playerData.isReady ? 'ready' : 'not-ready'}`;
+                readyEl.style.display = roomStatus === 'waiting' ? 'inline-block' : 'none';
             }
             areaElement.classList.toggle('current-turn', currentTurnPlayerId === playerData.userId && !isGameFinished);
             areaElement.classList.toggle('player-finished', !!playerData.finished);
             areaElement.classList.toggle('player-disconnected', !playerData.connected);
             areaElement.style.opacity = playerData.connected ? '1' : '0.5';
-        } else { /* ... (保持不变) ... */ }
+        } else {
+            if(nameEl) nameEl.textContent = '等待玩家...'; if(roleEl) roleEl.textContent = ''; if(countEl) countEl.textContent = '?';
+            if(readyEl) readyEl.style.display = 'none';
+            areaElement.classList.remove('current-turn', 'player-finished', 'player-disconnected');
+            areaElement.removeAttribute('data-player-id'); areaElement.style.opacity = '0.7';
+        }
     }
 
-    function updatePlayerHandUI(handCards, isMyTurn, animate = false) { /* ... (保持不变) ... */ }
-    function toggleCardSelection(cardDiv, cardData) { /* ... (保持不变) ... */ }
-    function updateCenterPileUI(centerPileCards, lastHandInfoData) { /* ... (保持不变) ... */ }
-    function createCardElement(cardData) { /* ... (保持不变) ... */ }
+    function updatePlayerReadyStatusUI(pUserId, isReady) { // Changed param to pUserId
+        let targetArea;
+        if (pUserId === myUserId) {
+            targetArea = document.getElementById('my-info-in-bar');
+        } else {
+            targetArea = document.querySelector(`.opponent-area[data-player-id="${pUserId}"]`);
+        }
+        if (targetArea) {
+            const readyStatusElement = targetArea.querySelector('.player-ready-status');
+            if (readyStatusElement) {
+                readyStatusElement.textContent = isReady ? "✓ 已准备" : "✗ 未准备";
+                readyStatusElement.className = `player-ready-status ${isReady ? 'ready' : 'not-ready'}`;
+                readyStatusElement.style.display = currentRoomState && currentRoomState.status === 'waiting' ? 'inline-block' : 'none';
+            }
+        }
+    }
+    function updatePlayerHandUI(handCards, isMyTurn, animate = false) { /* ... (Game logic - unchanged from previous full client.js) ... */ }
+    function toggleCardSelection(cardDiv, cardData) { /* ... (Game logic - unchanged) ... */ }
+    function updateCenterPileUI(centerPileCards, lastHandInfoData) { /* ... (Game logic - unchanged) ... */ }
+    function createCardElement(cardData) { /* ... (Game logic - unchanged) ... */ }
 
-    // Voice Functionality
-    async function handleVoicePress(event) { /* ... (保持不变, 包含麦克风错误处理) ... */ }
-    function handleVoiceRelease(event) { /* ... (保持不变) ... */ }
-    function findSpeakingPlayerArea(speakerUserId) { /* ... (保持不变) ... */ }
-    socket.on('playerStartedSpeaking', ({ userId, username }) => { /* ... (保持不变) ... */ });
-    socket.on('playerStoppedSpeaking', ({ userId }) => { /* ... (保持不变) ... */ });
-    socket.on('receiveVoiceMessage', (data) => { /* ... (保持不变) ... */ });
+    // --- Voice Functionality ---
+    if (micButton) { /* ... (Voice logic - unchanged from previous full client.js) ... */ }
+    async function handleVoicePress(event) { /* ... (Voice logic - unchanged, with navigator.mediaDevices check) ... */ }
+    function handleVoiceRelease(event) { /* ... (Voice logic - unchanged) ... */ }
+    function findSpeakingPlayerArea(speakerUserId) { /* ... (Voice logic - unchanged) ... */ }
+    socket.on('playerStartedSpeaking', ({ userId, username }) => { /* ... (Voice logic - unchanged) ... */ });
+    socket.on('playerStoppedSpeaking', ({ userId }) => { /* ... (Voice logic - unchanged) ... */ });
+    socket.on('receiveVoiceMessage', (data) => { /* ... (Voice logic - unchanged) ... */ });
 
 }); // END DOMContentLoaded
+
+// Ensure the placeholder functions are defined if you copy-pasted partial client.js before
+// For brevity, using the ones from the last complete client.js provided.
+// Make sure updatePlayerHandUI, toggleCardSelection, updateCenterPileUI, createCardElement,
+// and all voice functions are present and correct.
