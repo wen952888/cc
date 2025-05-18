@@ -525,7 +525,7 @@ function renderPlayerCards(containerParam, playerData, isMe, isMyTurnAndCanPlay)
         targetContainer = containerParam;
         if (!targetContainer) { console.error(`[DEBUG] renderPlayerCards 对手 (${playerData.username}): 传入的容器为null。`); return; }
         targetContainer.innerHTML = '';
-
+        
         if (playerData.finished) {
             targetContainer.innerHTML = '<span style="color:#888; font-style:italic;">已出完</span>';
         } else if (playerData.handCount > 0) {
@@ -536,26 +536,29 @@ function renderPlayerCards(containerParam, playerData, isMe, isMyTurnAndCanPlay)
             const visibleOffset = 10; // 每张后续卡牌露出的像素值
 
             const maxVisibleRenderedCards = 10; // 最多实际渲染的卡牌DOM元素数量
-            const numToRender = Math.min(playerData.handCount, maxVisibleRenderedCards);
+            
+            // 增加条件判断：只在手牌数量大于0且玩家未完成时渲染
+            if (playerData.handCount > 0 && !playerData.finished) {
+                const numToRender = Math.min(playerData.handCount, maxVisibleRenderedCards);
 
-            for (let i = 0; i < numToRender; i++) {
-                const cardElement = renderCard(null, true, false); // true 表示背面
-                cardElement.style.left = `${i * visibleOffset}px`;
-                cardElement.style.zIndex = i;
-                targetContainer.appendChild(cardElement);
-            }
+                for (let i = 0; i < numToRender; i++) {
+                    const cardElement = renderCard(null, true, false); // true 表示背面
+                    cardElement.style.left = `${i * visibleOffset}px`;
+                    cardElement.style.zIndex = i;
+                    targetContainer.appendChild(cardElement);
+                }
 
-            let handCountEl = targetContainer.closest('.playerArea')?.querySelector('.hand-count-display');
-            if (!handCountEl) {
-                handCountEl = document.createElement('div');
-                handCountEl.classList.add('hand-count-display');
-                const playerAreaEl = targetContainer.closest('.playerArea');
-                if (playerAreaEl) playerAreaEl.appendChild(handCountEl);
-            }
-            if (handCountEl) handCountEl.textContent = `${playerData.handCount} 张`;
-
-            if (playerData.handCount > numToRender && handCountEl) {
-                // handCountEl.textContent += ` (+${playerData.handCount - numToRender})`; // 更明确的提示
+                let handCountEl = targetContainer.closest('.playerArea')?.querySelector('.hand-count-display');
+                if (!handCountEl) {
+                    handCountEl = document.createElement('div');
+                    handCountEl.classList.add('hand-count-display');
+                    const playerAreaEl = targetContainer.closest('.playerArea');
+                    if (playerAreaEl) playerAreaEl.appendChild(handCountEl);
+                }
+                if (handCountEl) handCountEl.textContent = `${playerData.handCount} 张`;
+                // 如果需要，可以在这里添加更多的逻辑来处理 handCountEl 的显示位置等
+            } else {
+                 targetContainer.innerHTML = '<span style="color:#555; font-style:italic;">- 等待 -</span>';
             }
         } else {
             targetContainer.innerHTML = '<span style="color:#555; font-style:italic;">- 等待 -</span>';
