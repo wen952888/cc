@@ -402,3 +402,108 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
     .voice-indicator-container { width: 7px; height: 7px; margin-right: 2px;}
     .voice-indicator { width: 5px; height: 5px; }
 }
+
+/* Game View Styles */
+#game-view {
+    padding: 20px;
+    text-align: center; /* Center content within game view */
+}
+
+#game-view h2 {
+    color: #333;
+    margin-bottom: 20px;
+}
+
+#players-info {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+}
+
+.opponent-area {
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.opponent-area .player-name {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+#discarded-cards {
+    margin-bottom: 20px;
+    border: 1px dashed #ccc;
+    padding: 10px;
+    border-radius: 4px;
+    min-height: 100px; /* Placeholder height for discarded cards */
+}
+
+#discarded-cards h3 {
+    margin-top: 0;
+    color: #555;
+}
+
+#discarded-cards-area {
+    /* Style for displaying discarded cards (e.g., using flexbox or grid) */
+}
+
+#player-hand {
+    margin-bottom: 20px;
+    border: 1px solid #333;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+#player-hand h3 {
+    margin-top: 0;
+    color: #333;
+}
+
+#player-hand-area {
+    display: flex; /* Arrange player's hand horizontally */
+    justify-content: center;
+    /* Additional styling for cards in hand */
+}
+
+#game-controls {
+    margin-top: 20px;
+}
+
+#game-controls button {
+    padding: 10px 20px;
+    margin: 0 5px;
+    font-size: 16px;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+}
+
+#play-button {
+    background-color: #28a745; /* Green */
+    color: white;
+}
+
+#play-button:hover {
+    background-color: #218838;
+}
+
+#pass-button {
+    background-color: #ffc107; /* Yellow */
+    color: #212529;
+}
+
+#pass-button:hover {
+    background-color: #e0a800;
+}
+
+#hint-button {
+    background-color: #007bff; /* Blue */
+    color: white;
+}
+
+#hint-button:hover {
+    background-color: #0056b3;
+}
+}

@@ -45,6 +45,49 @@
             </ul>
         </div>
     </div>
+
+    <!-- Game View -->
+    <div id="game-view" class="view hidden-view">
+        <h2>游戏进行中</h2>
+        <div id="players-info">
+            <!-- 其他玩家信息将在这里显示 -->
+            <div id="player-top" class="opponent-area">
+                <div class="player-name">玩家 2</div>
+                <div class="player-card-count">手牌数: <span id="player2-card-count"></span></div>
+            </div>
+            <div id="player-left" class="opponent-area">
+                <div class="player-name">玩家 3</div>
+                <div class="player-card-count">手牌数: <span id="player3-card-count"></span></div>
+            </div>
+            <div id="player-right" class="opponent-area">
+                <div class="player-name">玩家 4</div>
+                <div class="player-card-count">手牌数: <span id="player4-card-count"></span></div>
+            </div>
+        </div>
+
+        <div id="discarded-cards">
+            <!-- 弃牌将在这里显示 -->
+            <h3>弃牌区</h3>
+            <div id="discarded-cards-area">
+                <!-- 弃牌的卡牌图像将在这里显示 -->
+            </div>
+        </div>
+
+        <div id="player-hand">
+            <!-- 玩家的手牌将在这里显示 -->
+            <h3>我的手牌</h3>
+            <div id="player-hand-area">
+                <!-- 玩家手牌的卡牌图像将在这里显示 -->
+            </div>
+        </div>
+
+        <div id="game-controls">
+            <!-- 游戏控制按钮将在这里显示 -->
+            <button id="play-button">出牌</button>
+            <button id="pass-button">不出</button>
+            <button id="hint-button">提示</button>
+        </div>
+    </div>
     <script src="/socket.io/socket.io.js"></script>
     <script src="client.js?v=1.0.21"></script> <!-- 版本号更新 -->
 </body>
