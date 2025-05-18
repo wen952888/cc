@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>KK 在线纸牌</title>
-    <link rel="stylesheet" href="style.css?v=1.0.25"> <!-- 版本号更新 -->
+    <link rel="stylesheet" href="style.css?v=1.0.27"> <!-- 版本号更新 -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#333"/>
     <link rel="apple-touch-icon" href="/images/icon-192x192.png">
@@ -65,7 +65,8 @@
         <div id="gameInfoBar">
             <div class="room-name-id">
                 房间: <span id="infoBarRoomName">未知</span> (<span id="infoBarRoomId">----</span>)
-                | 当前回合: <span id="infoBarCurrentTurn">N/A</span>
+                | 状态: <span id="infoBarRoomStatus">等待中</span> <!-- 新增房间状态显示 -->
+                | 回合: <span id="infoBarCurrentTurn">N/A</span>
             </div>
             <button id="leaveRoomButton" title="离开房间">离开</button>
         </div>
@@ -80,7 +81,7 @@
                 <div class="player-details">
                     <div class="playerName">等待玩家...</div>
                     <div class="playerRole"></div>
-                    <div class="playerInfo">手牌: <span class="card-count">?</span></div>
+                    <div class="playerInfo">手牌: <span class="card-count">?</span> <span class="player-ready-status"></span></div>
                 </div>
             </div>
             <div id="player-left" class="player-area opponent-area opponent-left" data-player-id="">
@@ -91,7 +92,7 @@
                 <div class="player-details">
                     <div class="playerName">等待玩家...</div>
                     <div class="playerRole"></div>
-                    <div class="playerInfo">手牌: <span class="card-count">?</span></div>
+                    <div class="playerInfo">手牌: <span class="card-count">?</span> <span class="player-ready-status"></span></div>
                 </div>
             </div>
             <div id="player-right" class="player-area opponent-area opponent-right" data-player-id="">
@@ -102,7 +103,7 @@
                 <div class="player-details">
                     <div class="playerName">等待玩家...</div>
                     <div class="playerRole"></div>
-                    <div class="playerInfo">手牌: <span class="card-count">?</span></div>
+                    <div class="playerInfo">手牌: <span class="card-count">?</span> <span class="player-ready-status"></span></div>
                 </div>
             </div>
 
@@ -112,32 +113,24 @@
             </div>
         </div>
 
-        <!-- 自己的手牌区域 -->
         <div id="player-hand-area-wrapper">
-             <div id="player-hand-area">
-                <!-- 玩家手牌的卡牌图像将在这里显示 -->
-            </div>
+             <div id="player-hand-area"></div>
         </div>
 
-
-        <!-- 新的底部栏：包含个人信息和操作按钮 -->
         <div id="bottom-bar">
+            <button id="ready-button" title="准备/取消准备">准备</button> <!-- 新增准备按钮 -->
             <button id="hint-button" title="提示">提示</button>
             <button id="pass-button" title="不出 / 过">过</button>
-
-            <!-- 自己的信息区，移到这里 -->
             <div id="my-info-in-bar" class="player-area self-info-in-bar" data-player-id="">
                 <div class="player-avatar-container">
-                    <div class="player-avatar" id="myAvatar"></div> <!-- JS 会使用 myAvatar ID -->
+                    <div class="player-avatar" id="myAvatar"></div>
                     <div class="voice-indicator-container"><div class="voice-indicator" id="myVoiceIndicator"></div></div>
                 </div>
                 <div class="player-details">
-                    <!-- JS 会使用 myPlayerName 和 myPlayerStatus ID -->
                     <div class="playerName" id="myPlayerName">我</div>
-                    <div class="playerInfo" id="myPlayerStatus">手牌: <span class="card-count">?</span></div>
+                    <div class="playerInfo" id="myPlayerStatus">手牌: <span class="card-count">?</span> <span class="player-ready-status"></span></div>
                 </div>
             </div>
-
             <button id="play-button" title="出牌">出牌</button>
             <button id="micButton" title="按住说话">🎤</button>
         </div>
@@ -148,11 +141,12 @@
                 <p id="gameOverReasonText"></p>
                 <div id="gameOverScores"></div>
                 <button id="backToLobbyBtn">返回大厅</button>
+                <!-- 可以考虑在这里也放一个“再来一局/准备”按钮 -->
             </div>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="client.js?v=1.0.25"></script> <!-- 版本号更新 -->
+    <script src="client.js?v=1.0.27"></script> <!-- 版本号更新 -->
 </body>
 </html>
