@@ -713,6 +713,11 @@ socket.on('gameStateUpdate', (newState) => {
             } else myNewPlayerState.hand = [];
         }
     }
+    // 在渲染前打印当前玩家手牌信息用于调试
+    const myPlayerAfterUpdate = currentGameState.players.find(p => p.userId === myUserId);
+    console.log(`[gameStateUpdate] My Hand Data (UserId: ${myUserId}):`, myPlayerAfterUpdate?.hand);
+    console.log(`[gameStateUpdate] My Hand Count (UserId: ${myUserId}):`, myPlayerAfterUpdate?.handCount);
+
     if (previousGameState && currentGameState) {
       const myTurnChangedToNotMyTurn = previousGameState.currentPlayerId === myUserId && currentGameState.currentPlayerId !== myUserId;
       const newRoundStartedForMe = !currentGameState.lastHandInfo && previousGameState.lastHandInfo && currentGameState.currentPlayerId === myUserId;
