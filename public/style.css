@@ -113,7 +113,7 @@ html, body {
 /* Game View - Fullscreen Layout & Green Theme */
 #game-view {
     padding: 0; /* 全屏不需要外边距 */
-    background-color: #255025; /* 深绿色牌桌背景 */
+    background-color: #356035; /* 深绿色牌桌背景 */
     display: flex;
     flex-direction: column;
 }
@@ -147,7 +147,7 @@ html, body {
     width: 100%;
     box-sizing: border-box;
     overflow: hidden;
-    padding: 5px; /* 内部元素与 gameArea 边缘的间距 */
+    padding: 0; /* 内部元素与 gameArea 边缘的间距 */
     /* background-color: rgba(255,255,0,0.05); /* 调试: gameArea 范围 */
 }
 
