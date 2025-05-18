@@ -1,6 +1,6 @@
 // client.js
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM fully loaded and parsed');
+    console.log('DOM fully loaded and parsed. Client v1.0.25');
     const socket = io({
         reconnectionAttempts: 5,
         reconnectionDelay: 2000,
@@ -19,8 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const authView = document.getElementById('auth-view');
     const lobbyView = document.getElementById('lobby-view');
     const gameView = document.getElementById('game-view');
-    // 在 style.css 中，我看到您也用了 roomView，这里假设 gameView 就是主要的房间/游戏界面
-    // 如果 roomView 是一个独立的准备界面，那么切换逻辑需要更细致
     const allViews = [loadingView, authView, lobbyView, gameView];
 
     // Auth elements
@@ -34,40 +32,47 @@ document.addEventListener('DOMContentLoaded', () => {
     const registerButton = document.getElementById('register-button');
     const showRegisterLink = document.getElementById('show-register');
     const showLoginLink = document.getElementById('show-login');
-    // const authErrorElement = document.getElementById('authError'); // 之前您HTML里没有，所以注释掉
+    const authErrorElement = document.getElementById('authError');
 
     // Lobby elements
     const roomNameInput = document.getElementById('roomNameInput');
     const createRoomButton = document.getElementById('createRoomButton');
     const roomsListUl = document.getElementById('rooms');
+    const lobbyUsernameSpan = document.getElementById('lobbyUsername');
+    const refreshRoomListButton = document.getElementById('refreshRoomListButton');
+    const logoutButtonLobby = document.getElementById('logoutButtonLobby');
+    const roomPasswordInput = document.getElementById('roomPasswordInput');
 
-    // Game elements
+
+    // Game elements (in bottom-bar or general game view)
     const playerHandArea = document.getElementById('player-hand-area');
     const discardedCardsArea = document.getElementById('discarded-cards-area');
     const playButton = document.getElementById('play-button');
     const passButton = document.getElementById('pass-button');
     const hintButton = document.getElementById('hint-button');
+    const micButton = document.getElementById('micButton');
+    const leaveRoomButton = document.getElementById('leaveRoomButton'); // In gameInfoBar
 
-    // Voice elements
-    const micButton = document.getElementById('micButton'); // Assume micButton exists in HTML
+    // Game Over Overlay elements
+    const gameOverOverlay = document.getElementById('gameOverOverlay');
+    const gameOverTitle = document.getElementById('gameOverTitle');
+    const gameOverReasonText = document.getElementById('gameOverReasonText');
+    const gameOverScoresDiv = document.getElementById('gameOverScores');
+    const backToLobbyBtnOverlay = gameOverOverlay.querySelector('#backToLobbyBtn');
 
-    // Opponent area elements (您HTML里还没有这些ID，先注释掉，否则会是null)
-    /*
-    const opponentDisplayElements = {
-        top: { name: document.getElementById('player-top-name'), count: document.getElementById('player2-card-count'), area: document.getElementById('player-top') },
-        left: { name: document.getElementById('player-left-name'), count: document.getElementById('player3-card-count'), area: document.getElementById('player-left') },
-        right: { name: document.getElementById('player-right-name'), count: document.getElementById('player4-card-count'), area: document.getElementById('player-right') }
-    };
-    */
+
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false;
 
     function switchToView(targetViewId) {
         console.log(`Switching to view: ${targetViewId}`);
         allViews.forEach(view => {
-            if (view) { // 确保元素存在
+            if (view) {
                 if (view.id === targetViewId) {
                     view.classList.remove('hidden-view');
-                    // 根据需要设置为 'block' 或 'flex'，这里统一用 block，具体样式由CSS控制
-                    view.style.display = 'block'; // 或者您在CSS中定义的 .view-block / .view-flex
+                    view.style.display = (view.id === 'game-view' || view.id === 'loadingView' || view.id === 'auth-view' || view.id === 'lobby-view') ? 'flex' : 'block';
+                    if (view.id === 'game-view') view.style.flexDirection = 'column'; // game-view's own flex direction
                 } else {
                     view.classList.add('hidden-view');
                     view.style.display = 'none';
@@ -76,19 +81,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    switchToView('loadingView'); // 初始显示加载中
+    switchToView('loadingView');
 
+    // Reauthentication logic
     const storedUserId = localStorage.getItem('userId');
     if (storedUserId) {
         console.log(`Found stored user ID: ${storedUserId}, attempting reauthentication.`);
         socket.emit('reauthenticate', storedUserId, (response) => {
             console.log('Reauthenticate response:', response);
             if (response.success) {
-                handleAuthSuccess(response); // 这个函数会处理视图切换
+                handleAuthSuccess(response);
             } else {
-                console.log('Reauthentication failed:', response.message);
+                showAuthError(response.message);
                 localStorage.removeItem('userId');
-                localStorage.removeItem('username'); // 如果也存了用户名
+                localStorage.removeItem('username');
                 switchToView('auth-view');
             }
         });
@@ -97,36 +103,64 @@ document.addEventListener('DOMContentLoaded', () => {
         switchToView('auth-view');
     }
 
-    showRegisterLink.addEventListener('click', (e) => {
+    function showAuthError(message) {
+        if (authErrorElement) {
+            authErrorElement.textContent = message;
+            authErrorElement.style.display = 'block';
+        } else {
+            alert(message);
+        }
+    }
+    function clearAuthError() {
+        if (authErrorElement) {
+            authErrorElement.textContent = '';
+            authErrorElement.style.display = 'none';
+        }
+    }
+
+    if (showRegisterLink) showRegisterLink.addEventListener('click', (e) => {
         e.preventDefault();
-        loginForm.style.display = 'none';
-        registerForm.style.display = 'block';
+        clearAuthError();
+        if (loginForm) loginForm.style.display = 'none';
+        if (registerForm) registerForm.style.display = 'block';
     });
 
-    showLoginLink.addEventListener('click', (e) => {
+    if (showLoginLink) showLoginLink.addEventListener('click', (e) => {
         e.preventDefault();
-        registerForm.style.display = 'none';
-        loginForm.style.display = 'block';
+        clearAuthError();
+        if (registerForm) registerForm.style.display = 'none';
+        if (loginForm) loginForm.style.display = 'block';
     });
 
-    loginButton.addEventListener('click', () => {
+    if (loginButton) loginButton.addEventListener('click', () => {
+        clearAuthError();
         const phoneNumber = loginUsernameInput.value;
         const password = loginPasswordInput.value;
+        if (!phoneNumber || !password) {
+            showAuthError("手机号和密码不能为空。");
+            return;
+        }
         socket.emit('login', { phoneNumber, password }, handleAuthResponse);
     });
 
-    registerButton.addEventListener('click', () => {
+    if (registerButton) registerButton.addEventListener('click', () => {
+        clearAuthError();
         const phoneNumber = registerUsernameInput.value;
         const password = registerPasswordInput.value;
+        if (!phoneNumber || password.length < 4) {
+            showAuthError("手机号不能为空，密码至少4位。");
+            return;
+        }
         socket.emit('register', { phoneNumber, password }, (response) => {
-            alert(response.message); // 使用 alert 提示用户
+            alert(response.message);
             if (response.success) {
-                loginForm.style.display = 'block';
-                registerForm.style.display = 'none';
-                // 可以考虑自动填充登录表单
+                if (loginForm) loginForm.style.display = 'block';
+                if (registerForm) registerForm.style.display = 'none';
                 loginUsernameInput.value = phoneNumber;
-                loginPasswordInput.value = ""; // 清空密码或让用户重新输入
+                loginPasswordInput.value = "";
                 loginPasswordInput.focus();
+            } else {
+                showAuthError(response.message);
             }
         });
     });
@@ -135,18 +169,20 @@ document.addEventListener('DOMContentLoaded', () => {
         myUserId = data.userId;
         myUsername = data.username;
         localStorage.setItem('userId', data.userId);
-        // localStorage.setItem('username', data.username); // 可以选择性存储用户名
+        // localStorage.setItem('username', data.username); // Optional
         console.log(`Auth success for user: ${myUsername} (ID: ${myUserId})`);
+        if(lobbyUsernameSpan) lobbyUsernameSpan.textContent = myUsername;
+        clearAuthError();
 
-        if (data.roomState) {
+        if (data.roomState && data.roomState.roomId) {
             currentRoomId = data.roomState.roomId;
             console.log(`User was in room ${currentRoomId}, displaying game state.`);
-            displayGameState(data.roomState, true);
-            switchToView('game-view'); // <--- 关键：切换到游戏视图
+            displayGameState(data.roomState, true); // Animate hand if rejoining mid-game deal
+            switchToView('game-view');
         } else {
             console.log('User not in a room, switching to lobby.');
             switchToView('lobby-view');
-            socket.emit('listRooms', updateRoomList); // 获取房间列表
+            socket.emit('listRooms', updateRoomList);
         }
     }
 
@@ -155,24 +191,25 @@ document.addEventListener('DOMContentLoaded', () => {
         if (response.success) {
             handleAuthSuccess(response);
         } else {
-            alert(`认证失败: ${response.message}`); // 使用 alert 提示用户
+            showAuthError(response.message || "认证失败，请重试。");
             localStorage.removeItem('userId');
-            // localStorage.removeItem('username');
-            switchToView('auth-view'); // 保持在认证视图
+            // switchToView('auth-view'); // Already in auth-view
         }
     }
 
     socket.on('connect', () => {
         console.log('Connected to server with ID:', socket.id);
-        // 如果是 loadingView 状态，说明是初次加载或断线重连的开始
-        if (document.getElementById('loadingView').style.display !== 'none') {
-            if (storedUserId && !myUserId) { // 有存储ID但尚未通过 reauth 成功
-                // 等待 reauthenticate 的结果
-                console.log("Connected, waiting for reauthentication result...");
-            } else if (!myUserId) { // 没有存储ID，也没有登录
-                switchToView('auth-view');
-            }
-            // 如果 myUserId 已经存在 (例如 reauthenticate 已经成功)，则 handleAuthSuccess 已经处理了视图
+        if (loadingView.style.display !== 'none' && !myUserId && localStorage.getItem('userId')) {
+            console.log("Re-emitting reauthenticate on connect if needed.");
+            socket.emit('reauthenticate', localStorage.getItem('userId'), (response) => {
+                if (response.success) handleAuthSuccess(response);
+                else {
+                    localStorage.removeItem('userId');
+                    switchToView('auth-view');
+                }
+            });
+        } else if (loadingView.style.display !== 'none' && !myUserId) {
+            switchToView('auth-view');
         }
     });
 
@@ -182,9 +219,8 @@ document.addEventListener('DOMContentLoaded', () => {
         switchToView('loadingView');
         const loadingViewP = loadingView.querySelector('p');
         if (loadingViewP) loadingViewP.textContent = '已断开连接...';
-        myUserId = null; // 清理状态
-        myUsername = null;
-        currentRoomId = null;
+        // Consider clearing state, but re-auth should handle it
+        // myUserId = null; currentRoomId = null;
     });
 
     socket.on('connect_error', (err) => {
@@ -194,16 +230,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (loadingViewP) loadingViewP.textContent = `连接错误: ${err.message}.`;
     });
 
-
-    createRoomButton.addEventListener('click', () => {
+    if (createRoomButton) createRoomButton.addEventListener('click', () => {
         const roomName = roomNameInput.value.trim();
+        const password = roomPasswordInput.value; // Get password
         if (!roomName) { alert('请输入房间名称'); return; }
-        socket.emit('createRoom', { roomName, password: null /* 暂不支持密码 */ }, (response) => {
+        socket.emit('createRoom', { roomName, password: password || null }, (response) => {
             if (response.success) {
                 currentRoomId = response.roomId;
-                console.log(`Room created: ${roomName} (${currentRoomId}), initial state:`, response.roomState);
                 displayGameState(response.roomState);
-                switchToView('game-view'); // 创建房间后切换到游戏/房间视图
+                switchToView('game-view');
                 alert(`房间 "${roomName}" 创建成功! ID: ${response.roomId}`);
             } else {
                 alert(`创建房间失败: ${response.message}`);
@@ -219,22 +254,30 @@ document.addEventListener('DOMContentLoaded', () => {
         if (rooms && rooms.length > 0) {
             rooms.forEach(room => {
                 const li = document.createElement('li');
+                let joinButtonHtml = `<button data-roomid="${room.roomId}" class="join-room-btn" ${room.status !== 'waiting' || room.playerCount >= room.maxPlayers ? 'disabled' : ''}>加入</button>`;
+                if (room.hasPassword) {
+                     joinButtonHtml = `<button data-roomid="${room.roomId}" data-roomname="${room.roomName}" class="join-room-btn-pwd">加入 (有密码)</button>`;
+                }
+
                 li.innerHTML = `
-                    <span>${room.roomName} (${room.playerCount}/${room.maxPlayers}) - ${room.status}</span>
-                    <button data-roomid="${room.roomId}" class="join-room-btn" ${room.status !== 'waiting' || room.playerCount >= room.maxPlayers ? 'disabled' : ''}>加入</button>
+                    <span>${room.roomName} (${room.playerCount}/${room.maxPlayers}) - ${room.status} ${room.hasPassword ? '' : ''}</span>
+                    ${joinButtonHtml}
                 `;
                 roomsListUl.appendChild(li);
             });
-            document.querySelectorAll('.join-room-btn').forEach(button => {
+            document.querySelectorAll('.join-room-btn, .join-room-btn-pwd').forEach(button => {
                 button.addEventListener('click', (e) => {
                     const roomIdToJoin = e.target.dataset.roomid;
-                    // TODO: 如果房间有密码，这里需要弹出密码输入框
-                    socket.emit('joinRoom', { roomId: roomIdToJoin, password: null }, (response) => {
+                    let passwordToJoin = null;
+                    if (e.target.classList.contains('join-room-btn-pwd')) {
+                        passwordToJoin = prompt(`请输入房间 "${e.target.dataset.roomname}" 的密码:`);
+                        if (passwordToJoin === null) return; // User cancelled prompt
+                    }
+                    socket.emit('joinRoom', { roomId: roomIdToJoin, password: passwordToJoin }, (response) => {
                         if (response.success) {
                             currentRoomId = response.roomId;
-                            console.log(`Joined room ${roomIdToJoin}, state:`, response.roomState);
                             displayGameState(response.roomState);
-                            switchToView('game-view'); // 加入房间后切换视图
+                            switchToView('game-view');
                         } else {
                             alert(`加入房间失败: ${response.message}`);
                         }
@@ -246,24 +289,50 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    if (refreshRoomListButton) refreshRoomListButton.addEventListener('click', () => {
+        socket.emit('listRooms', updateRoomList);
+    });
+    if (logoutButtonLobby) logoutButtonLobby.addEventListener('click', () => {
+        localStorage.removeItem('userId');
+        localStorage.removeItem('username');
+        myUserId = null; myUsername = null; currentRoomId = null; currentRoomState = null;
+        if(loginForm) loginForm.reset();
+        if(registerForm) registerForm.reset();
+        switchToView('auth-view');
+        // socket.disconnect(); // Optional: force disconnect
+        // socket.connect(); // If needed for clean slate
+    });
+
+
     socket.on('gameStarted', (gameState) => {
         console.log('Game started event received!', gameState);
         currentRoomState = gameState;
-        displayGameState(gameState, true); // Animate hand on game start
-        switchToView('game-view'); // 确保在游戏开始时切换到游戏视图
-        const myRole = gameState.players.find(p=>p.userId === myUserId)?.role;
-        alert("游戏开始！" + (myRole ? `你的身份是: ${myRole}` : ''));
+        displayGameState(gameState, true);
+        switchToView('game-view');
+        const myPlayer = gameState.players.find(p => p.userId === myUserId);
+        alert("游戏开始！" + (myPlayer && myPlayer.role ? `你的身份是: ${myPlayer.role}` : ''));
     });
 
     socket.on('gameStateUpdate', (gameState) => {
-        console.log('Game state update event received:', gameState);
+        console.log('Game state update received:', gameState);
         const oldHand = currentRoomState?.players.find(p => p.userId === myUserId)?.hand;
         currentRoomState = gameState;
         const myNewHand = gameState.players.find(p => p.userId === myUserId)?.hand;
-        const shouldAnimateHand = !oldHand && myNewHand && myNewHand.length > 0;
+        const shouldAnimateHand = !oldHand && myNewHand && myNewHand.length > 0; // Animate only if hand was empty before
         displayGameState(gameState, shouldAnimateHand);
-        // 不需要在这里切换视图，因为理论上应该已经在游戏视图了
     });
+    socket.on('playerReadyUpdate', ({ userId, isReady }) => {
+        console.log(`Player ${userId} ready status: ${isReady}`);
+        if (currentRoomState && currentRoomState.players) {
+            const player = currentRoomState.players.find(p => p.userId === userId);
+            if (player) {
+                player.isReady = isReady;
+                displayGameState(currentRoomState); // Re-render to show ready status, or update specific element
+            }
+        }
+         // TODO: Update UI for ready status more efficiently if needed
+    });
+
 
     socket.on('invalidPlay', (data) => {
         alert(`无效操作: ${data.message}`);
@@ -271,88 +340,66 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.on('gameOver', (data) => {
         console.log('Game Over event received:', data);
-        // 合并游戏结束信息到当前状态，确保 gameFinished 等标志被设置
         currentRoomState = {
-            ...(currentRoomState || {}), // 保留现有房间信息
-            ...data,                    // 应用游戏结束的特定信息 (scores, resultText etc.)
+            ...(currentRoomState || {}),
+            ...data,
             gameFinished: true,
-            gameStarted: false, // 游戏已不再进行
-            currentPlayerId: null // 没有当前玩家了
+            gameStarted: false,
+            currentPlayerId: null
          };
-        displayGameState(currentRoomState); // 更新UI以显示最终分数等
-
-        let gameOverMessage = `游戏结束! 结果: ${data.result || '未定'}`;
-        if (data.reason && data.reason !== '游戏结束' && data.reason !== '正常结束') { // 避免重复显示“游戏结束”
-            gameOverMessage += `\n原因: ${data.reason}`;
-        }
-        if (data.finalScores) {
-            gameOverMessage += "\n最终得分:\n";
-            data.finalScores.forEach(ps => {
-                const scoreChange = data.scoreChanges ? (data.scoreChanges[ps.id] || 0) : 0;
-                gameOverMessage += `${ps.name} (${ps.role || '无角色'}): ${ps.score} (${scoreChange >= 0 ? '+' : ''}${scoreChange})\n`;
-            });
-        }
-        alert(gameOverMessage);
-
-        const gameControlsDiv = document.getElementById('game-controls');
-        if (gameControlsDiv) {
-            const existingBtn = document.getElementById('backToLobbyBtn');
-            if(existingBtn) existingBtn.remove();
-
-            const backToLobbyBtn = document.createElement('button');
-            backToLobbyBtn.textContent = "返回大厅";
-            backToLobbyBtn.id = 'backToLobbyBtn';
-            backToLobbyBtn.onclick = () => {
-                socket.emit('leaveRoom', (response) => {
-                    console.log('Leave room response:', response);
-                    // 无论成功与否，都尝试清理客户端状态并切换视图
-                    currentRoomId = null;
-                    currentRoomState = null;
-                    selectedCardsForPlay = [];
-                    currentHint = null;
-                    switchToView('lobby-view');
-                    socket.emit('listRooms', updateRoomList); // 刷新大厅列表
-                    const btnToRemove = document.getElementById('backToLobbyBtn');
-                    if (btnToRemove) btnToRemove.remove();
-                });
-            };
-            gameControlsDiv.appendChild(backToLobbyBtn);
-        } else {
-            console.error("game-controls div not found for game over button.");
-        }
+        displayGameState(currentRoomState); // This will now handle showing the overlay
     });
 
+    function handleLeaveRoomAndReturnToLobby() {
+        socket.emit('leaveRoom', (response) => {
+            console.log('Leave room response:', response);
+            currentRoomId = null;
+            currentRoomState = null;
+            selectedCardsForPlay = [];
+            currentHint = null;
+            switchToView('lobby-view');
+            socket.emit('listRooms', updateRoomList);
+            if (gameOverOverlay) {
+                 gameOverOverlay.classList.add('hidden-view');
+                 gameOverOverlay.style.display = 'none';
+            }
+        });
+    }
+    if (leaveRoomButton) leaveRoomButton.addEventListener('click', handleLeaveRoomAndReturnToLobby);
+    if (backToLobbyBtnOverlay) backToLobbyBtnOverlay.addEventListener('click', handleLeaveRoomAndReturnToLobby);
 
-    playButton.addEventListener('click', () => {
+
+    if (playButton) playButton.addEventListener('click', () => {
         if (selectedCardsForPlay.length === 0) { alert('请选择要出的牌'); return; }
         socket.emit('playCard', selectedCardsForPlay, (response) => {
-            if (response && response.success) { // 检查 response 是否存在
-                selectedCardsForPlay = [];
-                // UI 会通过 gameStateUpdate 更新
+            if (response && response.success) {
+                selectedCardsForPlay = []; // Clear selection on successful play
+                // Game state update will refresh hand
             } else {
                 alert(`出牌失败: ${response ? response.message : '未知错误'}`);
             }
         });
     });
 
-    passButton.addEventListener('click', () => {
+    if (passButton) passButton.addEventListener('click', () => {
         socket.emit('passTurn', (response) => {
-            if (response && !response.success) { // 检查 response 是否存在
+            if (response && !response.success) {
                 alert(`操作失败: ${response.message}`);
             }
         });
     });
 
-    hintButton.addEventListener('click', () => {
+    if (hintButton) hintButton.addEventListener('click', () => {
         socket.emit('requestHint', currentHintIndexFromServer, (response) => {
             if (response.success && response.hint && response.hint.cards) {
                 currentHint = response.hint.cards;
-                currentHintIndexFromServer = response.nextHintIndexToServer !== undefined ? response.nextHintIndexToServer : 0;
+                currentHintIndexFromServer = response.nextHintIndex || 0; // Use 'nextHintIndex'
                 highlightHintedCards(currentHint);
             } else {
                 alert(response.message || '没有可用的提示。');
                 currentHint = null;
-                highlightHintedCards([]); // 清除高亮
+                currentHintIndexFromServer = 0;
+                highlightHintedCards([]);
             }
         });
     });
@@ -376,172 +423,175 @@ document.addEventListener('DOMContentLoaded', () => {
     function displayGameState(state, animateHandOnDisplay = false) {
         if (!state) {
             console.warn("displayGameState called with null state.");
-            // 可能需要切换到大厅或错误页面
-            if (!myUserId) switchToView('auth-view'); // 如果连用户ID都没了，返回登录
-            else switchToView('lobby-view');
+            if (myUserId) switchToView('lobby-view'); else switchToView('auth-view');
             return;
         }
-        currentRoomState = state; // 更新全局的房间状态
-
+        currentRoomState = state;
         const myPlayer = state.players ? state.players.find(p => p.userId === myUserId) : null;
 
-        // 更新对手信息 (需要您在HTML中为对手区域添加正确的ID)
-        // 这个对手映射逻辑需要根据您的游戏设计（固定位置还是相对位置）来完善
-        const opponentSlotsMapping = { // 这是一个示例，您需要根据实际情况调整
-            // 'player-top': (myPlayerSlot + 2) % 4,
-            // 'player-left': (myPlayerSlot + 3) % 4, // 或 (myPlayerSlot - 1 + 4) % 4
-            // 'player-right': (myPlayerSlot + 1) % 4,
-        };
-        if (myPlayer && state.players) {
+        // Update Info Bar
+        const infoBarRoomName = document.getElementById('infoBarRoomName');
+        const infoBarRoomId = document.getElementById('infoBarRoomId');
+        const infoBarCurrentTurn = document.getElementById('infoBarCurrentTurn');
+        if (infoBarRoomName) infoBarRoomName.textContent = state.roomName || '未知';
+        if (infoBarRoomId) infoBarRoomId.textContent = state.roomId || '----';
+        let currentTurnPlayerName = "N/A";
+        if (state.currentPlayerId && !state.gameFinished) {
+            const cPlayer = state.players.find(p => p.userId === state.currentPlayerId);
+            if (cPlayer) currentTurnPlayerName = cPlayer.username;
+        }
+        if (infoBarCurrentTurn) infoBarCurrentTurn.textContent = currentTurnPlayerName;
+
+        // Update My Info in Bottom Bar
+        const myInfoInBar = document.getElementById('my-info-in-bar');
+        if (myInfoInBar && myPlayer) {
+            myInfoInBar.dataset.playerId = myPlayer.userId; // For speaking indicator
+            const myNameEl = myInfoInBar.querySelector('#myPlayerName');
+            const myStatusEl = myInfoInBar.querySelector('#myPlayerStatus .card-count');
+            if (myNameEl) myNameEl.textContent = myPlayer.username;
+            if (myStatusEl) myStatusEl.textContent = myPlayer.handCount !== undefined ? myPlayer.handCount : '?';
+            // Add current-turn, finished, disconnected classes
+            myInfoInBar.classList.toggle('current-turn', state.currentPlayerId === myPlayer.userId && !state.gameFinished);
+            myInfoInBar.classList.toggle('player-finished', !!myPlayer.finished);
+            myInfoInBar.classList.toggle('player-disconnected', !myPlayer.connected);
+        }
+
+
+        // Update Opponents UI
+        const opponentAreasIds = ['player-top', 'player-left', 'player-right'];
+        const otherPlayers = state.players ? state.players.filter(p => p.userId !== myUserId) : [];
+        
+        // Simple mapping (can be improved with slot logic if players aren't always in fixed order)
+        if (myPlayer && state.players && state.players.length === 4) { // Assuming 4 players
             const mySlot = myPlayer.slot;
-            state.players.forEach(p => {
-                if (p.userId === myUserId) {
-                    // 更新自己的信息区域 (如果除了手牌还有其他显示)
-                    // document.getElementById('my-player-name').textContent = p.username + (p.role ? `(${p.role})` : '');
-                    // ...
-                } else {
-                    // 根据 p.slot 和 mySlot 的关系，找到它对应的 opponentDisplayElement
-                    // 例如：
-                    // let positionKey;
-                    // if (p.slot === (mySlot + 1) % 4) positionKey = 'right';
-                    // else if (p.slot === (mySlot + 2) % 4) positionKey = 'top';
-                    // else if (p.slot === (mySlot + 3) % 4) positionKey = 'left';
-                    // if (positionKey && opponentDisplayElements[positionKey]) {
-                    //    updateOpponentUI(opponentDisplayElements[positionKey], p, state.currentPlayerId, state.gameFinished);
-                    // }
-                }
+            const numPlayers = 4;
+            const relativeSlots = {
+                top: (mySlot + 2) % numPlayers,
+                left: (mySlot + 3) % numPlayers, // Anti-clockwise: mySlot -> right -> top -> left
+                right: (mySlot + 1) % numPlayers,
+            };
+            Object.entries(relativeSlots).forEach(([positionKey, targetSlot]) => {
+                const opponentPlayer = state.players.find(p => p.slot === targetSlot && p.userId !== myUserId);
+                const areaElement = document.getElementById(`player-${positionKey}`);
+                updateOpponentUIElement(areaElement, opponentPlayer, state.currentPlayerId, state.gameFinished);
+            });
+        } else { // Fallback for less than 4 players or if myPlayer not found yet
+             opponentAreasIds.forEach((areaId, index) => {
+                const areaElement = document.getElementById(areaId);
+                updateOpponentUIElement(areaElement, otherPlayers[index], state.currentPlayerId, state.gameFinished);
             });
         }
-        // 简化的对手更新，假设HTML有 player-top, player-left, player-right 的 name 和 count 元素
-        // 您需要完善这里的逻辑以正确映射玩家到对应的UI元素
-        const otherPlayers = state.players ? state.players.filter(p => p.userId !== myUserId) : [];
-        const playerTopEl = document.getElementById('player-top'); // 整个区域
-        const playerLeftEl = document.getElementById('player-left');
-        const playerRightEl = document.getElementById('player-right');
-
-        updateOpponentUIElement(playerTopEl, otherPlayers[0], state.currentPlayerId, state.gameFinished); // 示例：取第一个其他玩家放顶部
-        updateOpponentUIElement(playerLeftEl, otherPlayers[1], state.currentPlayerId, state.gameFinished);
-        updateOpponentUIElement(playerRightEl, otherPlayers[2], state.currentPlayerId, state.gameFinished);
 
 
+        // Update Player Hand and Buttons
         if (myPlayer) {
-            updatePlayerHandUI(myPlayer.hand, state.currentPlayerId === myUserId && !state.gameFinished, animateHandOnDisplay);
-            playButton.disabled = state.currentPlayerId !== myUserId || state.gameFinished || !myPlayer.connected;
-            passButton.disabled = state.currentPlayerId !== myUserId || state.gameFinished || !myPlayer.connected || state.isFirstTurn || !state.lastHandInfo || (state.lastHandInfo && state.lastPlayerWhoPlayedId === myUserId);
-            hintButton.disabled = state.currentPlayerId !== myUserId || state.gameFinished || !myPlayer.connected;
-        } else { // 我不是玩家（例如刚加入房间，游戏已开始但我是旁观，或出错）
-            updatePlayerHandUI([], false, false); // 清空手牌
-            playButton.disabled = true;
-            passButton.disabled = true;
-            hintButton.disabled = true;
+            updatePlayerHandUI(myPlayer.hand, state.currentPlayerId === myUserId && !state.gameFinished && myPlayer.connected && !myPlayer.finished, animateHandOnDisplay);
+            if (playButton) playButton.disabled = !(state.currentPlayerId === myUserId && !state.gameFinished && myPlayer.connected && !myPlayer.finished);
+            if (passButton) passButton.disabled = !(state.currentPlayerId === myUserId && !state.gameFinished && myPlayer.connected && !myPlayer.finished && !state.isFirstTurn && state.lastHandInfo && state.lastPlayerWhoPlayedId !== myUserId);
+            if (hintButton) hintButton.disabled = !(state.currentPlayerId === myUserId && !state.gameFinished && myPlayer.connected && !myPlayer.finished);
+            if (micButton) micButton.disabled = state.gameFinished || !myPlayer.connected;
+        } else {
+            updatePlayerHandUI([], false, false);
+            if (playButton) playButton.disabled = true;
+            if (passButton) passButton.disabled = true;
+            if (hintButton) hintButton.disabled = true;
+            if (micButton) micButton.disabled = true;
         }
 
         updateCenterPileUI(state.centerPile, state.lastHandInfo);
 
-        // 更新当前回合玩家高亮
-        document.querySelectorAll('.opponent-area, .my-player-area').forEach(el => {
-            if(el) el.classList.remove('current-turn');
-        });
-        if (state.currentPlayerId && !state.gameFinished) {
-            const currentPlayerIsSelf = state.currentPlayerId === myUserId;
-            if (currentPlayerIsSelf) {
-                // Highlight self area, e.g., by adding a class to #player-hand or a dedicated self-info area
-                // document.getElementById('my-player-area-id').classList.add('current-turn');
-            } else {
-                // 查找哪个 opponent-area 对应 currentPlayerId
-                const opponentAreas = [playerTopEl, playerLeftEl, playerRightEl];
-                opponentAreas.forEach(area => {
-                    if (area && area.dataset.playerId === state.currentPlayerId) {
-                        area.classList.add('current-turn');
-                    }
+        // Game Over Overlay
+        if (state.gameFinished) {
+            if (gameOverOverlay) {
+                gameOverOverlay.classList.remove('hidden-view');
+                gameOverOverlay.style.display = 'flex';
+            }
+            if (gameOverTitle) gameOverTitle.textContent = `游戏结束 - ${state.gameResultText || state.result || "结果未定"}`;
+            if (gameOverReasonText) gameOverReasonText.textContent = state.gameOverReason || state.reason || "";
+            if (gameOverScoresDiv && state.finalScores) {
+                gameOverScoresDiv.innerHTML = '';
+                state.finalScores.forEach(ps => {
+                    const p = document.createElement('p');
+                    const scoreChange = state.scoreChanges ? (state.scoreChanges[ps.id] || 0) : 0;
+                    let changeClass = 'score-zero';
+                    if (scoreChange > 0) changeClass = 'score-plus';
+                    else if (scoreChange < 0) changeClass = 'score-minus';
+                    p.innerHTML = `${ps.name} (${ps.role || '?'}) : ${ps.score} <span class="${changeClass}">(${scoreChange >= 0 ? '+' : ''}${scoreChange})</span>`;
+                    gameOverScoresDiv.appendChild(p);
                 });
             }
-        }
-
-        // 处理游戏结束后的返回大厅按钮
-        const gameControlsDiv = document.getElementById('game-controls');
-        if (gameControlsDiv) {
-            const existingBackBtn = document.getElementById('backToLobbyBtn');
-            if (state.gameFinished && !existingBackBtn) {
-                // 创建按钮的逻辑已移至 'gameOver' 事件处理器中
-            } else if (!state.gameFinished && existingBackBtn) {
-                existingBackBtn.remove();
+        } else {
+            if (gameOverOverlay) {
+                gameOverOverlay.classList.add('hidden-view');
+                gameOverOverlay.style.display = 'none';
             }
         }
     }
 
-    // 辅助函数来更新单个对手的UI元素
     function updateOpponentUIElement(areaElement, playerData, currentTurnPlayerId, isGameFinished) {
         if (!areaElement) return;
-
-        const nameElement = areaElement.querySelector('.player-name'); // 假设内部有 .player-name
-        const countElement = areaElement.querySelector('.player-card-count span'); // 假设内部有 .player-card-count span
+        const nameElement = areaElement.querySelector('.playerName');
+        const roleElement = areaElement.querySelector('.playerRole');
+        const countElement = areaElement.querySelector('.playerInfo .card-count');
 
         if (playerData) {
-            areaElement.dataset.playerId = playerData.userId; // 用于高亮当前玩家等
-            if (nameElement) nameElement.textContent = playerData.username + (playerData.role ? ` (${playerData.role})` : '');
-            if (countElement) countElement.textContent = playerData.handCount;
+            areaElement.dataset.playerId = playerData.userId;
+            if (nameElement) nameElement.textContent = playerData.username;
+            if (roleElement) roleElement.textContent = playerData.role ? `(${playerData.role})` : '';
+            if (countElement) countElement.textContent = playerData.handCount !== undefined ? playerData.handCount : '?';
             areaElement.classList.toggle('current-turn', currentTurnPlayerId === playerData.userId && !isGameFinished);
-            // TODO: 显示 finished, disconnected 状态
+            areaElement.classList.toggle('player-finished', !!playerData.finished);
+            areaElement.classList.toggle('player-disconnected', !playerData.connected);
+            areaElement.style.opacity = playerData.connected ? '1' : '0.5';
         } else {
-            if (nameElement) nameElement.textContent = '等待玩家';
-            if (countElement) countElement.textContent = '-';
-            areaElement.classList.remove('current-turn');
+            if (nameElement) nameElement.textContent = '等待玩家...';
+            if (roleElement) roleElement.textContent = '';
+            if (countElement) countElement.textContent = '?';
+            areaElement.classList.remove('current-turn', 'player-finished', 'player-disconnected');
             areaElement.removeAttribute('data-player-id');
+            areaElement.style.opacity = '0.7';
         }
     }
-
 
     function updatePlayerHandUI(handCards, isMyTurn, animate = false) {
         if (!playerHandArea) return;
         playerHandArea.innerHTML = '';
-        selectedCardsForPlay = []; // 清空已选中的牌
-        // currentHint = null; // 不在这里清空hint，除非有明确逻辑
-
-        if (!handCards || handCards.length === 0) {
-            // console.log("No hand cards to display or player not in game.");
-            return;
-        }
+        // selectedCardsForPlay = []; // Don't clear here, user might be re-selecting after invalid play
+        if (!handCards || handCards.length === 0) return;
 
         handCards.forEach((cardData, index) => {
             const cardDiv = createCardElement(cardData);
             cardDiv.classList.add('my-card');
-
             if (animate) {
-                cardDiv.classList.add('card-in-hand'); // Base for animation
-                // Trigger reflow to ensure animation plays
+                cardDiv.classList.add('card-in-hand');
                 void cardDiv.offsetWidth;
-                setTimeout(() => {
-                    cardDiv.classList.add('dealt');
-                 }, index * 70 + 50); // Stagger animation, add slight initial delay
+                setTimeout(() => cardDiv.classList.add('dealt'), index * 70 + 50);
             } else {
-                cardDiv.classList.add('card-in-hand', 'dealt'); // Immediately visible, no animation
+                cardDiv.classList.add('card-in-hand', 'dealt');
             }
-            playerHandArea.appendChild(cardDiv);
+             // Re-apply selection if card is still in hand
+            if (selectedCardsForPlay.some(selCard => cardObjectToKey(selCard) === cardObjectToKey(cardData))) {
+                cardDiv.classList.add('selected');
+            }
 
-            if (isMyTurn) { // 只有轮到我并且游戏没结束才能选牌
+            playerHandArea.appendChild(cardDiv);
+            if (isMyTurn) {
                 cardDiv.classList.add('selectable');
                 cardDiv.addEventListener('click', () => {
                     toggleCardSelection(cardDiv, cardData);
-                    // 如果用户点击了牌，通常意味着他们放弃了当前的提示
                     if (currentHint) {
-                        currentHint = null;
-                        currentHintIndexFromServer = 0; // 重置提示索引
-                        highlightHintedCards([]); // 清除提示高亮
+                        currentHint = null; currentHintIndexFromServer = 0;
+                        highlightHintedCards([]);
                     }
                 });
             }
         });
-        // 如果 currentHint 仍然有效，在手牌重绘后重新高亮
-        if (currentHint && currentHint.length > 0) {
-            highlightHintedCards(currentHint);
-        }
+        if (currentHint && currentHint.length > 0) highlightHintedCards(currentHint);
     }
 
     function toggleCardSelection(cardDiv, cardData) {
         const cardKey = cardObjectToKey(cardData);
         const indexInSelection = selectedCardsForPlay.findIndex(c => cardObjectToKey(c) === cardKey);
-
         if (indexInSelection > -1) {
             selectedCardsForPlay.splice(indexInSelection, 1);
             cardDiv.classList.remove('selected');
@@ -554,36 +604,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateCenterPileUI(centerPileCards, lastHandInfoData) {
         if (!discardedCardsArea) return;
-        discardedCardsArea.innerHTML = ''; // 清空弃牌区
+        const lastHandTypeDisplay = document.getElementById('lastHandType');
+        discardedCardsArea.innerHTML = '';
 
         let cardsToDisplay = [];
-        let handTypeMessage = "";
+        let handTypeMessage = "等待出牌";
 
         if (lastHandInfoData && lastHandInfoData.cards && lastHandInfoData.cards.length > 0) {
-            // 如果有 lastHandInfo (通常是上一手有效出牌)，则显示它
             cardsToDisplay = lastHandInfoData.cards;
             handTypeMessage = `类型: ${lastHandInfoData.type || '未知'}`;
-            if (lastHandInfoData.representativeCard) {
-                 // handTypeMessage += `, 代表牌: ${lastHandInfoData.representativeCard.rank}${lastHandInfoData.representativeCard.suit}`;
-            }
-        } else if (centerPileCards && centerPileCards.length > 0) {
-            // 否则，如果中心牌堆有牌 (例如，在回合重置后，前一个玩家刚打出，但尚未成为 lastValidHandInfo)
-            // 这种情况比较少见，因为 lastValidHandInfo 通常会被更新
-            cardsToDisplay = centerPileCards;
-            handTypeMessage = "当前牌堆";
-        } else {
-            handTypeMessage = "等待出牌";
+        } else if (centerPileCards && centerPileCards.length > 0 && (!lastHandInfoData || lastHandInfoData.cards.length === 0)) {
+            // This case handles when the pile is reset (new round), but still shows the cards *just played* before reset if game state provides them in centerPile
+            // However, usually lastHandInfo is authoritative.
+             cardsToDisplay = centerPileCards;
+             handTypeMessage = "当前出牌"; // Or simply don't show type if it's just a pile for a new turn
         }
-
-        const handTypeDisplay = document.createElement('div');
-        handTypeDisplay.className = 'last-hand-type'; // 可以用这个类来设定文字样式
-        handTypeDisplay.textContent = handTypeMessage;
-        discardedCardsArea.appendChild(handTypeDisplay);
+        
+        if(lastHandTypeDisplay) lastHandTypeDisplay.textContent = handTypeMessage;
 
         if (cardsToDisplay.length > 0) {
             cardsToDisplay.forEach(cardData => {
                 const cardDiv = createCardElement(cardData);
-                cardDiv.classList.add('center-pile-card'); // 用于区分中间牌堆的牌
+                cardDiv.classList.add('center-pile-card');
                 discardedCardsArea.appendChild(cardDiv);
             });
         }
@@ -594,136 +636,136 @@ document.addEventListener('DOMContentLoaded', () => {
         cardDiv.className = 'card';
         cardDiv.dataset.rank = cardData.rank;
         cardDiv.dataset.suit = cardData.suit;
-        const rankChar = cardData.rank;
-        const suitChar = cardData.suit;
-        const imageName = `${suitChar}${rankChar}.png`; // 例如 S2.png, HK.png
+        const imageName = `${cardData.suit}${cardData.rank}.png`;
         try {
             cardDiv.style.backgroundImage = `url('/images/cards/${imageName}')`;
         } catch (e) {
             console.error("Error setting card background image:", e, imageName);
-            cardDiv.textContent = `${suitChar}${rankChar}`; // Fallback text
+            cardDiv.textContent = `${cardData.suit}${cardData.rank}`;
         }
         return cardDiv;
     }
 
-    // Voice functionality
+    // --- Voice Functionality ---
     if (micButton) {
         micButton.addEventListener('mousedown', handleVoicePress);
         micButton.addEventListener('mouseup', handleVoiceRelease);
-        micButton.addEventListener('touchstart', handleVoicePress); // Support mobile touch
+        micButton.addEventListener('mouseleave', handleVoiceRelease);
+        micButton.addEventListener('touchstart', handleVoicePress, { passive: false });
         micButton.addEventListener('touchend', handleVoiceRelease);
+        micButton.addEventListener('touchcancel', handleVoiceRelease);
     }
 
-    let mediaRecorder;
-    let audioChunks = [];
-    let isRecording = false; // 添加一个标志来表示是否正在录音
-
     async function handleVoicePress(event) {
-        // Prevent default long-press menu etc.
         event.preventDefault();
-        console.log('Voice button pressed');
+        if (isRecording || !currentRoomId || (currentRoomState && currentRoomState.gameFinished)) return;
 
-        if (!isRecording) {
-            isRecording = true;
-            audioChunks = []; // 清空之前的录音数据
+        console.log('Voice button pressed. Attempting to record.');
+        isRecording = true;
+        audioChunks = [];
+        if(micButton) micButton.classList.add('recording');
+        if(socket) socket.emit('playerStartSpeaking');
 
-            try {
-            // 1. Request microphone permission
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-            // 2. Use MediaRecorder 初始化并开始录音
-                mediaRecorder = new MediaRecorder(stream);
-                mediaRecorder.ondataavailable = event => {
-                    audioChunks.push(event.data);
-                };
-                mediaRecorder.onstop = () => {
-                    // 录音停止后的处理在 handleVoiceRelease 中进行
-                };
-                mediaRecorder.start();
-
-                console.log('MediaRecorder started.');
-
-            } catch (err) {
-                console.error('Error accessing microphone:', err);
-                isRecording = false; // 录音失败，重置状态
-                alert('无法访问麦克风，请检查权限设置。');
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // Try common mimeTypes, fall back if specific ones fail
+            const mimeTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg', 'audio/mp4'];
+            let selectedMimeType = '';
+            for (const mimeType of mimeTypes) {
+                if (MediaRecorder.isTypeSupported(mimeType)) {
+                    selectedMimeType = mimeType;
+                    break;
+                }
             }
+            if (!selectedMimeType) {
+                console.warn("No preferred MIME type supported, using default.");
+            }
+            console.log("Using MIME type:", selectedMimeType || 'default (browser chosen)');
 
-            // Visual feedback: Change button style
-            if (micButton) micButton.classList.add('recording');
+            mediaRecorder = selectedMimeType ? new MediaRecorder(stream, { mimeType: selectedMimeType }) : new MediaRecorder(stream);
+
+            mediaRecorder.ondataavailable = event => {
+                if (event.data.size > 0) audioChunks.push(event.data);
+            };
+            mediaRecorder.onstop = () => {
+                console.log('MediaRecorder stopped. Processing audio chunks.');
+                if (audioChunks.length > 0 && currentRoomId && socket) {
+                    // Use the selectedMimeType (or default if empty) when creating the Blob
+                    const blobMimeType = selectedMimeType || (audioChunks[0] && audioChunks[0].type) || 'application/octet-stream';
+                    const audioBlob = new Blob(audioChunks, { type: blobMimeType });
+
+                    console.log(`Sending voice message blob of type ${audioBlob.type}, size ${audioBlob.size} to room ${currentRoomId}`);
+                    socket.emit('sendVoiceMessage', { roomId: currentRoomId, audioBlob: audioBlob });
+                } else {
+                    console.log("No audio chunks to send or not in a room/socket not available.");
+                }
+                audioChunks = [];
+                if (stream) stream.getTracks().forEach(track => track.stop());
+            };
+            mediaRecorder.start();
+            console.log('MediaRecorder started.');
+        } catch (err) {
+            console.error('Error accessing/starting microphone:', err);
+            alert(`无法访问麦克风: ${err.name} - ${err.message}\n\n请检查：\n1. 浏览器是否已授予麦克风权限（点击地址栏左侧的图标）。\n2. 操作系统是否允许浏览器访问麦克风。\n3. 是否有其他程序正在使用麦克风。\n4. 如果在服务器上运行，请确保使用 HTTPS 连接。`);
+            isRecording = false;
+            if(micButton) micButton.classList.remove('recording');
+            if(socket) socket.emit('playerStopSpeaking');
         }
     }
 
     function handleVoiceRelease(event) {
-        console.log('Voice button released');
         event.preventDefault();
-
-        if (isRecording && mediaRecorder && mediaRecorder.state !== 'inactive') {
-            isRecording = false;
-
-            // Stop recording
+        if (!isRecording) return;
+        console.log('Voice button released.');
+        isRecording = false;
+        if(micButton) micButton.classList.remove('recording');
+        if(socket) socket.emit('playerStopSpeaking');
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
             mediaRecorder.stop();
-
-            console.log('Stopping recording.');
-
-            // Visual feedback: Restore button style
-            if (micButton) micButton.classList.remove('recording');
-
-        } else if (isRecording) { // If pressed but recording didn't start successfully
-            isRecording = false;
-            if (micButton) micButton.classList.remove('recording');
-            console.warn('Voice button released, but not actively recording.');
+        } else if (mediaRecorder && mediaRecorder.stream) { // If recording didn't start but stream was acquired
+             mediaRecorder.stream.getTracks().forEach(track => track.stop());
         }
-
+    }
+    
+    function findSpeakingPlayerArea(speakerUserId) {
+        // For self, the info is in #my-info-in-bar
+        if (speakerUserId === myUserId) {
+            return document.getElementById('my-info-in-bar');
+        }
+        // For opponents, their main area div has data-player-id
+        return document.querySelector(`.opponent-area[data-player-id="${speakerUserId}"]`);
     }
 
-    // TODO: Add socket.on listener to receive and play voice messages
-    // socket.on('receiveVoiceMessage', (data) => {
-    //     console.log('Received voice message:', data);
-    //     // 1. Get audio data from data
-    //     // 2. Use AudioContext or <audio> tag to play the voice
-    //     // 3. Optional: Show visual indication of voice playback
-    // });
+    socket.on('playerStartedSpeaking', ({ userId, username }) => {
+        console.log(`${username} (ID: ${userId}) started speaking`);
+        const playerArea = findSpeakingPlayerArea(userId);
+        if (playerArea) {
+            const indicator = playerArea.querySelector('.voice-indicator');
+            if (indicator) indicator.classList.add('speaking');
+        }
+    });
 
-    // Receive and play voice messages
+    socket.on('playerStoppedSpeaking', ({ userId }) => {
+        console.log(`Player ID: ${userId} stopped speaking`);
+        const playerArea = findSpeakingPlayerArea(userId);
+        if (playerArea) {
+            const indicator = playerArea.querySelector('.voice-indicator');
+            if (indicator) indicator.classList.remove('speaking');
+        }
+    });
+
     socket.on('receiveVoiceMessage', (data) => {
-        console.log('Received voice message:', data);
+        console.log('Received voice message from:', data.userId, "Blob type:", data.audioBlob.type, "size:", data.audioBlob.size);
         const { userId, audioBlob } = data;
-
-        // TODO: Find the voice indicator element for the corresponding player
-        // You need to add a unique voice indicator element for each player (including yourself) in your HTML,
-        // for example, with an ID like `voiceIndicator_${userId}` or similar structure.
-        // Assuming you have a way to find the player UI element based on userId.
-        // For example, assuming you have a function getPlayerElementByUserId(userId) {...}
-
-        // Example: Create an Audio element to play the voice
+        if (!(audioBlob instanceof Blob) || audioBlob.size === 0) {
+            console.error("Received audio data is not a valid Blob or is empty:", audioBlob);
+            return;
+        }
         const audioUrl = URL.createObjectURL(audioBlob);
         const audio = new Audio(audioUrl);
-
-        // Play the voice
-        audio.play().then(() => {
-            console.log('Audio playback started.');
-            // TODO: Show visual indication of voice playback, e.g., light up the voice indicator
-            const playerElement = document.querySelector(`.player-area[data-user-id="${userId}"]`);
-            const indicator = playerElement ? playerElement.querySelector('.voice-indicator') : null;
-            if (indicator) indicator.classList.add('active');
-
-        }).catch(error => {
-            console.error('Audio playback failed:', error);
-            // Handle playback failure, e.g., show an error message
-            const playerElement = document.querySelector(`.player-area[data-user-id="${userId}"]`);
-            const indicator = playerElement ? playerElement.querySelector('.voice-indicator') : null;
-            if (indicator) indicator.classList.remove('active');
-        });
-
-        // After playback ends, remove the temporary URL and visual indication
-        audio.onended = () => {
-            console.log('Audio playback ended.');
-            URL.revokeObjectURL(audioUrl); // Release memory
-            // TODO: Remove visual indication of voice playback
-            const playerElement = document.querySelector(`.player-area[data-user-id="${userId}"]`);
-            const indicator = playerElement ? playerElement.querySelector('.voice-indicator') : null;
-            if (indicator) indicator.classList.remove('active');
-        };
+        audio.play().catch(error => console.error('Audio playback failed:', error));
+        audio.onended = () => URL.revokeObjectURL(audioUrl);
+        audio.onerror = (e) => { console.error(`Error playing audio for ${userId}:`, e); URL.revokeObjectURL(audioUrl); };
     });
-});
+
+}); // END DOMContentLoaded
