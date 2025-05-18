@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>KK 在线纸牌</title>
-    <link rel="stylesheet" href="style.css?v=1.0.27"> <!-- 版本号更新 -->
+    <link rel="stylesheet" href="style.css?v=1.0.26"> <!-- 版本号更新 -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#333"/>
     <link rel="apple-touch-icon" href="/images/icon-192x192.png">
@@ -66,7 +66,7 @@
             <div class="room-name-id">
                 房间: <span id="infoBarRoomName">未知</span> (<span id="infoBarRoomId">----</span>)
                 | 状态: <span id="infoBarRoomStatus">等待中</span> <!-- 新增房间状态显示 -->
-                | 回合: <span id="infoBarCurrentTurn">N/A</span>
+                | 当前回合: <span id="infoBarCurrentTurn">N/A</span>
             </div>
             <button id="leaveRoomButton" title="离开房间">离开</button>
         </div>
@@ -118,7 +118,7 @@
         </div>
 
         <div id="bottom-bar">
-            <button id="ready-button" title="准备/取消准备">准备</button> <!-- 新增准备按钮 -->
+            <button id="ready-button" title="准备">准备</button> <!-- 新增准备按钮 -->
             <button id="hint-button" title="提示">提示</button>
             <button id="pass-button" title="不出 / 过">过</button>
             <div id="my-info-in-bar" class="player-area self-info-in-bar" data-player-id="">
@@ -141,12 +141,11 @@
                 <p id="gameOverReasonText"></p>
                 <div id="gameOverScores"></div>
                 <button id="backToLobbyBtn">返回大厅</button>
-                <!-- 可以考虑在这里也放一个“再来一局/准备”按钮 -->
             </div>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="client.js?v=1.0.27"></script> <!-- 版本号更新 -->
+    <script src="client.js?v=1.0.26"></script>
 </body>
 </html>
