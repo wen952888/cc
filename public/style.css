@@ -2,16 +2,16 @@
 html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #e0e0e0; color: #333; font-size: 16px; -webkit-tap-highlight-color: transparent; }
 .hidden-view { display: none !important; } .view-block { display: block !important; } .view-flex { display: flex !important; flex-direction: column; } .overlay.view-flex { justify-content: center; align-items: center; }
 .view { background-color: #f5f5f5; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-radius: 10px; margin: 20px auto; padding: 25px; box-sizing: border-box; }
-#loginRegisterView, #lobbyView, #loadingView { width: 90%; max-width: 600px; color: #333; }
-#loadingView.view-block { text-align: center; padding-top: 50px; font-size: 1.2em; color: #555; background-color: transparent; box-shadow: none;}
-#authFormContainer { display: flex; flex-wrap: wrap; justify-content: space-around; margin-bottom: 20px; gap: 20px; }
-.formSection { border: none; padding: 20px; border-radius: 8px; width: 100%; max-width: 300px; box-sizing: border-box; background-color: #f0f0f0; }
-input[type="text"], input[type="password"], input[type="tel"] { border: 1px solid #ccc; padding: 10px; border-radius: 4px; margin: 5px 0; width: calc(100% - 22px); box-sizing: border-box; font-size: 1em; }
-#roomList { border: 1px solid #d8d8d8; background-color: #efefef; padding: 10px; border-radius: 5px; max-height: 300px; overflow-y: auto;}
-.room-item { border-bottom: 1px solid #e0e0e0; color: #444; padding: 10px 5px; display: flex; justify-content: space-between; align-items: center;}
-.room-item:last-child { border-bottom: none; }
-.room-item span { margin-right: 10px; }
-.room-item button { font-size: 0.85em; padding: 6px 10px; }
+.view#loginRegisterView, .view#lobbyView, .view#loadingView { width: 90%; max-width: 600px; color: #333; }
+.view#loadingView.view-block { text-align: center; padding-top: 50px; font-size: 1.2em; color: #555; background-color: transparent; box-shadow: none;}
+.view#authFormContainer { display: flex; flex-wrap: wrap; justify-content: space-around; margin-bottom: 20px; gap: 20px; }
+.view .formSection { border: none; padding: 20px; border-radius: 8px; width: 100%; max-width: 300px; box-sizing: border-box; background-color: #f0f0f0; }
+ .view input[type="text"], .view input[type="password"], .view input[type="tel"] { border: 1px solid #ccc; padding: 10px; border-radius: 4px; margin: 5px 0; width: calc(100% - 22px); box-sizing: border-box; font-size: 1em; }
+ .view #roomList { border: 1px solid #d8d8d8; background-color: #efefef; padding: 10px; border-radius: 5px; max-height: 300px; overflow-y: auto;}
+ .view .room-item { border-bottom: 1px solid #e0e0e0; color: #444; padding: 10px 5px; display: flex; justify-content: space-between; align-items: center;}
+ .view .room-item:last-child { border-bottom: none; }
+ .view .room-item span { margin-right: 10px; }
+ .view .room-item button { font-size: 0.85em; padding: 6px 10px; }
 button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; transition: background-color 0.2s ease; margin: 3px 0; }
 button:hover { background-color: #0056b3; }
 button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
@@ -20,16 +20,16 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
 .message.error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; }
 .message.success { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; }
 
-#roomView { width: 100%; height: 100%; padding: 0; background-color: transparent; display: flex; flex-direction: column;}
-#gameArea { flex-grow: 1; position: relative; padding-top: 10px; padding-bottom: 25px; box-sizing: border-box; background-color: #e0e0e0; overflow: hidden; }
-#gameInfoBar { position: absolute; top: 10px; right: 10px; width: auto; height: auto; padding: 6px 10px; display: flex; flex-direction: row; align-items: center; justify-content: flex-end; background-color: rgba(240, 240, 240, 0.8); border-radius: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.15); z-index: 300; }
-#gameInfoBar .room-name-id { font-size: 0.75em; color: #333; margin-right: 12px; white-space: nowrap; }
-#gameInfoBar .room-name-id .room-name { font-weight: normal; }
-#gameInfoBar .room-name-id .room-id { opacity: 0.8; margin-left: 4px; }
-#gameInfoBar #leaveRoomButton { padding: 4px 8px; font-size: 0.75em; background-color: #e57373; color: white; border: none; border-radius: 4px; flex-shrink: 0; }
+.view#roomView { width: 100%; height: 100%; padding: 0; background-color: transparent; display: flex; flex-direction: column;}
+.view#gameArea { flex-grow: 1; position: relative; padding-top: 10px; padding-bottom: 25px; box-sizing: border-box; background-color: #e0e0e0; overflow: hidden; }
+.view#gameInfoBar { position: absolute; top: 10px; right: 10px; width: auto; height: auto; padding: 6px 10px; display: flex; flex-direction: row; align-items: center; justify-content: flex-end; background-color: rgba(240, 240, 240, 0.8); border-radius: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.15); z-index: 300; }
+.view#gameInfoBar .room-name-id { font-size: 0.75em; color: #333; margin-right: 12px; white-space: nowrap; }
+.view#gameInfoBar .room-name-id .room-name { font-weight: normal; }
+.view#gameInfoBar .room-name-id .room-id { opacity: 0.8; margin-left: 4px; }
+.view#gameInfoBar #leaveRoomButton { padding: 4px 8px; font-size: 0.75em; background-color: #e57373; color: white; border: none; border-radius: 4px; flex-shrink: 0; }
 .playerArea { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 3px; box-sizing: border-box; min-width: 80px; }
 .playerHeader { display: flex; flex-direction: column; align-items: center; margin-bottom: 1px; }
-.player-avatar { width: 30px; height: 30px; border-radius: 50%; background-color: #d0d0d0; background-size: cover; background-position: center; flex-shrink: 0; border: 1px solid #b0b0b0; display: flex; justify-content: center; align-items: center; margin-bottom: 2px; }
+.player-avatar { width: 30px; height: 30px; border-radius: 50%; background-color: #d0d0d0; background-size: cover; background-position: center; flex-shrink: 0; border: 1px solid #b0b0b0; display: flex; justify-content: center; align-items: center; margin-bottom: 2px; position: relative;}
 .player-avatar img.alarm-icon { width: 20px; height: 20px; }
 .player-details { display: flex; flex-direction: column; align-items: center; }
 .playerName { font-weight: bold; font-size: 0.75em; color: #333; white-space: nowrap; }
@@ -88,53 +88,271 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
 .opponent-left { top: 30%; left: 5px; transform: translateY(-50%); }
 .opponent-right { top: 30%; right: 5px; transform: translateY(-50%); }
 
-/* 对手手牌区域的关键CSS */
-.opponentHand {
-    display: block; /* 改为 block，因为子元素是 absolute 定位 */
-    /* justify-content: center; align-items: center;  对于 absolute 子元素意义不大 */
-    width: auto; /* 或者一个固定的宽度，例如 150px，以容纳展开的牌 */
-    min-width: 40px; /* 至少一张牌的宽度 */
-    height: 50px; /* 根据您的卡牌高度调整 */
-    position: relative; /* 关键：使得内部绝对定位的卡牌相对于此容器 */
-    margin-top: 2px;
-    /* overflow: hidden; 如果不希望卡牌超出这个区域，但可能导致部分卡牌不可见 */
+/* 麦克风按钮样式 */
+#micButton {
+    background-color: #6c757d;
+    border: 1px solid #5a6268;
+    color: white;
 }
-
-.opponentHand .card {
-    position: absolute; /* 关键：允许通过 left, top, z-index 精确控制位置 */
-    top: 0; /* 所有卡牌顶部对齐 */
-    width: 30px;    /* 与 client.js 中的 cardWidth 匹配 */
-    height: 42px;   /* 卡牌高度 */
-    border-radius: 3px;
-    box-shadow: 0.5px 0.5px 1px rgba(0,0,0,0.1);
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    /* transform 和 opacity 现在应该主要由 JS 控制，或通过其他类控制 */
-    transition: none; /* 避免JS设置left时有动画干扰 */
+#micButton.active {
+    background-color: #28a745;
+    border-color: #1e7e34;
+}
+#micButton:disabled {
+    background-color: #9e9e9e;
+    border-color: #757575;
+    cursor: not-allowed;
 }
 
 
-#centerArea { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); width: auto; max-width: 70%; min-width: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5px; z-index: 50; min-height: 150px; }
-#centerInfo { text-align: center; margin-bottom: 3px; width: 100%; }
-#centerInfo #lastHandText { font-size: 0.7em; color: #666; margin: 0 0 1px 0; }
-#centerInfo #lastHandTypeDisplay { font-size: 0.75em; color: #444; font-weight: bold; min-height: 1em; }
-#centerPileArea { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; width: 100%; min-height: 150px; padding: 2px; box-sizing: border-box; }
-#centerPileArea .card { position: relative; margin: 2px; border-radius: 8px; }
+.playerArea.current-turn .player-avatar { box-shadow: 0 0 8px 2px gold, 0 0 12px 3px rgba(255, 215, 0, 0.5); border-color: gold; }
+.overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); z-index: 1000; }
+.overlay-content { background-color: #fefefe; padding: 18px; border-radius: 8px; text-align: center; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22); max-width: 90%; width: 380px; color: #333;}
+#gameOverScores p { margin: 5px 0; font-size: 0.95em; }
+#gameOverScores .score-plus { color: #28a745; font-weight: bold; }
+#gameOverScores .score-minus { color: #dc3545; font-weight: bold; }
+#gameOverScores .score-zero { color: #6c757d; }
+.hand-count-display { font-size: 0.7em; color: #fff; background-color: rgba(0,0,0,0.7); padding: 1px 4px; border-radius: 6px; z-index: 160; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+.opponent-left .hand-count-display, .opponent-right .hand-count-display { bottom: auto; top: calc(100% - 10px); }
 
-#playerAreaBottom.selfArea { position: absolute; bottom: 25px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; padding: 0 5px; box-sizing: border-box; z-index: 200; }
-#myHand.playerCards.myHand { order: 1; width: 100%; max-width: 95vw; min-height: 150px; overflow-x: auto; overflow-y: hidden; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 5px; margin-bottom: 5px; scrollbar-width: thin; scrollbar-color: #b0b0b0 #e0e0e0; }
-#myHand.playerCards.myHand::-webkit-scrollbar { height: 4px; }
-#playerAreaBottom .self-player-info-container { order: 2; display: flex; flex-direction: column; align-items: center; margin-bottom: 5px; }
-#playerAreaBottom .self-player-info-container .player-avatar { width: 30px; height: 30px;}
-#playerAreaBottom .self-player-info-container .playerHeader { flex-direction: column; align-items: center; }
-#readyButton { padding: 3px 7px; font-size: 0.7em; margin-top: 2px; }
-#readyButton.ready { background-color: #f44336; border-color: #d32f2f; }
-.my-actions-container { order: 3; display: flex; justify-content: center; align-items: center; gap: 5px; padding: 2px 0; width: 100%; }
-.my-actions-container.hidden-view { display: none !important; }
-.my-actions-container button { min-width: 45px; height: 30px; font-size: 0.75em; border-radius: 3px; padding: 0 5px; }
-#playSelectedCardsButton { background-color: #4CAF50; border: 1px solid #388E3C; }
-#playSelectedCardsButton:disabled { background-color: #9E9E9E; border-color: #757575; }
+/* Basic Authentication Form Styles */
+#auth-view {
+ display: flex;
+ justify-content: center;
+ align-items: center;
+ min-height: 100vh;
+ background-color: #f0f0f0; /* Example background color */
+}
+
+#login-form,
+#register-form {
+ background-color: #fff;
+ padding: 20px;
+ border-radius: 8px;
+ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+ text-align: center;
+}
+
+#login-form h2,
+#register-form h2 {
+ margin-top: 0;
+ margin-bottom: 20px;
+ color: #333;
+}
+
+#login-form input,
+#register-form input {
+ display: block;
+ width: 100%;
+ margin-bottom: 15px;
+ padding: 10px;
+ border: 1px solid #ccc;
+ border-radius: 4px;
+}
+
+#login-form button,
+#register-form button {
+ background-color: #007bff;
+ color: white;
+ padding: 10px 20px;
+ border: none;
+ border-radius: 4px;
+ cursor: pointer;
+ font-size: 16px;
+}
+
+#login-form button:hover,
+#register-form button:hover {
+ background-color: #0056b3;
+}
+
+#login-form p,
+#register-form p {
+ margin-top: 15px;
+ font-size: 14px;
+}
+
+#login-form a,
+#register-form a {
+ color: #007bff;
+ text-decoration: none;
+}
+
+#login-form a:hover,
+#register-form a:hover {
+ text-decoration: underline;
+}
+
+/* Lobby View Styles */
+#lobby-view {
+    padding: 20px;
+    max-width: 600px;
+    margin: 20px auto;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#lobby-view h2 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+#createRoomForm {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+}
+
+#createRoomForm input[type="text"] {
+    width: calc(100% - 80px); /* Adjust width considering button */
+    padding: 8px;
+    margin-right: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+#createRoomForm button {
+    padding: 8px 15px;
+    background-color: #28a745; /* Green color */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#createRoomForm button:hover {
+    background-color: #218838;
+}
+
+#roomList h3 {
+    color: #555;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+}
+
+#rooms {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#rooms li {
+    background-color: #eee;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#rooms li span {
+    flex-grow: 1;
+    margin-right: 10px;
+}
+
+#rooms li button {
+    padding: 5px 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#rooms li button:hover {
+    background-color: #0056b3;
+}
+
+.view#loadingView.view-block { text-align: center; padding-top: 50px; font-size: 1.2em; color: #555; background-color: transparent; box-shadow: none;}
+.view#authFormContainer { display: flex; flex-wrap: wrap; justify-content: space-around; margin-bottom: 20px; gap: 20px; }
+.view .formSection { border: none; padding: 20px; border-radius: 8px; width: 100%; max-width: 300px; box-sizing: border-box; background-color: #f0f0f0; }
+ .view input[type="text"], .view input[type="password"], .view input[type="tel"] { border: 1px solid #ccc; padding: 10px; border-radius: 4px; margin: 5px 0; width: calc(100% - 22px); box-sizing: border-box; font-size: 1em; }
+ .view #roomList { border: 1px solid #d8d8d8; background-color: #efefef; padding: 10px; border-radius: 5px; max-height: 300px; overflow-y: auto;}
+ .view .room-item { border-bottom: 1px solid #e0e0e0; color: #444; padding: 10px 5px; display: flex; justify-content: space-between; align-items: center;}
+ .view .room-item:last-child { border-bottom: none; }
+ .view .room-item span { margin-right: 10px; }
+ .view .room-item button { font-size: 0.85em; padding: 6px 10px; }
+button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; transition: background-color 0.2s ease; margin: 3px 0; }
+button:hover { background-color: #0056b3; }
+button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
+.inline-button { padding: 4px 8px; font-size: 0.8em; margin-left: 8px; }
+.message { margin-top: 12px; font-weight: bold; text-align: center; font-size: 0.85em; min-height: 1.1em; padding: 6px; border-radius: 4px; color: #444;}
+.message.error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; }
+.message.success { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; }
+
+.view#roomView { width: 100%; height: 100%; padding: 0; background-color: transparent; display: flex; flex-direction: column;}
+.view#gameArea { flex-grow: 1; position: relative; padding-top: 10px; padding-bottom: 25px; box-sizing: border-box; background-color: #e0e0e0; overflow: hidden; }
+.view#gameInfoBar { position: absolute; top: 10px; right: 10px; width: auto; height: auto; padding: 6px 10px; display: flex; flex-direction: row; align-items: center; justify-content: flex-end; background-color: rgba(240, 240, 240, 0.8); border-radius: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.15); z-index: 300; }
+.view#gameInfoBar .room-name-id { font-size: 0.75em; color: #333; margin-right: 12px; white-space: nowrap; }
+.view#gameInfoBar .room-name-id .room-name { font-weight: normal; }
+.view#gameInfoBar .room-name-id .room-id { opacity: 0.8; margin-left: 4px; }
+.view#gameInfoBar #leaveRoomButton { padding: 4px 8px; font-size: 0.75em; background-color: #e57373; color: white; border: none; border-radius: 4px; flex-shrink: 0; }
+.playerArea { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 3px; box-sizing: border-box; min-width: 80px; }
+.playerHeader { display: flex; flex-direction: column; align-items: center; margin-bottom: 1px; }
+.player-avatar { width: 30px; height: 30px; border-radius: 50%; background-color: #d0d0d0; background-size: cover; background-position: center; flex-shrink: 0; border: 1px solid #b0b0b0; display: flex; justify-content: center; align-items: center; margin-bottom: 2px; position: relative;}
+.player-avatar img.alarm-icon { width: 20px; height: 20px; }
+.player-details { display: flex; flex-direction: column; align-items: center; }
+.playerName { font-weight: bold; font-size: 0.75em; color: #333; white-space: nowrap; }
+.playerRole { font-size: 0.65em; font-style: italic; color: #555; }
+.playerInfo { font-size: 0.6em; line-height: 1.1; color: #666; width: 100%; margin-top: 1px;}
+.playerInfo .ready { color: #28a745; font-weight: bold; } .playerInfo .not-ready { color: #ffc107; font-weight: bold;} .playerInfo .disconnected { color: #dc3545; font-style: italic; } .playerInfo .finished { color: #6c757d; font-style: italic; }
+
+/* 语音指示器样式 */
+.voice-indicator-container {
+    width: 10px;
+    height: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.voice-indicator {
+    width: 8px;
+    height: 8px;
+    background-color: #bbb; /* 默认灰色，不说话 */
+    border-radius: 50%;
+    transition: background-color 0.1s, box-shadow 0.1s;
+}
+.voice-indicator.speaking {
+    background-color: #4CAF50; /* 说话时绿色 */
+    box-shadow: 0 0 4px #4CAF50, 0 0 8px #4CAF50;
+}
+
+.opponent-area { position: absolute; z-index: 100; }
+.opponent-area .playerHeader {
+    flex-direction: row;
+    align-items: center;
+}
+.opponent-area .voice-indicator-container {
+    order: -1;
+    margin-right: 4px;
+}
+.opponent-area .player-details {
+    margin-left: 3px;
+    align-items: flex-start;
+}
+
+.opponent-top { top: 10px; left: 50%; transform: translateX(-50%); padding-top: 0;}
+.opponent-top .playerHeader {
+    flex-direction: column;
+}
+.opponent-top .voice-indicator-container {
+    order: initial;
+    margin-right: 0;
+    margin-left: 4px;
+}
+.opponent-top .player-details {
+    margin-left: 0;
+    align-items: center;
+}
+
+.opponent-left { top: 30%; left: 5px; transform: translateY(-50%); }
+.opponent-right { top: 30%; right: 5px; transform: translateY(-50%); }
 
 /* 麦克风按钮样式 */
 #micButton {
@@ -153,16 +371,7 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
 }
 
 
-.card { border: 1px solid #a0a0a0; border-radius: 8px; width: 100px; height: 140px; background-color: #fff; box-shadow: 1px 1px 3px rgba(0,0,0,0.1); background-size: contain; background-repeat: no-repeat; background-position: center; display: flex; overflow: hidden; flex-shrink: 0; transition: transform 0.15s ease-out, box-shadow 0.15s ease-out, opacity 0.15s ease-out, border-color 0.15s ease-out; user-select: none; box-sizing: border-box; opacity: 1; transform: translateY(0) scale(1); position: relative; }
-.card.hidden { background-image: url('/images/card-back.png'); border-color: #777; }
-#myHand.myHand .card { transform-origin: bottom center; cursor: pointer; margin-left: -70px; }
-#myHand.myHand .card:first-child { margin-left: 0; }
-#myHand.myHand .card:not(.disabled):hover { transform: translateY(-25px) scale(1.05); z-index: 200 !important; box-shadow: 3px 3px 8px rgba(0,0,0,0.25); }
-#myHand.myHand .card.selected:not(.disabled) { border: 3px solid #007bff; transform: translateY(-35px) scale(1.06) !important; z-index: 150 !important; box-shadow: 2px 3px 7px rgba(0,0,0,0.2); }
-#myHand.myHand .card.hinted:not(.disabled) { border: 3px dashed orange; transform: translateY(-10px); z-index: 140 !important; }
-#myHand.myHand .card.disabled { opacity: 0.65; cursor: not-allowed; transform: translateY(0) scale(1) !important; box-shadow: 1px 1px 2px rgba(0,0,0,0.08); z-index: 5 !important; border-color: #b0b0b0; }
 .playerArea.current-turn .player-avatar { box-shadow: 0 0 8px 2px gold, 0 0 12px 3px rgba(255, 215, 0, 0.5); border-color: gold; }
-#gameStatusDisplay  { position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); background-color: rgba(230, 230, 230, 0.88); padding: 2px 7px; border-radius: 8px; font-size: 0.7em; color: #333; z-index: 350; min-height: 1em; white-space: nowrap; box-shadow: 0 1px 1px rgba(0,0,0,0.05); }
 .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); z-index: 1000; }
 .overlay-content { background-color: #fefefe; padding: 18px; border-radius: 8px; text-align: center; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22); max-width: 90%; width: 380px; color: #333;}
 #gameOverScores p { margin: 5px 0; font-size: 0.95em; }
@@ -171,26 +380,16 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
 #gameOverScores .score-zero { color: #6c757d; }
 .hand-count-display { font-size: 0.7em; color: #fff; background-color: rgba(0,0,0,0.7); padding: 1px 4px; border-radius: 6px; z-index: 160; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); white-space: nowrap; }
 .opponent-left .hand-count-display, .opponent-right .hand-count-display { bottom: auto; top: calc(100% - 10px); }
+
 @media (max-height: 700px) and (max-width: 900px), (max-width: 768px) {
     #gameArea { padding-top: 8px; padding-bottom: 20px; }
     #gameInfoBar { top: 5px; right: 5px; padding: 5px 8px; }
     #gameInfoBar .room-name-id { font-size: 0.7em; margin-right: 8px;}
     #gameInfoBar #leaveRoomButton { font-size: 0.7em; padding: 3px 6px; }
-    .card { width: 80px; height: 112px; }
-    #myHand.myHand .card { margin-left: -55px; }
-    .opponentHand .card { width: 30px; height: 42px; } /* 确保媒体查询中也更新了对手卡牌大小 */
-    #myHand.playerCards.myHand { min-height: 120px; }
-    #centerArea { min-height: 130px; }
-    #centerPileArea { min-height: 120px; }
-    .opponentHand { height: 50px; }
-    .my-actions-container button { min-width: 38px; height: 26px; font-size: 0.65em;}
     .player-avatar { width: 24px; height: 24px; }
-    #gameStatusDisplay { font-size: 0.6em; padding: 1px 5px; bottom: 1px;}
     .hand-count-display { font-size: 0.6em; bottom: -4px; }
     #playerAreaBottom.selfArea { bottom: 15px; }
-    #centerArea { top: 43%; }
-    .voice-indicator-container { width: 8px; height: 8px; }
-    .voice-indicator { width: 6px; height: 6px; }
+
 }
 @media (max-width: 480px) {
     #gameArea { padding-top: 5px; }
@@ -198,13 +397,7 @@ button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
     #gameInfoBar .room-name-id { font-size: 0.65em; margin-right: 6px;}
     #gameInfoBar #leaveRoomButton { font-size: 0.65em; padding: 2px 5px; }
     .card { width: 50px; height: 70px; }
-    #myHand.myHand .card { margin-left: -30px; }
-    .opponentHand .card { width: 25px; height: 35px; } /* 确保媒体查询中也更新了对手卡牌大小 */
-    #myHand.playerCards.myHand { min-height: 80px; }
-    #centerArea { min-height: 85px; top: 44%;}
-    #centerPileArea { min-height: 75px; }
-    .opponentHand { height: 45px; }
-    .my-actions-container button { font-size: 0.6em; min-width: 35px; height: 24px;}
+
     .player-avatar { width: 20px; height: 20px; }
     .voice-indicator-container { width: 7px; height: 7px; margin-right: 2px;}
     .voice-indicator { width: 5px; height: 5px; }

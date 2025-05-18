@@ -11,107 +11,39 @@
 </head>
 <body>
     <div id="loadingView" class="view view-block"><p>连接中...</p></div>
-    <div id="loginRegisterView" class="view hidden-view">
-        <h2>登录 / 注册</h2>
-        <div id="authFormContainer">
-            <div class="formSection"><h3>注册</h3><input type="tel" id="regPhone" placeholder="手机号" autocomplete="username"><input type="password" id="regPassword" placeholder="密码 (至少4位)" autocomplete="new-password"><button id="registerButton">注册</button></div>
-            <div class="formSection"><h3>登录</h3><input type="tel" id="loginPhone" placeholder="手机号" autocomplete="username"><input type="password" id="loginPassword" placeholder="密码" autocomplete="current-password"><button id="loginButton">登录</button></div>
+
+    <!-- Authentication View -->
+    <div id="auth-view" class="view hidden-view">
+        <div id="login-form">
+            <h2>登录</h2>
+            <input type="text" id="login-username" placeholder="用户名">
+            <input type="password" id="login-password" placeholder="密码">
+            <button id="login-button">登录</button>
+            <p>没有账号？<a href="#" id="show-register">注册</a></p>
         </div>
-        <p id="authMessage" class="message"></p>
-    </div>
-    <div id="lobbyView" class="view hidden-view">
-        <h2>游戏大厅</h2>
-        <p>欢迎, <span id="lobbyUsername">玩家</span>! <button id="logoutButton" class="inline-button">登出</button></p>
-        <div id="createRoomSection"><h3>创建房间</h3><input type="text" id="createRoomName" placeholder="房间名称"><input type="password" id="createRoomPassword" placeholder="房间密码 (可选)"><button id="createRoomButton">创建</button></div>
-        <h3>加入房间</h3><div id="roomList"><p>加载中...</p></div>
-        <p id="lobbyMessage" class="message"></p>
+
+        <div id="register-form" style="display: none;">
+            <h2>注册</h2>
+            <input type="text" id="register-username" placeholder="手机号">
+            <input type="password" id="register-password" placeholder="密码">
+            <button id="register-button">注册</button>
+            <p>已有账号？<a href="#" id="show-login">登录</a></p>
+        </div>
     </div>
 
-    <div id="roomView" class="view hidden-view view-flex">
-        <div id="gameArea">
-            <div id="gameInfoBar">
-                <div class="room-name-id">
-                    <span class="room-name">房间名</span>
-                    <span class="room-id">ID: ---</span>
-                </div>
-                <button id="micButton" title="麦克风">🎤</button>
-                <button id="leaveRoomButton">离开</button>
-            </div>
-            <div id="playerAreaTop" class="playerArea opponent-area opponent-top">
-                <div class="playerHeader">
-                    <div class="voice-indicator-container">
-                        <div class="voice-indicator"></div>
-                    </div>
-                    <div class="player-avatar"></div>
-                    <div class="player-details">
-                        <span class="playerName"></span>
-                        <span class="playerRole"></span>
-                    </div>
-                </div>
-                <div class="playerInfo"></div><div class="playerCards opponentHand"></div>
-            </div>
-            <div id="playerAreaLeft" class="playerArea opponent-area opponent-left">
-                <div class="playerHeader">
-                    <div class="voice-indicator-container">
-                        <div class="voice-indicator"></div>
-                    </div>
-                    <div class="player-avatar"></div>
-                    <div class="player-details">
-                        <span class="playerName"></span>
-                        <span class="playerRole"></span>
-                    </div>
-                </div>
-                <div class="playerInfo"></div><div class="playerCards opponentHand"></div>
-            </div>
-            <div id="playerAreaRight" class="playerArea opponent-area opponent-right">
-                <div class="playerHeader">
-                    <div class="voice-indicator-container">
-                        <div class="voice-indicator"></div>
-                    </div>
-                    <div class="player-avatar"></div>
-                    <div class="player-details">
-                        <span class="playerName"></span>
-                        <span class="playerRole"></span>
-                    </div>
-                </div>
-                <div class="playerInfo"></div><div class="playerCards opponentHand"></div>
-            </div>
-            <div id="centerArea">
-                <div id="centerPileArea"></div>
-                <div id="centerInfo"><p id="lastHandText">上一手牌:</p><span id="lastHandTypeDisplay"></span></div>
-            </div>
-            <div id="playerAreaBottom" class="playerArea selfArea">
-                <div id="myHand" class="playerCards myHand"></div>
-                <div class="self-player-info-container">
-                    <div class="playerHeader">
-                         <!-- 自己区域的语音指示器通常由麦克风按钮状态表示，但也可以加一个 -->
-                        <div class="voice-indicator-container" style="display: none;"> <!-- 默认隐藏自己的指示器，因为有micButton -->
-                            <div class="voice-indicator"></div>
-                        </div>
-                        <div class="player-avatar"></div>
-                        <div class="player-details">
-                            <span class="playerName">你</span>
-                            <span class="playerRole">[?]</span>
-                        </div>
-                    </div>
-                    <div class="playerInfo">总分: 0</div>
-                    <button id="readyButton" class="hidden-view">准备</button>
-                </div>
-                <div class="my-actions-container hidden-view">
-                    <button id="sortHandButton" title="整理">整理</button>
-                    <button id="hintButton" title="提示">提示</button>
-                    <button id="passTurnButton" title="不要">不要</button>
-                    <button id="playSelectedCardsButton" title="出牌" disabled>出牌</button>
-                </div>
-            </div>
-            <div id="gameStatusDisplay">等待玩家...</div>
+    <!-- Lobby View -->
+    <div id="lobby-view" class="view hidden-view">
+        <h2>游戏大厅</h2>
+        <div id="createRoomForm">
+            <input type="text" id="roomNameInput" placeholder="房间名称">
+            <button id="createRoomButton">创建房间</button>
         </div>
-        <div id="gameOverOverlay" class="overlay hidden-view view-flex">
-             <div class="overlay-content">
-                 <h3 id="gameOverTitle">游戏结束!</h3><p id="gameOverReason"></p><div id="gameOverScores"></div>
-                 <button id="backToLobbyButton">返回大厅</button>
-             </div>
-         </div>
+        <div id="roomList">
+            <h3>房间列表</h3>
+            <ul id="rooms">
+                <!-- 房间列表项将在这里由 JavaScript 动态生成 -->
+            </ul>
+        </div>
     </div>
     <script src="/socket.io/socket.io.js"></script>
     <script src="client.js?v=1.0.21"></script> <!-- 版本号更新 -->
