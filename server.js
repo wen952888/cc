@@ -34,6 +34,21 @@ io.on('connection', (socket) => {
     authManager.init(socket);
     roomManager.init(socket, io);
 
+    // 添加语音消息处理
+    socket.on('sendVoiceMessage', (data) => {
+        const { roomId, audioBlob } = data;
+        console.log(`[SERVER] Received voice message from ${socket.id} for room ${roomId}.`);
+
+        // 查找房间
+        const room = roomManager.getRoomById(roomId); // 假设 roomManager 有 getRoomById 方法
+        if (room) {
+            // 广播语音消息给房间内除发送者外的其他玩家
+            socket.to(roomId).emit('receiveVoiceMessage', { userId: socket.userId, audioBlob: audioBlob }); // 假设 socket.userId 已经被 authManager 设置
+            console.log(`[SERVER] Broadcasting voice message to room ${roomId}.`);
+        } else {
+            console.warn(`[SERVER] Room ${roomId} not found for voice message.`);
+        }
+    });
     socket.on('disconnect', (reason) => {
         console.log(`[SERVER] Client disconnected: ${socket.id}. Reason: ${reason}`);
         roomManager.handleDisconnect(socket);

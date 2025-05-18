@@ -248,7 +248,8 @@ html, body {
 /* 自己区域 (包括头像信息和手牌区) - HTML中它仍在gameArea内，所以相对于gameArea底部定位 */
 #player-bottom.self-area {
     position: absolute;
-    bottom: 0; /* 相对于 #gameArea 的底部 */
+ bottom: 0; /* 相对于 #gameArea 的底部 */
+    left: 0;
     left: 0;
     right: 0;
     width: 100%;
@@ -435,4 +436,27 @@ html, body {
     #player-hand-area { min-height: 60px; }
     .self-area .player-avatar-container { margin-bottom: 1px; padding: 1px 4px; font-size: 0.8em;}
     #centerPileArea { top: 40%; }
+}
+
+/* 为录音按钮添加样式 */
+#micButton.recording {
+ background-color: rgba(255, 0, 0, 0.5); /* 录音时变为半透明红色 */
+ box-shadow: 0 0 10px rgba(255, 0, 0, 0.7); /* 添加红色光晕效果 */
+}
+
+/* 为语音指示器添加样式 */
+.voice-indicator {
+ width: 15px; /* 指示器大小 */
+ height: 15px;
+ border-radius: 50%; /* 圆形 */
+ background-color: rgba(0, 128, 0, 0.3); /* 默认半透明绿色 */
+ margin-left: 5px;
+ display: inline-block; /* 使其能在文本旁边显示 */
+ vertical-align: middle;
+ transition: background-color 0.2s, box-shadow 0.2s; /* 添加过渡效果 */
+}
+
+.voice-indicator.active {
+ background-color: rgba(0, 255, 0, 0.7); /* 活跃时变为更亮的绿色 */
+ box-shadow: 0 0 8px rgba(0, 255, 0, 0.9); /* 添加绿色光晕效果 */
 }

@@ -48,6 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const passButton = document.getElementById('pass-button');
     const hintButton = document.getElementById('hint-button');
 
+    // Voice elements
+    const micButton = document.getElementById('micButton'); // Assume micButton exists in HTML
+
     // Opponent area elements (您HTML里还没有这些ID，先注释掉，否则会是null)
     /*
     const opponentDisplayElements = {
@@ -603,4 +606,124 @@ document.addEventListener('DOMContentLoaded', () => {
         return cardDiv;
     }
 
+    // Voice functionality
+    if (micButton) {
+        micButton.addEventListener('mousedown', handleVoicePress);
+        micButton.addEventListener('mouseup', handleVoiceRelease);
+        micButton.addEventListener('touchstart', handleVoicePress); // Support mobile touch
+        micButton.addEventListener('touchend', handleVoiceRelease);
+    }
+
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false; // 添加一个标志来表示是否正在录音
+
+    async function handleVoicePress(event) {
+        // Prevent default long-press menu etc.
+        event.preventDefault();
+        console.log('Voice button pressed');
+
+        if (!isRecording) {
+            isRecording = true;
+            audioChunks = []; // 清空之前的录音数据
+
+            try {
+            // 1. Request microphone permission
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+            // 2. Use MediaRecorder 初始化并开始录音
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+                mediaRecorder.onstop = () => {
+                    // 录音停止后的处理在 handleVoiceRelease 中进行
+                };
+                mediaRecorder.start();
+
+                console.log('MediaRecorder started.');
+
+            } catch (err) {
+                console.error('Error accessing microphone:', err);
+                isRecording = false; // 录音失败，重置状态
+                alert('无法访问麦克风，请检查权限设置。');
+            }
+
+            // Visual feedback: Change button style
+            if (micButton) micButton.classList.add('recording');
+        }
+    }
+
+    function handleVoiceRelease(event) {
+        console.log('Voice button released');
+        event.preventDefault();
+
+        if (isRecording && mediaRecorder && mediaRecorder.state !== 'inactive') {
+            isRecording = false;
+
+            // Stop recording
+            mediaRecorder.stop();
+
+            console.log('Stopping recording.');
+
+            // Visual feedback: Restore button style
+            if (micButton) micButton.classList.remove('recording');
+
+        } else if (isRecording) { // If pressed but recording didn't start successfully
+            isRecording = false;
+            if (micButton) micButton.classList.remove('recording');
+            console.warn('Voice button released, but not actively recording.');
+        }
+
+    }
+
+    // TODO: Add socket.on listener to receive and play voice messages
+    // socket.on('receiveVoiceMessage', (data) => {
+    //     console.log('Received voice message:', data);
+    //     // 1. Get audio data from data
+    //     // 2. Use AudioContext or <audio> tag to play the voice
+    //     // 3. Optional: Show visual indication of voice playback
+    // });
+
+    // Receive and play voice messages
+    socket.on('receiveVoiceMessage', (data) => {
+        console.log('Received voice message:', data);
+        const { userId, audioBlob } = data;
+
+        // TODO: Find the voice indicator element for the corresponding player
+        // You need to add a unique voice indicator element for each player (including yourself) in your HTML,
+        // for example, with an ID like `voiceIndicator_${userId}` or similar structure.
+        // Assuming you have a way to find the player UI element based on userId.
+        // For example, assuming you have a function getPlayerElementByUserId(userId) {...}
+
+        // Example: Create an Audio element to play the voice
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+
+        // Play the voice
+        audio.play().then(() => {
+            console.log('Audio playback started.');
+            // TODO: Show visual indication of voice playback, e.g., light up the voice indicator
+            const playerElement = document.querySelector(`.player-area[data-user-id="${userId}"]`);
+            const indicator = playerElement ? playerElement.querySelector('.voice-indicator') : null;
+            if (indicator) indicator.classList.add('active');
+
+        }).catch(error => {
+            console.error('Audio playback failed:', error);
+            // Handle playback failure, e.g., show an error message
+            const playerElement = document.querySelector(`.player-area[data-user-id="${userId}"]`);
+            const indicator = playerElement ? playerElement.querySelector('.voice-indicator') : null;
+            if (indicator) indicator.classList.remove('active');
+        });
+
+        // After playback ends, remove the temporary URL and visual indication
+        audio.onended = () => {
+            console.log('Audio playback ended.');
+            URL.revokeObjectURL(audioUrl); // Release memory
+            // TODO: Remove visual indication of voice playback
+            const playerElement = document.querySelector(`.player-area[data-user-id="${userId}"]`);
+            const indicator = playerElement ? playerElement.querySelector('.voice-indicator') : null;
+            if (indicator) indicator.classList.remove('active');
+        };
+    });
 });
