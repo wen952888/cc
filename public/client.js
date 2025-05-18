@@ -519,6 +519,8 @@ function renderPlayerCards(containerParam, playerData, isMe, isMyTurnAndCanPlay)
     if (isMe) {
         targetContainer = document.getElementById('myHand');
         if (!targetContainer) { console.error("[DEBUG] renderPlayerCards: #myHand 未找到!"); return; }
+        // 明确清空自己的手牌容器，防止重影
+        targetContainer.innerHTML = '';
     }  else { // 对手玩家
         targetContainer = containerParam;
         if (!targetContainer) { console.error(`[DEBUG] renderPlayerCards 对手 (${playerData.username}): 传入的容器为null。`); return; }
@@ -564,7 +566,6 @@ function renderPlayerCards(containerParam, playerData, isMe, isMyTurnAndCanPlay)
     }
 
     // 自己的手牌渲染逻辑
-    targetContainer.innerHTML = '';
     let handToRender = [];
     if (playerData && Array.isArray(playerData.hand)) handToRender = [...playerData.hand];
     else if (playerData && playerData.hand === undefined && playerData.handCount > 0 && !playerData.finished) {
