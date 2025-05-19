@@ -17,7 +17,7 @@ html, body {
 #game-view.fullscreen-view { padding: 0; }
 .flex-center-center { align-items: center; justify-content: center; text-align: center; }
 
-/* Auth & Lobby Styles - (保持不变) */
+/* Auth & Lobby Styles */
 #loadingView p { font-size: 1.2em; color: #a5d6a7; }
 .auth-form-container { background-color: rgba(102, 187, 106, 0.1); padding: 25px 30px; border-radius: 12px; box-shadow: 0 5px 25px rgba(0, 0, 0, 0.4); width: 100%; max-width: 380px; }
 #auth-view h2 { color: #e8f5e9; margin-bottom: 20px; }
@@ -59,11 +59,70 @@ html, body {
 #leaveRoomButton { padding: 5px 10px; font-size: 0.9em; background-color: #b71c1c; color: white; border: none; border-radius: 4px; cursor: pointer; }
 #leaveRoomButton:hover { background-color: #8c1616; }
 #gameArea { flex-grow: 1; position: relative; width: 100%; overflow: hidden; }
-.player-area { display: flex; align-items: center; padding: 5px; box-sizing: border-box; border-radius: 6px; transition: box-shadow 0.3s ease, background-color 0.3s ease; color: #c8e6c9; }
-.player-area.current-turn { box-shadow: 0 0 10px 3px #a5d6a7, inset 0 0 0 2px #a5d6a7; background-color: rgba(165, 214, 167, 0.05); }
+
+.player-area {
+    display: flex;
+    align-items: center;
+    padding: 5px;
+    box-sizing: border-box;
+    border-radius: 6px;
+    transition: box-shadow 0.3s ease, background-color 0.3s ease;
+    color: #c8e6c9;
+    position: relative; /* Needed for absolute positioning of ::after */
+}
+
+/* .player-area.current-turn: เดิมใช้ box-shadow, ตอนนี้จะเพิ่ม SVG indicator */
+.player-area.current-turn {
+    box-shadow: 0 0 10px 3px #a5d6a7, inset 0 0 0 2px #a5d6a7; /* 可以保留原来的高光 */
+    background-color: rgba(165, 214, 167, 0.05);
+}
+
+/* 新增：回合指示器 SVG 的样式 */
+.player-area.current-turn .player-avatar-container::after {
+    content: ''; /*  可以通过 background-image 设置 SVG */
+    background-image: url('/images/turn-indicator.svg'); /* 确保路径正确 */
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position: center;
+    position: absolute;
+    width: 20px;  /* SVG 指示器的大小 */
+    height: 20px; /* SVG 指示器的大小 */
+    /* 定位指示器，根据需要调整 */
+    /* 示例：在头像下方居中 */
+    bottom: -15px; /* 调整此值使SVG在头像下方 */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5; /* 确保在头像上（如果需要覆盖部分）或旁边 */
+    animation: bounceIndicator 1.5s infinite ease-in-out; /* 添加简单动画 */
+}
+
+/* 为底部自己的信息条的当前回合指示器做特殊定位 */
+#my-info-in-bar.current-turn .player-avatar-container::after {
+    /* 示例：在头像上方居中 */
+    top: -15px; /* 调整此值使SVG在自己头像上方 */
+    bottom: auto; /* 重置 bottom */
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+
+@keyframes bounceIndicator {
+    0%, 100% {
+        transform: translateX(-50%) translateY(0);
+    }
+    50% {
+        transform: translateX(-50%) translateY(-3px);
+    }
+}
+
+
 .player-area.player-disconnected { opacity: 0.6; }
 .player-area.player-finished .playerName::after { content: " (已出完)"; font-style: italic; font-size: 0.9em; color: #a5d6a7; margin-left: 4px; }
-.player-avatar-container { position: relative; margin-right: 8px; }
+
+.player-avatar-container {
+    position: relative; /* 确保 ::after 相对于它定位 */
+    margin-right: 8px;
+}
 .player-avatar { width: 35px; height: 35px; border-radius: 50%; background-color: #4a704a; border: 1px solid #698c69; background-size: cover; background-position: center; }
 .voice-indicator-container { position: absolute; bottom: -1px; right: -1px; width: 12px; height: 12px; display: flex; align-items: center; justify-content: center; }
 .voice-indicator { width: 8px; height: 8px; background-color: #698c69; border-radius: 50%; transition: all 0.2s; }
@@ -80,10 +139,44 @@ html, body {
 #player-top.opponent-area { top: 5px; left: 50%; transform: translateX(-50%); flex-direction: column; align-items: center; }
 #player-top .player-avatar-container { margin-right: 0; margin-bottom: 3px; }
 #player-top .player-details { text-align: center; }
+/* 为顶部的对手调整SVG指示器位置 */
+#player-top.opponent-area.current-turn .player-avatar-container::after {
+    bottom: -15px; /* 确认在头像下方 */
+    top: auto;
+}
+
 #player-left.opponent-area { left: 5px; top: 35%; transform: translateY(-50%); }
+/* 为左边的对手调整SVG指示器位置 */
+#player-left.opponent-area.current-turn .player-avatar-container::after {
+    right: -15px; /* 在头像右边 */
+    left: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    animation-name: bounceIndicatorSidewaysLeft; /* 可以用不同动画 */
+}
+@keyframes bounceIndicatorSidewaysLeft { /* 左右晃动的示例动画 */
+    0%, 100% { transform: translateY(-50%) translateX(0); }
+    50% {  transform: translateY(-50%) translateX(3px); }
+}
+
+
 #player-right.opponent-area { right: 5px; top: 35%; transform: translateY(-50%); flex-direction: row-reverse; }
 #player-right .player-avatar-container { margin-right: 0; margin-left: 8px;}
 #player-right .player-details { text-align: right; }
+/* 为右边的对手调整SVG指示器位置 */
+#player-right.opponent-area.current-turn .player-avatar-container::after {
+    left: -15px; /* 在头像左边 */
+    right: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    animation-name: bounceIndicatorSidewaysRight; /* 可以用不同动画 */
+}
+@keyframes bounceIndicatorSidewaysRight { /* 左右晃动的示例动画 */
+    0%, 100% { transform: translateY(-50%) translateX(0); }
+    50% {  transform: translateY(-50%) translateX(-3px); }
+}
+
+
 #centerPileArea { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: auto; max-width: 60%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5px; min-height: 80px; }
 #lastHandType { font-size: 0.75em; color: #a5d6a7; margin-bottom: 3px; font-style: italic; }
 #discarded-cards-area { display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; gap: -25px; min-height: 80px; }
@@ -92,25 +185,25 @@ html, body {
 
 #player-hand-area-wrapper {
     width: 100%;
-    min-height: 155px; /* 增加以适应更大的牌和抬高效果 */
+    min-height: 155px;
     display: flex;
     align-items: flex-end;
     justify-content: center;
     flex-shrink: 0;
-    padding-bottom: 8px; /* 增加一点底部padding */
+    padding-bottom: 8px;
     box-sizing: border-box;
 }
 
 #player-hand-area {
     display: flex;
-    justify-content: center; 
+    justify-content: center;
     align-items: flex-end;
-    width: 100%; /* 容器宽度占满包装器 */
-    max-width: 100vw; 
-    padding: 0; 
+    width: 100%;
+    max-width: 100vw;
+    padding: 0;
     box-sizing: border-box;
-    min-height: 140px; /* 适应牌高 */
-    overflow-x: hidden; 
+    min-height: 138px;
+    overflow-x: hidden;
     overflow-y: hidden;
     position: relative;
 }
@@ -118,9 +211,9 @@ html, body {
 #bottom-bar {
     height: 60px;
     display: flex;
-    justify-content: space-between; /* 两端对齐，中间元素自动分配空间 */
+    justify-content: space-between;
     align-items: center;
-    padding: 0 5px; /* 稍微减少整体左右padding，让内容更充分利用宽度 */
+    padding: 0 5px;
     background-color: rgba(0, 0, 0, 0.7);
     width: 100%;
     box-sizing: border-box;
@@ -131,10 +224,9 @@ html, body {
 .bottom-bar-button-group {
     display: flex;
     align-items: center;
-    gap: 5px; /* 按钮之间的间距可以小一点 */
-    flex-shrink: 0; /* 防止按钮组被压缩 */
+    gap: 5px;
+    flex-shrink: 0;
 }
-/* 为左右按钮组分别指定 flex 以控制其内部对齐（如果需要） */
 .bottom-bar-button-group.left-buttons {
     justify-content: flex-start;
 }
@@ -144,17 +236,17 @@ html, body {
 
 
 #bottom-bar button {
-    padding: 7px 9px; 
-    font-size: 0.85em; /* 稍微减小字体以适应更多按钮 */
-    min-width: 45px; 
+    padding: 7px 9px;
+    font-size: 0.85em;
+    min-width: 45px;
     border-radius: 5px;
     border: 1px solid rgba(129, 199, 132, 0.3);
     background-color: rgba(129, 199, 132, 0.2);
     color: #e8f5e9;
     transition: background-color 0.2s, transform 0.1s;
     cursor: pointer;
-    line-height: 1.2; 
-    white-space: nowrap; /* 防止按钮文字换行 */
+    line-height: 1.2;
+    white-space: nowrap;
 }
 #bottom-bar button:hover:not(:disabled) { background-color: rgba(129, 199, 132, 0.35); }
 #bottom-bar button:active:not(:disabled) { transform: scale(0.95); }
@@ -178,63 +270,59 @@ html, body {
 #ai-toggle-button.ai-active { background-color: #03A9F4; border-color: #0288D1; color: white; }
 
 
-#my-info-in-bar { 
+#my-info-in-bar {
     padding: 3px 5px;
-    background-color: rgba(0,0,0,0.2); 
+    background-color: rgba(0,0,0,0.2);
     border-radius: 6px;
-    display: flex; 
+    display: flex;
     align-items: center;
-    margin: 0 5px; /* 给中间的头像信息区一点左右边距 */
-    flex-shrink: 1; /* 允许它在空间不足时被轻微压缩 */
-    min-width: 100px; /* 给头像和名字一个最小宽度保证 */
+    margin: 0 5px;
+    flex-shrink: 1;
+    min-width: 100px;
+    /* position: relative; 已在 .player-area 中设置 */
+}
+#my-info-in-bar .player-avatar-container { /* 确保这个容器存在且能应用 ::after */
+    /* 样式已在 .player-avatar-container 中定义 */
 }
 #my-info-in-bar .player-avatar { width: 30px; height: 30px; }
 #my-info-in-bar .voice-indicator-container { width:11px; height:11px; }
 #my-info-in-bar .voice-indicator { width:7px; height:7px;}
 #my-info-in-bar .player-details { font-size: 0.75em; margin-left: 5px; }
-#my-info-in-bar .playerName { font-size: 0.9em; max-width: 70px;} /* 限制名字宽度 */
+#my-info-in-bar .playerName { font-size: 0.9em; max-width: 70px;}
 #my-info-in-bar .playerInfo { font-size: 0.9em; }
 #my-info-in-bar .player-ready-status { display: inline; }
 
 
 .card {
-    /* 目标：在手机上尽可能大，同时13张牌能放下 */
-    width: 72px;  /* 再次增大 */
-    height: 108px; /* 保持约1.5的宽高比 */
+    width: 72px;
+    height: 108px;
     background-size: cover; background-repeat: no-repeat;
     background-position: center; border: 1px solid #698c69;
-    border-radius: 6px; 
-    display: inline-block; 
+    border-radius: 6px;
+    display: inline-block;
     box-shadow: 1px 1px 4px rgba(0,0,0,0.35);
     position: relative;
     background-color: #e8f5e9;
-    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, margin-left 0.15s ease-out; /* margin过渡可以快一点 */
+    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, margin-left 0.15s ease-out;
     user-select: none;
-    flex-shrink: 0; 
+    flex-shrink: 0;
 }
 
 .my-card {
-    /* 牌宽72px。手机宽度390px。第一张牌左边距0。*/
-    /* 露出部分 = (390 - 72) / 12 = 318 / 12 = 26.5 px */
-    /* margin-left = -(72 - 26.5) = -45.5px.  取 -46px 或 -45px */
-    margin-left: -54px; /* 示例值，需要根据目标屏幕宽度和13张牌精确计算 */
-                        /* 72宽，露18px。总宽72+12*18 = 72+216 = 288px。适合窄屏 */
+    margin-left: -54px;
 }
-
 .my-card:first-child {
-    margin-left: 0; /* 第一张牌的左边紧贴 #player-hand-area 的左边缘 (因为 padding:0) */
+    margin-left: 0;
 }
-
-
 .my-card.selectable { cursor: pointer; }
 .my-card.selectable:hover:not(.selected) {
-    transform: translateY(-18px) scale(1.07); 
+    transform: translateY(-18px) scale(1.07);
     z-index: 10;
 }
 .my-card.selected {
-    transform: translateY(-30px) scale(1.12); 
-    box-shadow: 0 0 22px 6px #81c784;
-    border-color: #81c784;
+    transform: translateY(-30px) scale(1.05);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    border-color: #66bb6a;
     z-index: 20;
 }
 .my-card.hinted {
@@ -245,72 +333,86 @@ html, body {
 .card.card-in-hand { opacity: 0; transform: translateY(50px) rotate(10deg) scale(0.6); }
 .card.card-in-hand.dealt { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
 
-#gameOverOverlay { /* (保持不变) */ }
-/* ... (省略) ... */
+#gameOverOverlay { background-color: rgba(0,0,0,0.85); z-index: 10000; }
+#gameOverOverlay .overlay-content { background-color: rgba(67, 160, 71, 0.2); padding: 25px; border-radius: 10px; box-shadow: 0 0 30px rgba(0,0,0,0.5); text-align: center; max-width: 90%; width: 350px; }
+#gameOverOverlay h3 { color: #e8f5e9; margin-bottom: 15px; font-size: 1.6em; }
+#gameOverOverlay p { margin-bottom: 10px; font-size: 1em; color: #c8e6c9; }
+#gameOverScores p { margin: 5px 0; font-size: 0.9em; color: #e8f5e9; }
+#gameOverScores .score-plus { color: #81c784; font-weight: bold; }
+#gameOverScores .score-minus { color: #e57373; font-weight: bold; }
+#gameOverScores .score-zero { color: #c8e6c9; }
+#backToLobbyBtn { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; margin-top: 20px; }
+#backToLobbyBtn:hover { background-color: #388e3c; }
+
 
 /* --- Responsive Adjustments --- */
-
-/* 主要针对竖屏手机 (例如宽度 <= 450px) */
-@media (max-width: 450px) { /* 稍微放宽这个断点 */
-    .card {
-        width: 68px; 
-        height: 102px;
-        border-radius: 5px;
-    }
-    .my-card {
-        /* 手机宽度例如 390px。牌宽68px。*/
-        /* 可见部分 = (390 - 68) / 12 = 322 / 12 = 26.83 px */
-        /* margin-left = -(68 - 26.83) = -41.17px.  取 -41px 或 -42px */
-        margin-left: -50px; /* 68宽，露18px。总宽 68 + 12*18 = 284px。 */
-    }
-    .my-card:first-child { 
-        margin-left: 0; 
-    }
-
-    #player-hand-area-wrapper { min-height: 135px; padding-bottom: 5px; }
-    #player-hand-area { min-height: 120px; }
-
+@media (max-width: 450px) {
+    .card { width: 68px; height: 102px; border-radius: 5px; }
+    .my-card { margin-left: -50px; }
+    .my-card:first-child { margin-left: 0; }
+    #player-hand-area-wrapper { min-height: 133px; padding-bottom: 5px; }
+    #player-hand-area { min-height: 128px; }
     .my-card.selectable:hover:not(.selected) { transform: translateY(-16px) scale(1.08); }
-    .my-card.selected { transform: translateY(-26px) scale(1.13); }
-
-    #bottom-bar { height: 58px; padding: 0 4px; } 
+    .my-card.selected { transform: translateY(-26px) scale(1.04); box-shadow: 0 2px 6px rgba(0,0,0,0.25); border-color: #66bb6a; }
+    #bottom-bar { height: 58px; padding: 0 4px; }
     #bottom-bar button { font-size: 0.82em; padding: 6px 7px; min-width: 42px; }
     .bottom-bar-button-group { gap: 4px; }
+    #my-info-in-bar { min-width: 90px; margin: 0 4px; }
     #my-info-in-bar .player-avatar { width: 28px; height: 28px;}
+    #my-info-in-bar .playerName { max-width: 55px; }
+    #my-info-in-bar .player-details { font-size: 0.72em; }
+    /* Responsive SVG indicator size */
+    .player-area.current-turn .player-avatar-container::after { width: 18px; height: 18px; bottom: -12px;}
+    #my-info-in-bar.current-turn .player-avatar-container::after { top: -12px; }
+    #player-left.opponent-area.current-turn .player-avatar-container::after,
+    #player-right.opponent-area.current-turn .player-avatar-container::after { width: 18px; height: 18px; }
+    #player-left.opponent-area.current-turn .player-avatar-container::after { right: -12px; }
+    #player-right.opponent-area.current-turn .player-avatar-container::after { left: -12px; }
 }
 
-/* 针对极窄屏幕 (例如宽度 <= 375px) */
 @media (max-width: 375px) {
-    .card {
-        width: 62px; 
-        height: 93px;
-    }
-    .my-card {
-        /* 屏幕宽度例如 360px。牌宽62px。*/
-        /* 可见部分 = (360 - 62) / 12 = 298 / 12 = 24.83 px */
-        /* margin-left = -(62 - 24.83) = -37.17px. 取 -37px */
-        margin-left: -46px; /* 62宽，露16px。总宽 62 + 12*16 = 254px。 */
-    }
+    .card { width: 62px; height: 93px; }
+    .my-card { margin-left: -46px; }
     .my-card:first-child { margin-left: 0; }
-    #player-hand-area-wrapper { min-height: 125px; }
-    #player-hand-area { min-height: 110px; }
-    .my-card.selected { transform: translateY(-22px) scale(1.13); }
+    #player-hand-area-wrapper { min-height: 120px; }
+    #player-hand-area { min-height: 115px; }
+    .my-card.selectable:hover:not(.selected) { transform: translateY(-14px) scale(1.07); }
+    .my-card.selected { transform: translateY(-22px) scale(1.03); box-shadow: 0 1px 4px rgba(0,0,0,0.2); border-color: #66bb6a; }
+    #bottom-bar { height: 55px; padding: 0 3px; }
+    #bottom-bar button { font-size: 0.78em; padding: 5px 5px; min-width: 36px; }
+    .bottom-bar-button-group { gap: 3px; }
+    #my-info-in-bar { min-width: 80px; margin: 0 3px; padding: 2px 4px; }
+    #my-info-in-bar .player-avatar { width: 26px; height: 26px; }
+    #my-info-in-bar .voice-indicator-container { width: 9px; height: 9px; }
+    #my-info-in-bar .voice-indicator { width: 5px; height: 5px; }
+    #my-info-in-bar .player-details { font-size: 0.7em; margin-left: 4px; }
+    #my-info-in-bar .playerName { max-width: 45px; }
+    #my-info-in-bar .playerInfo { font-size: 0.85em; }
+    /* Responsive SVG indicator size */
+    .player-area.current-turn .player-avatar-container::after { width: 16px; height: 16px; bottom: -10px;}
+    #my-info-in-bar.current-turn .player-avatar-container::after { top: -10px; }
+    #player-left.opponent-area.current-turn .player-avatar-container::after,
+    #player-right.opponent-area.current-turn .player-avatar-container::after { width: 16px; height: 16px; }
+    #player-left.opponent-area.current-turn .player-avatar-container::after { right: -10px; }
+    #player-right.opponent-area.current-turn .player-avatar-container::after { left: -10px; }
 }
 
-
-/* 横屏模式下的调整 */
 @media (orientation: landscape) and (max-height: 500px) {
-    .card {
-        width: 70px; /* 横屏时牌可以高一些 */
-        height: 105px;
-    }
-    .my-card {
-        /* 假设横屏可用宽度约500-600px给手牌。 (550-70)/12 = 40. -(70-40) = -30px */
-        margin-left: -50px; 
-    }
+    .card { width: 70px; height: 105px; }
+    .my-card { margin-left: -50px; }
     .my-card:first-child { margin-left: 4px; }
-
-    #player-hand-area-wrapper { min-height: 130px; }
-    #player-hand-area { min-height: 115px; padding: 0 5px; }
+    #player-hand-area-wrapper { min-height: 140px; }
+    #player-hand-area { min-height: 130px; padding: 0 5px; }
+    .my-card.selectable:hover:not(.selected) { transform: translateY(-15px) scale(1.06); }
+    .my-card.selected { transform: translateY(-25px) scale(1.04); box-shadow: 0 2px 6px rgba(0,0,0,0.25); border-color: #66bb6a; }
     #bottom-bar { height: 50px; }
+    #bottom-bar button { font-size: 0.8em; padding: 6px 8px; min-width: 40px; }
+    #my-info-in-bar .player-avatar { width: 28px; height: 28px; }
+    /* Responsive SVG indicator size */
+    .player-area.current-turn .player-avatar-container::after { width: 18px; height: 18px; bottom: -12px;}
+    #my-info-in-bar.current-turn .player-avatar-container::after { top: -12px; }
+    #player-left.opponent-area.current-turn .player-avatar-container::after,
+    #player-right.opponent-area.current-turn .player-avatar-container::after { width: 18px; height: 18px; }
+    #player-left.opponent-area.current-turn .player-avatar-container::after { right: -12px; }
+    #player-right.opponent-area.current-turn .player-avatar-container::after { left: -12px; }
 }
