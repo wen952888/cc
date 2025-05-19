@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let recordingTimer = null; // 用于20秒超时
     const MAX_RECORDING_TIME = 20000; // 20秒
     let allowVoiceBroadcast = true; // 新增：控制是否播放收到的语音
+    let currentStream = null; // 保存当前的 MediaStream
 
     // --- DOM Elements ---
     // ... (其他DOM元素获取保持不变) ...
@@ -78,10 +79,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const gameOverScoresDiv = document.getElementById('gameOverScores');
     const backToLobbyBtnOverlay = gameOverOverlay.querySelector('#backToLobbyBtn');
 
-    const toggleVoiceBroadcastButton = document.getElementById('toggleVoiceBroadcastButton'); // 新增按钮
+    const toggleVoiceBroadcastButton = document.getElementById('toggleVoiceBroadcastButton');
 
     // --- Utility Functions ---
-    // ... (showTemporaryMessage, switchToView, showAuthError, clearAuthError, handleAuthSuccess, handleAuthResponse 保持不变) ...
     function cardObjectToKey(card) {
         if (!card || typeof card.rank === 'undefined' || typeof card.suit === 'undefined') return null;
         return `${card.rank}${card.suit}`;
@@ -162,9 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-
     // --- Socket Connection Handling ---
-    // ... (socket.on('connect'), socket.on('disconnect'), socket.on('connect_error') 保持不变) ...
     switchToView('loadingView', "连接服务器...");
     const storedUserIdOnLoad = localStorage.getItem('userId');
     if (!storedUserIdOnLoad) initialReauthAttempted = true;
@@ -208,8 +206,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.on('disconnect', (reason) => {
         console.warn('[SOCKET CLIENT] Disconnected from server. Reason:', reason);
-        if (isRecording) { // 如果断线时正在录音，则停止
-            stopRecordingAndSend(false); // false表示不是用户主动停止
+        if (isRecording) {
+            forceStopRecording(); // 修改：强制停止，但不一定发送
         }
         if (reason === 'io server disconnect') {
             showTemporaryMessage('与服务器连接已断开。请稍后重试。', 5000, true);
@@ -226,9 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (loadingMessage) loadingMessage.textContent = `连接错误: ${err.message}. 尝试重连...`;
     });
 
-
     // --- Auth View Listeners ---
-    // ... (保持不变) ...
     if (showRegisterLink) showRegisterLink.addEventListener('click', (e) => { e.preventDefault(); clearAuthError(); loginForm.style.display = 'none'; registerForm.style.display = 'block'; });
     if (showLoginLink) showLoginLink.addEventListener('click', (e) => { e.preventDefault(); clearAuthError(); registerForm.style.display = 'none'; loginForm.style.display = 'block'; });
     if (loginButton) loginButton.addEventListener('click', () => {
@@ -251,7 +247,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Lobby View Listeners ---
-    // ... (保持不变, updateRoomList 保持不变) ...
     if (createRoomButton) createRoomButton.addEventListener('click', () => {
         const roomName = roomNameInput.value.trim();
         const password = roomPasswordInput.value;
@@ -287,6 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (logoutButtonLobby) logoutButtonLobby.addEventListener('click', () => {
         console.log('[LOBBY CLIENT] Logging out...');
+        if (isRecording) forceStopRecording();
         if (socket.connected) socket.disconnect();
         localStorage.removeItem('userId'); localStorage.removeItem('username');
         myUserId = null; myUsername = null; currentRoomId = null; currentRoomState = null;
@@ -349,11 +345,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-
     // --- Game View Listeners & Logic (大部分保持不变) ---
-    // ... (readyButton, playButton, passButton, hintButton, aiToggleButton, leaveRoomButton, backToLobbyBtnOverlay listeners 保持不变) ...
-    // ... (socket.on('gameStateUpdate'), gameStarted, playerJoined, playerLeft, playerReadyUpdate, gameStartFailed, invalidPlay, gameOver 保持不变) ...
-    // ... (displayGameState, updateMyPlayerArea, updatePlayerHandUI, toggleCardSelection, updatePlayButtonState, clearSelectionAndHighlights, highlightHintedCards, updateOpponentUIElement, updatePlayerReadyStatusUI, updateCenterPileUI, updateGameActionButtons 保持不变) ...
+    const CARD_IMAGE_EXTENSION = '.jpg';
+    const CARD_BACK_IMAGE = 'back.jpg';
+    const CARD_IMAGE_PATH = '/images/cards/';
+    const rankToImageNamePart = { 'A': 'ace', 'K': 'king', 'Q': 'queen', 'J': 'jack', 'T': '10', '9': '9', '8': '8', '7': '7', '6': '6', '5': '5', '4': '4', '3': '3', '2': '2' };
+    const suitToImageNamePart = { 'S': 'spades', 'H': 'hearts', 'D': 'diamonds', 'C': 'clubs' };
 
     if (readyButton) readyButton.addEventListener('click', () => {
         if (!currentRoomState || !myUserId || currentRoomState.status !== 'waiting') {
@@ -453,7 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const commonLeaveRoomLogic = () => {
         console.log('[ACTION CLIENT] Leaving room...');
-        if (isRecording) stopRecordingAndSend(false); // 如果离开时在录音，停止
+        if (isRecording) forceStopRecording();
 
         socket.emit('leaveRoom', (response) => {
             if (response && response.success) {
@@ -573,13 +570,6 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedCardsForPlay = []; currentHintCards = null; currentHintIndexFromServer = 0; updatePlayButtonState();
     });
 
-    // --- Voice Functionality (MODIFIED) ---
-    const CARD_IMAGE_EXTENSION = '.jpg';
-    const CARD_BACK_IMAGE = 'back.jpg';
-    const CARD_IMAGE_PATH = '/images/cards/';
-    const rankToImageNamePart = { 'A': 'ace', 'K': 'king', 'Q': 'queen', 'J': 'jack', 'T': '10', '9': '9', '8': '8', '7': '7', '6': '6', '5': '5', '4': '4', '3': '3', '2': '2' };
-    const suitToImageNamePart = { 'S': 'spades', 'H': 'hearts', 'D': 'diamonds', 'C': 'clubs' };
-
     function displayGameState(state, animateHand = false) {
         currentRoomState = state;
 
@@ -658,7 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateMyPlayerArea(playerData, isMyTurn, isGameFinished, roomStatus) {
         if (!myInfoInBar) return;
         const nameEl = myInfoInBar.querySelector('.playerName');
-        const avatarEl = myInfoInBar.querySelector('.player-avatar');
+        // const avatarEl = myInfoInBar.querySelector('.player-avatar'); // Not used for image updates here
         const cardCountEl = myInfoInBar.querySelector('.card-count');
         const readyStatusEl = myInfoInBar.querySelector('.player-ready-status');
 
@@ -806,7 +796,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateOpponentUIElement(areaElement, playerData, currentTurnPlayerId, isGameFinished, roomStatus) {
         if (!areaElement) return;
         const nameEl = areaElement.querySelector('.playerName');
-        const avatarEl = areaElement.querySelector('.player-avatar');
+        // const avatarEl = areaElement.querySelector('.player-avatar');
         const cardCountEl = areaElement.querySelector('.card-count');
         const roleEl = areaElement.querySelector('.playerRole');
         const readyStatusEl = areaElement.querySelector('.player-ready-status');
@@ -912,82 +902,110 @@ document.addEventListener('DOMContentLoaded', () => {
         if (passButton) passButton.disabled = !isMyTurn || (!state.lastHandInfo || state.lastPlayerWhoPlayedId === myUserId && !state.isFirstTurn);
         if (hintButton) hintButton.disabled = !isMyTurn;
         if (aiToggleButton) aiToggleButton.disabled = state.status === 'finished';
-        if (micButton) micButton.disabled = !currentRoomId || !myUserId; // 麦克风按钮在房间内可用
+        if (micButton) micButton.disabled = !currentRoomId || !myUserId;
     }
 
+
+    // --- Voice Functionality (MODIFIED AGAIN) ---
     async function startRecording() {
         if (isRecording || !currentRoomId || !myUserId) return;
-        console.log('[VOICE CLIENT] Starting recording...');
+        console.log('[VOICE CLIENT] Attempting to start recording...');
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
+            currentStream = await navigator.mediaDevices.getUserMedia({ audio: true }); // 保存 stream
+            mediaRecorder = new MediaRecorder(currentStream);
             audioChunks = [];
-            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-            mediaRecorder.onstop = () => { // 这个onstop现在只处理流的关闭
-                stream.getTracks().forEach(track => track.stop());
+
+            mediaRecorder.ondataavailable = e => {
+                if (e.data.size > 0) {
+                    audioChunks.push(e.data);
+                }
             };
+
+            mediaRecorder.onstop = () => { // 这个 onstop 现在主要负责发送数据和清理UI
+                console.log('[VOICE CLIENT] MediaRecorder.onstop triggered.');
+                if (currentStream) { // 确保 stream 存在再关闭
+                    currentStream.getTracks().forEach(track => track.stop());
+                    currentStream = null;
+                }
+
+                // 这个时候 audioChunks 应该已经收集完毕
+                if (audioChunks.length > 0) {
+                    const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+                    console.log(`[VOICE CLIENT] Sending voice data. Size: ${audioBlob.size}, Type: ${audioBlob.type}`);
+                    if (audioBlob.size > 100) { // 阈值可以调整
+                        socket.emit('sendVoiceMessage', { roomId: currentRoomId, audioBlob });
+                    } else {
+                        console.log('[VOICE CLIENT] Audio data too small or empty, not sending.');
+                    }
+                } else {
+                     console.log('[VOICE CLIENT] No audio chunks to send.');
+                }
+                audioChunks = []; // 清空
+
+                // UI清理也在这里，确保在所有操作后
+                isRecording = false;
+                if (micButton) {
+                    micButton.classList.remove('recording');
+                    micButton.textContent = "🎤";
+                }
+                socket.emit('playerStoppedSpeaking', { userId: myUserId, roomId: currentRoomId });
+            };
+
             mediaRecorder.start();
             isRecording = true;
-            micButton.classList.add('recording');
-            micButton.textContent = "停止"; // 或其他图标指示录音中
-
+            if (micButton) {
+                micButton.classList.add('recording');
+                micButton.textContent = "录音中";
+            }
             socket.emit('playerStartedSpeaking', { userId: myUserId, roomId: currentRoomId });
 
-            // 20秒自动停止计时器
-            clearTimeout(recordingTimer); // 清除之前的计时器 (以防万一)
+            clearTimeout(recordingTimer);
             recordingTimer = setTimeout(() => {
-                if (isRecording) {
+                if (isRecording && mediaRecorder && mediaRecorder.state === "recording") {
                     console.log('[VOICE CLIENT] Max recording time reached. Stopping automatically.');
-                    stopRecordingAndSend(true); // true表示是超时自动停止
+                    mediaRecorder.stop(); // 这会触发 onstop
                 }
             }, MAX_RECORDING_TIME);
+            console.log('[VOICE CLIENT] Recording started.');
 
         } catch (err) {
-            console.error('[VOICE CLIENT] Error accessing microphone:', err);
-            showTemporaryMessage("无法访问麦克风。", 2000, true);
-            isRecording = false; //确保状态正确
+            console.error('[VOICE CLIENT] Error accessing microphone or starting recording:', err);
+            showTemporaryMessage("无法访问麦克风或开始录音。", 2000, true);
+            isRecording = false;
             if (micButton) {
                 micButton.classList.remove('recording');
                 micButton.textContent = "🎤";
             }
+            if (currentStream) { // 如果获取了stream但后续失败，也关闭它
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
+            }
         }
     }
 
-    function stopRecordingAndSend(sendData = true) {
-        if (!isRecording || !mediaRecorder) return;
-        console.log('[VOICE CLIENT] Stopping recording. Send data:', sendData);
-
-        clearTimeout(recordingTimer); // 停止超时计时器
-        isRecording = false; // 先设置状态，防止重复进入
-
-        if (mediaRecorder.state === "recording") {
-             mediaRecorder.stop(); // 这会触发ondataavailable (如果还有数据) 和 onstop
-        }
-        // mediaRecorder.onstop 已经负责关闭媒体流
-        // mediaRecorder.onstop 触发后，我们才真正发送数据
-
-        // 由于 ondataavailable 可能在 onstop 之前或之后完成（取决于浏览器和数据量）
-        // 我们延迟一点点来确保 audioChunks 已经收集完毕
-        setTimeout(() => {
-            if (sendData && audioChunks.length > 0) {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                console.log(`[VOICE CLIENT] Sending voice data. Size: ${audioBlob.size}`);
-                if (audioBlob.size > 100) {
-                    socket.emit('sendVoiceMessage', { roomId: currentRoomId, audioBlob });
-                } else {
-                    console.log('[VOICE CLIENT] Audio data too small, not sending.');
-                }
+    function forceStopRecording() { // 用于意外中断，如断线、离开房间
+        console.log('[VOICE CLIENT] Forcing stop recording.');
+        clearTimeout(recordingTimer);
+        if (isRecording && mediaRecorder && mediaRecorder.state === "recording") {
+            // 不直接调用 mediaRecorder.stop() 来避免触发 onstop 中的发送逻辑
+            // 而是直接清理资源和UI
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
             }
-            audioChunks = []; // 清空数据块
-        }, 100); // 延迟100毫秒
-
-
+        }
+        isRecording = false;
+        audioChunks = [];
         if (micButton) {
             micButton.classList.remove('recording');
             micButton.textContent = "🎤";
         }
-        socket.emit('playerStoppedSpeaking', { userId: myUserId, roomId: currentRoomId });
+        if (currentRoomId && myUserId) { // 只有在房间内才发送停止说话事件
+            socket.emit('playerStoppedSpeaking', { userId: myUserId, roomId: currentRoomId });
+        }
+        mediaRecorder = null; // 清理 mediaRecorder 实例
     }
+
 
     if (micButton) {
         micButton.addEventListener('click', () => {
@@ -996,7 +1014,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             if (isRecording) {
-                stopRecordingAndSend(true); // 用户点击停止，发送数据
+                if (mediaRecorder && mediaRecorder.state === "recording") {
+                    mediaRecorder.stop(); // 正常停止，会触发onstop进而发送
+                } else {
+                    // 如果 mediaRecorder 状态不对，也强制清理一下UI
+                    forceStopRecording();
+                }
             } else {
                 startRecording();
             }
@@ -1019,8 +1042,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     socket.on('playerStartedSpeaking', ({ userId, username }) => {
-        // console.log(`[VOICE CLIENT] Player ${username} (ID: ${userId}) started speaking.`);
-        if (!allowVoiceBroadcast && userId !== myUserId) return; // 如果关闭了语音接收，且不是自己，则不显示
+        if (!allowVoiceBroadcast && userId !== myUserId) return;
         const speakerArea = findSpeakingPlayerArea(userId);
         if (speakerArea) {
             const indicator = speakerArea.querySelector('.voice-indicator');
@@ -1028,8 +1050,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     socket.on('playerStoppedSpeaking', ({ userId, username }) => {
-        // console.log(`[VOICE CLIENT] Player ${username} (ID: ${userId}) stopped speaking.`);
-        // 停止说话的指示器总是要更新，无论是否允许播放
         const speakerArea = findSpeakingPlayerArea(userId);
         if (speakerArea) {
             const indicator = speakerArea.querySelector('.voice-indicator');
@@ -1043,14 +1063,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     socket.on('receiveVoiceMessage', ({ userId, username, audioBlob }) => {
-        if (userId === myUserId || !allowVoiceBroadcast) return; // 不播放自己的消息或已关闭语音
+        if (userId === myUserId || !allowVoiceBroadcast) return;
         console.log(`[VOICE CLIENT] Received voice from ${username}. Size: ${audioBlob.size}. Allowed: ${allowVoiceBroadcast}`);
         try {
             const audioUrl = URL.createObjectURL(audioBlob);
             const audio = new Audio(audioUrl);
             audio.play()
                 .catch(e => console.error('[VOICE CLIENT] Error playing received audio:', e));
-            audio.onended = () => URL.revokeObjectURL(audioUrl);
+            // 清理 URL.revokeObjectURL 可以在 audio 播放完毕后，或者在一段时间后，
+            // 或者当收到新的语音时清理旧的。这里简单处理，播完就清理。
+            audio.onended = () => {
+                URL.revokeObjectURL(audioUrl);
+                console.log(`[VOICE CLIENT] Revoked Object URL for played audio from ${username}`);
+            };
+            audio.onerror = (e) => {
+                console.error(`[VOICE CLIENT] Error event on audio element for ${username}:`, e);
+                URL.revokeObjectURL(audioUrl); // 发生错误也清理
+            };
         } catch (e) {
             console.error('[VOICE CLIENT] Error processing received audioBlob:', e);
         }
