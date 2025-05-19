@@ -1,6 +1,6 @@
 // client.js
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM fully loaded and parsed. Client v1.0.30'); // Version updated
+    console.log('DOM fully loaded and parsed. Client v1.0.31'); // 版本号更新
     const socket = io({
         reconnectionAttempts: 5,
         reconnectionDelay: 2000,
@@ -143,15 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
             switchToView('auth-view');
             return;
         }
-        // Avoid redundant processing if already authenticated and state is similar
-        if (myUserId === data.userId && currentRoomId === data.roomState?.roomId && authView.style.display === 'none' && loadingView.style.display === 'none') {
-            if (data.roomState) currentRoomState = data.roomState; // Still update state for minor changes
-            console.log(`[AUTH] Auth success (state potentially consistent) for user: ${data.username} (ID: ${data.userId})`);
-            if (currentRoomId && gameView.style.display === 'none') switchToView('game-view');
-            else if (!currentRoomId && lobbyView.style.display === 'none') switchToView('lobby-view');
-            return;
-        }
-
+        
         myUserId = data.userId; myUsername = data.username;
         localStorage.setItem('userId', data.userId);
         if(lobbyUsernameSpan) lobbyUsernameSpan.textContent = myUsername;
@@ -174,31 +166,48 @@ document.addEventListener('DOMContentLoaded', () => {
         else { 
             showAuthError(response ? response.message : "认证失败，请重试。"); 
             localStorage.removeItem('userId');
+            myUserId = null; myUsername = null; // Ensure local state is cleared
+            switchToView('auth-view'); // Go back to auth view on failed re-auth
         }
     }
 
     socket.on('connect', () => {
         console.log('[SOCKET] Connected to server with ID:', socket.id);
         const lsUserId = localStorage.getItem('userId');
-        if (!initialReauthAttempted && !myUserId && lsUserId) { // Only if initial page load reauth hasn't run AND we are not logged in but have stored ID
-            console.log("[SOCKET] Connect event: Re-emitting reauthenticate because initial attempt might have been missed.");
-            initialReauthAttempted = true; // Mark as attempted now
-            socket.emit('reauthenticate', lsUserId, handleAuthResponse); // Use handleAuthResponse
-        } else if (loadingView.style.display !== 'none' && !myUserId && !lsUserId) { // Still on loading screen, no ID anywhere
-            switchToView('auth-view');
-        } else if (myUserId) { // If already logged in (myUserId is set)
+        // If we are not yet authenticated (myUserId is null) but have a stored ID, try to re-authenticate.
+        // This handles cases where initial reauth might have failed or was missed.
+        if (!myUserId && lsUserId) { 
+            console.log("[SOCKET] Connect event: Attempting reauthenticate as user not logged in but has stored ID.");
+            socket.emit('reauthenticate', lsUserId, handleAuthResponse); 
+        } else if (myUserId) { // If already logged in (myUserId is set), sync state
             console.log("[SOCKET] Socket reconnected, user was logged in. Requesting sync data.");
             if (currentRoomId) {
                 socket.emit('requestGameState', (state) => {
-                    if (state) { currentRoomState = state; displayGameState(state); }
-                    else { currentRoomId = null; currentRoomState = null; switchToView('lobby-view'); socket.emit('listRooms', updateRoomList); }
+                    if (state) { 
+                        console.log("[SOCKET] Reconnected in room, received game state:", state);
+                        currentRoomState = state; 
+                        displayGameState(state); 
+                    } else { 
+                        console.warn("[SOCKET] Reconnected in room, but failed to get game state. Returning to lobby.");
+                        currentRoomId = null; currentRoomState = null; 
+                        switchToView('lobby-view'); 
+                        socket.emit('listRooms', updateRoomList); 
+                    }
                 });
             } else {
+                console.log("[SOCKET] Reconnected in lobby, fetching room list.");
                 socket.emit('listRooms', updateRoomList);
-                if (authView.style.display !== 'none' || loadingView.style.display !== 'none') switchToView('lobby-view');
+                if (authView.style.display !== 'none' || loadingView.style.display !== 'none') {
+                     switchToView('lobby-view');
+                }
+            }
+        } else { // No myUserId and no lsUserId, new user or cleared storage
+            console.log("[SOCKET] Connect event: No active login session or stored ID. Displaying auth view.");
+            if (loadingView.style.display !== 'none') { // Only switch if still on loading
+                switchToView('auth-view');
             }
         }
-        initialReauthAttempted = true; // After any connect logic, mark that the initial phase is "handled"
+        initialReauthAttempted = true; 
     });
     socket.on('disconnect', (reason) => { console.log('[SOCKET] Disconnected from server:', reason); alert('与服务器断开连接: ' + reason + ". 请刷新页面重试。"); switchToView('loadingView'); const p=loadingView.querySelector('p'); if(p)p.textContent='已断开连接...'; initialReauthAttempted = false; });
     socket.on('connect_error', (err) => { console.error('[SOCKET] Connection error:', err.message); switchToView('loadingView'); const p=loadingView.querySelector('p'); if(p)p.textContent=`连接错误: ${err.message}.`; });
@@ -214,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('[CLIENT] Create room response from server:', response);
                 if (response && response.success) {
                     currentRoomId = response.roomId;
-                    displayGameState(response.roomState);
+                    displayGameState(response.roomState); // displayGameState will set currentRoomState
                     switchToView('game-view');
                     alert(`房间 "${roomName}" 创建成功! ID: ${response.roomId}`);
                 } else {
@@ -223,7 +232,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
-    socket.on('roomListUpdate', updateRoomList);
+    socket.on('roomListUpdate', (rooms) => {
+        console.log("[EVENT] roomListUpdate received:", rooms);
+        updateRoomList(rooms);
+    });
     function updateRoomList(rooms) {
         if (!roomsListUl) return;
         roomsListUl.innerHTML = '';
@@ -232,9 +244,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const li = document.createElement('li');
                 let joinBtnDisabled = room.status !== 'waiting' || room.playerCount >= room.maxPlayers;
                 let joinButtonHtml = `<button data-roomid="${room.roomId}" class="join-room-btn" ${joinBtnDisabled ? 'disabled' : ''}>加入</button>`;
-                if (room.hasPassword && !joinBtnDisabled) { // Only show password join if not disabled
+                if (room.hasPassword && !joinBtnDisabled) { 
                      joinButtonHtml = `<button data-roomid="${room.roomId}" data-roomname="${room.roomName}" class="join-room-btn-pwd" ${joinBtnDisabled ? 'disabled' : ''}>加入 (有密码)</button>`;
-                } else if (room.hasPassword && joinBtnDisabled) { // If has password but disabled (e.g. full)
+                } else if (room.hasPassword && joinBtnDisabled) { 
                     joinButtonHtml = `<button data-roomid="${room.roomId}" class="join-room-btn" disabled>加入 (有密码)</button>`;
                 }
                 li.innerHTML = `
@@ -244,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 roomsListUl.appendChild(li);
             });
             document.querySelectorAll('.join-room-btn, .join-room-btn-pwd').forEach(button => {
-                if (button.disabled) return; // Skip disabled buttons
+                if (button.disabled) return; 
                 button.addEventListener('click', (e) => {
                     const roomIdToJoin = e.target.dataset.roomid;
                     let passwordToJoin = null;
@@ -256,7 +268,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     socket.emit('joinRoom', { roomId: roomIdToJoin, password: passwordToJoin }, (response) => {
                         console.log('[CLIENT] Join room response:', response);
                         if (response && response.success) {
-                            currentRoomId = response.roomId; displayGameState(response.roomState); switchToView('game-view');
+                            currentRoomId = response.roomId; 
+                            displayGameState(response.roomState);  // displayGameState will set currentRoomState
+                            switchToView('game-view');
                         } else alert(`加入房间失败: ${response ? response.message : '未知错误'}`);
                     });
                 });
@@ -282,17 +296,55 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Game Socket Event Handlers
-    socket.on('gameStarted', (gameState) => { console.log('[EVENT] gameStarted', gameState); currentRoomState = gameState; displayGameState(gameState, true); switchToView('game-view'); const mp=gameState.players.find(p=>p.userId===myUserId); alert("游戏开始！"+(mp&&mp.role?`你的身份是: ${mp.role}`:'')); });
-    socket.on('gameStateUpdate', (gameState) => { console.log('[EVENT] gameStateUpdate', gameState); currentRoomState = gameState; displayGameState(gameState, false); });
+    socket.on('gameStarted', (gameState) => { 
+        console.log('[EVENT] gameStarted received:', gameState); 
+        currentRoomState = gameState; // Crucial: update global state
+        displayGameState(gameState, true); 
+        switchToView('game-view'); 
+        const mp=gameState.players.find(p=>p.userId===myUserId); 
+        alert("游戏开始！"+(mp&&mp.role?`你的身份是: ${mp.role}`:'')); 
+    });
+    socket.on('gameStateUpdate', (gameState) => { 
+        console.log('[EVENT] gameStateUpdate received:', gameState); 
+        currentRoomState = gameState; // Crucial: update global state
+        displayGameState(gameState, false); 
+    });
+    socket.on('playerJoined', (playerInfo) => { // Example handler if server sends this
+        console.log('[EVENT] playerJoined:', playerInfo);
+        if (currentRoomState && currentRoomState.players) {
+            const existingPlayer = currentRoomState.players.find(p => p.userId === playerInfo.userId);
+            if (!existingPlayer) {
+                currentRoomState.players.push(playerInfo);
+            } else { // Update existing player (e.g. if they reconnected and details changed)
+                Object.assign(existingPlayer, playerInfo);
+            }
+            displayGameState(currentRoomState); // Re-render with new player
+        }
+    });
+    socket.on('playerLeft', ({userId}) => { // Example handler if server sends this
+        console.log('[EVENT] playerLeft:', userId);
+        if (currentRoomState && currentRoomState.players) {
+            currentRoomState.players = currentRoomState.players.filter(p => p.userId !== userId);
+            displayGameState(currentRoomState); // Re-render without the player
+        }
+    });
     socket.on('playerReadyUpdate', ({ userId, isReady }) => {
-        console.log(`[EVENT] playerReadyUpdate: ${userId} is ${isReady}`);
+        console.log(`[EVENT] playerReadyUpdate: User ${userId} is ${isReady}`);
         if (currentRoomState && currentRoomState.players) {
             const player = currentRoomState.players.find(p => p.userId === userId);
             if (player) {
-                player.isReady = isReady; updatePlayerReadyStatusUI(player.userId, isReady);
-                if (userId === myUserId && readyButton) { readyButton.textContent = isReady ? "取消" : "准备"; readyButton.classList.toggle('cancel-ready', isReady); }
-            } else console.warn(`[EVENT] playerReadyUpdate: Player ${userId} not found in currentRoomState.players`);
-        } else console.warn("[EVENT] playerReadyUpdate: currentRoomState or players array is null/undefined.");
+                player.isReady = isReady; 
+                updatePlayerReadyStatusUI(player.userId, isReady);
+                if (userId === myUserId && readyButton) { 
+                    readyButton.textContent = isReady ? "取消" : "准备"; 
+                    readyButton.classList.toggle('cancel-ready', isReady); 
+                }
+            } else {
+                console.warn(`[EVENT] playerReadyUpdate: Player ${userId} not found in currentRoomState.players. Current players:`, currentRoomState.players.map(p=>p.userId));
+            }
+        } else {
+            console.warn("[EVENT] playerReadyUpdate: currentRoomState or players array is null/undefined.");
+        }
     });
     socket.on('allPlayersResetReady', () => {
         console.log('[EVENT] allPlayersResetReady');
@@ -326,9 +378,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function displayGameState(state, animateHandOnDisplay = false) {
         if (!state) { console.warn("[DISPLAY] displayGameState called with null state."); if(myUserId)switchToView('lobby-view');else switchToView('auth-view'); return; }
-        console.log("[DISPLAY] Displaying Game State. MyUserId:", myUserId, "Room Status:", state.status);
-        // console.log("[DISPLAY] Full state:", JSON.parse(JSON.stringify(state))); // For deep debugging
-        currentRoomState = state;
+        // console.log("[DISPLAY] Displaying Game State. MyUserId:", myUserId, "Room Status:", state.status, "Full state:", JSON.stringify(state));
+        currentRoomState = state; // Ensure global state is updated
         const myPlayer = state.players ? state.players.find(p => p.userId === myUserId) : null;
 
         if (infoBarRoomName) infoBarRoomName.textContent = state.roomName || '未知';
@@ -352,7 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
             myInfoInBar.classList.toggle('current-turn', state.status === 'playing' && state.currentPlayerId === myPlayer.userId && !state.gameFinished);
             myInfoInBar.classList.toggle('player-finished', !!myPlayer.finished);
             myInfoInBar.classList.toggle('player-disconnected', !myPlayer.connected);
-        } else if (myInfoInBar) { // My player data not found but element exists
+        } else if (myInfoInBar) { 
             myInfoInBar.removeAttribute('data-player-id');
             const myNameEl = myInfoInBar.querySelector('#myPlayerName');
             const myStatusEl = myInfoInBar.querySelector('#myPlayerStatus .card-count');
@@ -364,15 +415,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         const opponentSlotMap = {};
-        if (myPlayer && state.players && state.players.length > 0) { // Allow for games with < 4 players too
+        if (myPlayer && state.players && state.players.length > 0) { 
             const mySlot = myPlayer.slot;
-            const numPlayers = state.players.length > 1 ? state.players.length : 4; // Use actual or default to 4 for calculations
+            const numPlayers = state.players.length > 1 ? state.players.length : 4; 
             const relativeSlots = { top: (mySlot + 2) % numPlayers, left: (mySlot + 3) % numPlayers, right: (mySlot + 1) % numPlayers };
-            if (numPlayers === 2) { // Special case for 2 players, top is opponent
-                relativeSlots.left = -1; relativeSlots.right = -1; // Invalidate side views
+            if (numPlayers === 2) { 
+                relativeSlots.left = -1; relativeSlots.right = -1; 
                 relativeSlots.top = (mySlot + 1) % numPlayers;
-            } else if (numPlayers === 3) { // Special case for 3 players, left and right are opponents
-                relativeSlots.top = -1; // Invalidate top view
+            } else if (numPlayers === 3) { 
+                relativeSlots.top = -1; 
                 relativeSlots.left = (mySlot + 2) % numPlayers;
                 relativeSlots.right = (mySlot + 1) % numPlayers;
             }
@@ -408,7 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!areaEl) return; const nE=areaEl.querySelector('.playerName'), rE=areaEl.querySelector('.playerRole'), cE=areaEl.querySelector('.playerInfo .card-count'), readyE=areaEl.querySelector('.player-ready-status');
         if (pData) {
             areaEl.dataset.playerId = pData.userId; if(nE)nE.textContent=pData.username; if(rE)rE.textContent=pData.role?`(${pData.role})`:''; if(cE)cE.textContent=pData.handCount!==undefined?pData.handCount:'?';
-            if(readyE){readyE.textContent=pData.isReady?"✓ 已准备":"✗ 未准备"; readyE.className=`player-ready-status ${pData.isReady?'ready':'not-ready'}`; readyE.style.display=rStatus==='waiting'&&!isGFinished?'inline-block':'none';} // Show ready status only in waiting and not game finished
+            if(readyE){readyE.textContent=pData.isReady?"✓ 已准备":"✗ 未准备"; readyE.className=`player-ready-status ${pData.isReady?'ready':'not-ready'}`; readyE.style.display=rStatus==='waiting'&&!isGFinished?'inline-block':'none';} 
             areaEl.classList.toggle('current-turn', rStatus==='playing' && cTurnPId===pData.userId && !isGFinished); areaEl.classList.toggle('player-finished',!!pData.finished); areaEl.classList.toggle('player-disconnected',!pData.connected); areaEl.style.opacity=pData.connected?'1':'0.5';
         } else { if(nE)nE.textContent='等待玩家...';if(rE)rE.textContent='';if(cE)cE.textContent='?';if(readyE)readyE.style.display='none'; areaEl.classList.remove('current-turn','player-finished','player-disconnected'); areaEl.removeAttribute('data-player-id');areaEl.style.opacity='0.7'; }
     }
@@ -416,13 +467,21 @@ document.addEventListener('DOMContentLoaded', () => {
         let tA;
         if (pUserId === myUserId) tA = document.getElementById('my-info-in-bar');
         else tA = document.querySelector(`.opponent-area[data-player-id="${pUserId}"]`);
+        
         if (tA) {
             const rSE = tA.querySelector('.player-ready-status');
             if (rSE) {
                 rSE.textContent = isReady ? "✓ 已准备" : "✗ 未准备";
                 rSE.className = `player-ready-status ${isReady ? 'ready' : 'not-ready'}`;
-                rSE.style.display = currentRoomState && currentRoomState.status === 'waiting' && !currentRoomState.gameFinished ? 'inline-block' : 'none';
+                // Check currentRoomState before accessing its properties
+                if (currentRoomState) {
+                    rSE.style.display = currentRoomState.status === 'waiting' && !currentRoomState.gameFinished ? 'inline-block' : 'none';
+                } else {
+                     rSE.style.display = 'none'; // Default to hidden if state is not available
+                }
             }
+        } else {
+            console.warn(`[UI] updatePlayerReadyStatusUI: Target area for player ${pUserId} not found.`);
         }
     }
     function updatePlayerHandUI(hCards, isMTurn, anim=false) {
