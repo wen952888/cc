@@ -1,5 +1,50 @@
 /* public/style.css */
-/* ... (其他样式保持不变) ... */
+/* ... (大部分样式保持不变) ... */
+
+/* --- Game View Styles --- */
+#game-view { background-color: #356035; /* Main game table color */ }
+#gameInfoBar {
+    min-height: 30px; padding: 5px 10px; display: flex; justify-content: space-between; align-items: center;
+    background-color: rgba(0, 0, 0, 0.45); color: #a5d6a7; font-size: 0.8em;
+    border-bottom: 1px solid rgba(129, 199, 132, 0.2); flex-shrink: 0;
+}
+#infoBarRoomName, #infoBarRoomId, #infoBarCurrentTurn { font-weight: bold; color: #e8f5e9; }
+#infoBarRoomStatus { font-style: italic; color: #ffeb3b; margin: 0 8px; }
+
+/* 新增：顶部操作按钮组样式 */
+.top-bar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* 按钮之间的间距 */
+}
+
+#leaveRoomButton, #toggleVoiceBroadcastButton { /* 应用到两个顶部按钮 */
+    padding: 5px 10px;
+    font-size: 0.9em;
+    color: white;
+    border: none; /* 移除边框，如果需要可以加回来 */
+    border-radius: 4px;
+}
+
+#leaveRoomButton {
+    background-color: #b71c1c;
+}
+#leaveRoomButton:hover {
+    background-color: #8c1616;
+}
+
+#toggleVoiceBroadcastButton {
+    background-color: #4CAF50; /* 绿色表示开启 */
+}
+#toggleVoiceBroadcastButton.voice-off {
+    background-color: #757575; /* 灰色表示关闭 */
+}
+#toggleVoiceBroadcastButton:hover {
+    opacity: 0.8;
+}
+
+
+/* ... (player-area, card, bottom-bar 等样式保持与上次修改一致或按需调整) ... */
 
 /* Card base style (ensure images folder is correct) */
 .card {
@@ -17,7 +62,6 @@
 .my-card.selectable { cursor: pointer; }
 .my-card.selectable:hover:not(.selected) {
     transform: translateY(-20px) scale(1.08);
-    /* MODIFIED: 悬停时z-index提高，使其在同级中位于上方，但仍可能被后续的selected牌覆盖（如果后续牌也有高z-index）*/
     z-index: 10;
     box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
@@ -25,16 +69,11 @@
     transform: translateY(-40px) scale(1.05);
     box-shadow: 0 6px 15px rgba(46, 125, 50, 0.5);
     border-color: #66bb6a;
-    /* MODIFIED: 选中牌的z-index也设置为10，这样它不会比其他悬停牌更高，
-       但如果它右边的牌也被悬停，右边的牌因为在DOM中靠后，天然层级会高一些。
-       如果希望选中的牌总是最高，可以设为更高的值如 20，但会导致您描述的问题。
-       如果希望它不遮挡，它的z-index不应比普通牌高太多，或者依靠DOM顺序。
-       此处尝试将其z-index与悬停牌相同，看是否能改善遮挡。 */
-    z-index: 5; /* 尝试将选中牌的z-index降低，比hover低，但比普通牌高一点，避免被普通牌覆盖 */
+    z-index: 5;
 }
 .my-card.hinted {
     box-shadow: 0 0 12px 4px #ffeb3b, inset 0 0 0 2px #ffeb3b;
-    z-index: 15; /* 提示牌的层级可以高一些，因为它通常是临时的强调 */
+    z-index: 15;
 }
 .card.card-in-hand {
     opacity: 0; transform: translateY(60px) rotate(12deg) scale(0.5);
@@ -43,16 +82,14 @@
     opacity: 1; transform: translateY(0) rotate(0deg) scale(1);
 }
 
-/* ... (其他样式，特别是 #player-hand-area, #player-hand-area-wrapper 和响应式部分保持与上次修改一致) ... */
-
-#player-hand-area-wrapper { /* Wraps hand area to control its placement and min-height */
+#player-hand-area-wrapper {
     width: 100%; min-height: 165px;
     display: flex; align-items: flex-end; justify-content: center;
     flex-shrink: 0; padding-bottom: 8px; box-sizing: border-box; position: relative;
 }
-#player-hand-area { /* Actual scrolling container for cards */
+#player-hand-area {
     display: flex; justify-content: center; align-items: flex-end;
-    width: 100%; max-width: 100vw; /* Prevent exceeding viewport */
+    width: 100%; max-width: 100vw;
     padding: 0; box-sizing: border-box;
     min-height: 148px;
     overflow-x: auto;
@@ -60,59 +97,6 @@
     -webkit-overflow-scrolling: touch;
 }
 
-
-/* --- Responsive Adjustments --- */
-@media (max-width: 450px) and (orientation: portrait) { /* Small portrait devices */
-    .card { width: 68px; height: 102px; } .my-card { margin-left: -45px; }
-    #player-hand-area-wrapper { min-height: 148px; }
-    #player-hand-area { min-height: 137px; }
-    /* .my-card.selectable:hover:not(.selected) { transform: translateY(-18px) scale(1.07); } */ /* 悬停的z-index已在上面统一修改 */
-    .my-card.selected { transform: translateY(-35px) scale(1.04); }
-    #bottom-bar { height: 58px; padding: 0 4px; }
-    #bottom-bar button { font-size: 0.82em; padding: 6px 7px; min-width: 42px; }
-    #my-info-in-bar { min-width: 90px; margin: 0 4px; } #my-info-in-bar .player-avatar { width: 28px; height: 28px;} #my-info-in-bar .playerName { max-width: 50px; }
-    .player-area.current-turn .player-avatar-container::after { width: 20px; height: 20px; }
-    #my-info-in-bar.current-turn .player-avatar-container::after { top: -15px; }
-    #player-top.opponent-area.current-turn .player-avatar-container::after { bottom: -22px;}
-    #player-left.opponent-area.current-turn .player-avatar-container::after { right: -25px; }
-    #player-right.opponent-area.current-turn .player-avatar-container::after { left: -25px; }
-}
-@media (max-width: 375px) and (orientation: portrait) { /* Very small portrait devices */
-    .card { width: 62px; height: 93px; } .my-card { margin-left: -42px; }
-    #player-hand-area-wrapper { min-height: 135px; }
-    #player-hand-area { min-height: 123px; }
-    /* .my-card.selectable:hover:not(.selected) { transform: translateY(-16px) scale(1.06); } */
-    .my-card.selected { transform: translateY(-30px) scale(1.03); }
-    #bottom-bar { height: 55px; padding: 0 3px; }
-    #bottom-bar button { font-size: 0.78em; padding: 5px 5px; min-width: 36px; }
-    #my-info-in-bar { min-width: 80px; margin: 0 3px; padding: 2px 4px; } #my-info-in-bar .player-avatar { width: 26px; height: 26px; } #my-info-in-bar .playerName { max-width: 40px; }
-    .player-area.current-turn .player-avatar-container::after { width: 18px; height: 18px; }
-    #my-info-in-bar.current-turn .player-avatar-container::after { top: -14px; }
-    #player-top.opponent-area.current-turn .player-avatar-container::after { bottom: -20px; }
-    #player-left.opponent-area.current-turn .player-avatar-container::after { right: -22px; }
-    #player-right.opponent-area.current-turn .player-avatar-container::after { left: -22px; }
-}
-/* Adjustments for landscape on smaller height devices */
-@media (orientation: landscape) and (max-height: 500px) {
-    .card { width: 66px; height: 99px; } .my-card { margin-left: -44px; }
-    #player-hand-area-wrapper { min-height: 140px; }
-    #player-hand-area { min-height: 129px; padding: 0 5px; }
-    /* .my-card.selectable:hover:not(.selected) { transform: translateY(-16px) scale(1.05); } */
-    .my-card.selected { transform: translateY(-30px) scale(1.03); }
-    #bottom-bar { height: 48px; }
-    #bottom-bar button { font-size: 0.75em; padding: 5px 7px; min-width: 38px; }
-    #my-info-in-bar .player-avatar { width: 26px; height: 26px; } #my-info-in-bar .playerName { max-width: 50px; }
-    .player-area.current-turn .player-avatar-container::after { width: 18px; height: 18px; }
-    #my-info-in-bar.current-turn .player-avatar-container::after { top: -14px; }
-    #player-top.opponent-area.current-turn .player-avatar-container::after { bottom: -20px; }
-    #player-left.opponent-area.current-turn .player-avatar-container::after { right: -22px; }
-    #player-right.opponent-area.current-turn .player-avatar-container::after { left: -22px; }
-    #gameInfoBar { font-size: 0.75em; min-height: 26px; }
-    .player-details { font-size: 0.7em; } .playerName { font-size: 0.85em; }
-    #centerPileArea { min-height: 80px; } .center-pile-card { width: 45px; height: 67px; } #discarded-cards-area { gap: -25px; }
-}
-
-/* ... (确保其他样式如 #game-view, #gameInfoBar, #bottom-bar, #my-info-in-bar 等保持原样或上次修改后的状态) ... */
 /* --- Global Resets & Base Styles --- */
 html, body {
     height: 100%;
@@ -252,29 +236,7 @@ html, body {
 #logoutButtonLobby { background-color: #d32f2f; color: #fff; margin-top: 10px; }
 #logoutButtonLobby:hover { background-color: #b71c1c; }
 
-/* --- Game View Styles --- */
-#game-view { background-color: #356035; /* Main game table color */ }
-#gameInfoBar {
-    min-height: 30px; padding: 5px 10px; display: flex; justify-content: space-between; align-items: center;
-    background-color: rgba(0, 0, 0, 0.45); color: #a5d6a7; font-size: 0.8em;
-    border-bottom: 1px solid rgba(129, 199, 132, 0.2); flex-shrink: 0;
-}
-#infoBarRoomName, #infoBarRoomId, #infoBarCurrentTurn { font-weight: bold; color: #e8f5e9; }
-#infoBarRoomStatus { font-style: italic; color: #ffeb3b; margin: 0 8px; }
-#leaveRoomButton { padding: 5px 10px; font-size: 0.9em; background-color: #b71c1c; color: white; }
-#leaveRoomButton:hover { background-color: #8c1616; }
 
-#gameArea { flex-grow: 1; position: relative; width: 100%; overflow: hidden; }
-
-.player-area {
-    display: flex; align-items: center; padding: 5px; box-sizing: border-box; border-radius: 6px;
-    transition: box-shadow 0.3s ease, background-color 0.3s ease, opacity 0.3s ease;
-    color: #c8e6c9; position: relative;
-}
-.player-area.current-turn {
-    box-shadow: 0 0 12px 4px #a5d6a7, inset 0 0 0 2px #a5d6a7; /* Enhanced glow */
-    background-color: rgba(165, 214, 167, 0.1);
-}
 .player-area.current-turn .player-avatar-container::after { /* Turn indicator (ensure SVG exists and has fill) */
     content: ''; background-image: url('/images/turn-indicator.svg'); background-repeat: no-repeat;
     background-size: contain; background-position: center; position: absolute;
@@ -401,3 +363,52 @@ html, body {
     font-size: 1.05em; margin-top: 25px;
 }
 #backToLobbyBtn:hover { background-color: #388e3c; }
+
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 450px) and (orientation: portrait) { /* Small portrait devices */
+    .card { width: 68px; height: 102px; } .my-card { margin-left: -45px; }
+    #player-hand-area-wrapper { min-height: 148px; }
+    #player-hand-area { min-height: 137px; }
+    .my-card.selected { transform: translateY(-35px) scale(1.04); }
+    #bottom-bar { height: 58px; padding: 0 4px; }
+    #bottom-bar button { font-size: 0.82em; padding: 6px 7px; min-width: 42px; }
+    #my-info-in-bar { min-width: 90px; margin: 0 4px; } #my-info-in-bar .player-avatar { width: 28px; height: 28px;} #my-info-in-bar .playerName { max-width: 50px; }
+    .player-area.current-turn .player-avatar-container::after { width: 20px; height: 20px; }
+    #my-info-in-bar.current-turn .player-avatar-container::after { top: -15px; }
+    #player-top.opponent-area.current-turn .player-avatar-container::after { bottom: -22px;}
+    #player-left.opponent-area.current-turn .player-avatar-container::after { right: -25px; }
+    #player-right.opponent-area.current-turn .player-avatar-container::after { left: -25px; }
+}
+@media (max-width: 375px) and (orientation: portrait) { /* Very small portrait devices */
+    .card { width: 62px; height: 93px; } .my-card { margin-left: -42px; }
+    #player-hand-area-wrapper { min-height: 135px; }
+    #player-hand-area { min-height: 123px; }
+    .my-card.selected { transform: translateY(-30px) scale(1.03); }
+    #bottom-bar { height: 55px; padding: 0 3px; }
+    #bottom-bar button { font-size: 0.78em; padding: 5px 5px; min-width: 36px; }
+    #my-info-in-bar { min-width: 80px; margin: 0 3px; padding: 2px 4px; } #my-info-in-bar .player-avatar { width: 26px; height: 26px; } #my-info-in-bar .playerName { max-width: 40px; }
+    .player-area.current-turn .player-avatar-container::after { width: 18px; height: 18px; }
+    #my-info-in-bar.current-turn .player-avatar-container::after { top: -14px; }
+    #player-top.opponent-area.current-turn .player-avatar-container::after { bottom: -20px; }
+    #player-left.opponent-area.current-turn .player-avatar-container::after { right: -22px; }
+    #player-right.opponent-area.current-turn .player-avatar-container::after { left: -22px; }
+}
+/* Adjustments for landscape on smaller height devices */
+@media (orientation: landscape) and (max-height: 500px) {
+    .card { width: 66px; height: 99px; } .my-card { margin-left: -44px; }
+    #player-hand-area-wrapper { min-height: 140px; }
+    #player-hand-area { min-height: 129px; padding: 0 5px; }
+    .my-card.selected { transform: translateY(-30px) scale(1.03); }
+    #bottom-bar { height: 48px; }
+    #bottom-bar button { font-size: 0.75em; padding: 5px 7px; min-width: 38px; }
+    #my-info-in-bar .player-avatar { width: 26px; height: 26px; } #my-info-in-bar .playerName { max-width: 50px; }
+    .player-area.current-turn .player-avatar-container::after { width: 18px; height: 18px; }
+    #my-info-in-bar.current-turn .player-avatar-container::after { top: -14px; }
+    #player-top.opponent-area.current-turn .player-avatar-container::after { bottom: -20px; }
+    #player-left.opponent-area.current-turn .player-avatar-container::after { right: -22px; }
+    #player-right.opponent-area.current-turn .player-avatar-container::after { left: -22px; }
+    #gameInfoBar { font-size: 0.75em; min-height: 26px; }
+    .player-details { font-size: 0.7em; } .playerName { font-size: 0.85em; }
+    #centerPileArea { min-height: 80px; } .center-pile-card { width: 45px; height: 67px; } #discarded-cards-area { gap: -25px; }
+}
