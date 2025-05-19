@@ -1,13 +1,12 @@
 // roomManager.js
-const { Game, HAND_TYPES, RANK_VALUES, SUIT_VALUES, compareSingleCards, RANK_ORDER, SUIT_ORDER, compareHands } = require('./game'); // 确保导入 compareHands
+const { Game, HAND_TYPES, RANK_VALUES, SUIT_VALUES, compareSingleCards, RANK_ORDER, SUIT_ORDER, compareHands } = require('./game');
 const crypto = require('crypto');
 
-// ... (其他变量和函数保持不变) ...
 let activeGames = {};
-let ioInstance;
+let ioInstance; // Will be set by init
 
-const ROOM_TTL_SECONDS = 30 * 60;
-const PLAYER_RECONNECT_WINDOW_SECONDS = 2 * 60;
+const ROOM_TTL_SECONDS = 30 * 60; // 30 minutes: Room inactive time before pruning
+const PLAYER_RECONNECT_WINDOW_SECONDS = 2 * 60; // 2 minutes: Time a player slot is held after disconnect
 
 function generateRoomId() { return crypto.randomBytes(3).toString('hex'); }
 function getRoomById(roomId) { return activeGames[roomId]; }
@@ -37,7 +36,7 @@ function getPublicRoomList() {
         .map(room => ({
             roomId: room.roomId,
             roomName: room.roomName,
-            playerCount: room.players.filter(p => p.connected || p.isAiControlled).length, // AI也算人数
+            playerCount: room.players.filter(p => p.connected || p.isAiControlled).length,
             maxPlayers: room.game ? (room.game.maxPlayers || 4) : 4,
             status: room.status,
             hasPassword: !!room.password
@@ -45,7 +44,6 @@ function getPublicRoomList() {
 }
 
 function getRoomStateForPlayer(room, requestingUserId, isGameRelatedUpdate = false) {
-    // ... (保持不变)
     if (!room) return null;
     const gameExistsAndActive = !!room.game && (room.status === 'playing' || room.status === 'finished' || isGameRelatedUpdate);
     const baseGameState = gameExistsAndActive ? room.game.getStateForPlayer(requestingUserId) : null;
@@ -91,7 +89,6 @@ function getRoomStateForPlayer(room, requestingUserId, isGameRelatedUpdate = fal
 }
 
 function addPlayerToRoom(room, socket) {
-    // ... (保持不变)
     if (!room || !room.game || !socket || !socket.userId || !socket.username) {
         console.error("[ADD PLAYER RM] Invalid params for addPlayerToRoom.", { room:!!room, game:!!room?.game, sock:!!socket, uid:socket?.userId, uname:socket?.username });
         return { success: false, message: "服务器内部错误：数据不完整。" };
@@ -103,14 +100,14 @@ function addPlayerToRoom(room, socket) {
         console.log(`[ADD PLAYER RM] Player ${socket.username} (ID: ${socket.userId}) already in room.players for ${room.roomId}. Updating status.`);
         existingPlayerInRoom.socketId = socket.id;
         existingPlayerInRoom.connected = true;
-        existingPlayerInRoom.username = socket.username; // 同步名称
+        existingPlayerInRoom.username = socket.username;
         room.game.markPlayerConnected(socket.userId, true, existingPlayerInRoom.isAiControlled);
         const gamePlayer = room.game.players.find(gp => gp.id === socket.userId);
         if (gamePlayer) gamePlayer.name = socket.username;
         return { success: true, player: existingPlayerInRoom, rejoining: true };
     }
 
-    if (room.players.filter(p => p.connected || p.isAiControlled).length >= maxPlayers) { // AI也算人数
+    if (room.players.filter(p => p.connected || p.isAiControlled).length >= maxPlayers) {
         return { success: false, message: "房间已满。" };
     }
 
@@ -142,16 +139,16 @@ function addPlayerToRoom(room, socket) {
     return { success: true, player: playerInfo, rejoining: false };
 }
 
-
 function checkAndStartGame(room, ioForEmit) {
-    // ... (保持不变)
     if (!room || !room.game || room.status !== 'waiting') return false;
 
     const eligiblePlayers = room.players.filter(p => p.connected || p.isAiControlled);
-    if (eligiblePlayers.length < 2 || eligiblePlayers.length > room.game.maxPlayers) { // 至少需要2人开始游戏
+    // KK 规则如果要求必须4人开始，这里的判断应该是 eligiblePlayers.length !== room.game.maxPlayers
+    // 通用规则至少2人
+    if (eligiblePlayers.length < 2 || eligiblePlayers.length > room.game.maxPlayers) {
+      console.log(`[RM Check&Start] Not enough/too many eligible players for room ${room.roomId}. Have ${eligiblePlayers.length}, need 2-${room.game.maxPlayers}`);
       return false;
     }
-     // KK 规则如果要求必须4人，则这里判断  eligiblePlayers.length !== room.game.maxPlayers
 
     const allReady = eligiblePlayers.every(p => p.isReady || p.isAiControlled);
     if (!allReady) {
@@ -166,20 +163,19 @@ function checkAndStartGame(room, ioForEmit) {
         isAiControlled: p.isAiControlled
     })).sort((a, b) => a.slot - b.slot);
 
-    const startGameResult = room.game.startGame(playerStartInfo); // game.startGame 现在也处理人数问题
+    const startGameResult = room.game.startGame(playerStartInfo);
     if (startGameResult.success) {
         room.status = 'playing';
         room.lastActivityTime = Date.now();
-        room.players.forEach(p => p.isReady = false); // 重置准备状态
+        room.players.forEach(p => p.isReady = false);
 
-        // 首次发送状态，包含AI延迟信息
         const initialStateForAll = getRoomStateForPlayer(room, null, true);
         ioForEmit.to(room.roomId).emit('gameStarted', initialStateForAll);
 
         room.players.forEach(p => {
-            if (p.socketId && (p.connected || p.isAiControlled)) { // AI也需要状态（虽然它不通过socket接收）
+            if (p.socketId && (p.connected || p.isAiControlled)) {
                 const playerSocket = ioForEmit.sockets.sockets.get(p.socketId);
-                if (playerSocket) {
+                if (playerSocket) { // 只给真实连接的socket发
                     playerSocket.emit('gameStateUpdate', getRoomStateForPlayer(room, p.userId, true));
                 }
             }
@@ -187,7 +183,6 @@ function checkAndStartGame(room, ioForEmit) {
 
         broadcastRoomList();
         console.log(`[RM Check&Start] Game started successfully in room ${room.roomId}.`);
-        // 检查第一个出牌的是否是AI
         checkAndTriggerAI(room, ioForEmit);
         return true;
     } else {
@@ -197,7 +192,6 @@ function checkAndStartGame(room, ioForEmit) {
     }
 }
 
-// 新增：检查并触发AI行动的函数
 function checkAndTriggerAI(room, ioForEmit) {
     if (!room || !room.game || !room.game.gameStarted || room.game.gameFinished) {
         return;
@@ -205,9 +199,7 @@ function checkAndTriggerAI(room, ioForEmit) {
     const currentPlayerInGame = room.game.players[room.game.currentPlayerIndex];
     if (currentPlayerInGame && currentPlayerInGame.isAiControlled && !currentPlayerInGame.finished) {
         console.log(`[AI TRIGGER] AI player ${currentPlayerInGame.name}'s turn in room ${room.roomId}.`);
-        // 使用 game.aiPlayDelay
         setTimeout(() => {
-            // 再次检查游戏状态，防止在延迟期间游戏已结束或玩家状态改变
             if (!room.game || !room.game.gameStarted || room.game.gameFinished) return;
             const currentTurnPlayerNow = room.game.players[room.game.currentPlayerIndex];
             if (currentTurnPlayerNow && currentTurnPlayerNow.id === currentPlayerInGame.id && currentTurnPlayerNow.isAiControlled && !currentTurnPlayerNow.finished) {
@@ -215,24 +207,21 @@ function checkAndTriggerAI(room, ioForEmit) {
                 let result;
                 if (aiDecision.action === 'play') {
                     result = room.game.playCard(currentPlayerInGame.id, aiDecision.cards);
-                } else { // action === 'pass'
+                } else {
                     result = room.game.handlePass(currentPlayerInGame.id);
                 }
 
-                // 处理AI行动的结果
                 if (result && result.success) {
                     room.lastActivityTime = Date.now();
                     const newStateForAll = getRoomStateForPlayer(room, null, true);
-                    ioForEmit.to(room.roomId).emit('gameStateUpdate', newStateForAll); // 广播给所有人
+                    ioForEmit.to(room.roomId).emit('gameStateUpdate', newStateForAll);
 
-                    // 单独给每个真实玩家发送手牌信息（如果他们的手牌在全局状态中被隐藏了）
                     room.players.forEach(p => {
                         if (p.connected && !p.isAiControlled && p.socketId) {
                             const playerSocket = ioInstance.sockets.sockets.get(p.socketId);
                             if (playerSocket) playerSocket.emit('gameStateUpdate', getRoomStateForPlayer(room, p.userId, true));
                         }
                     });
-
 
                     if (result.gameOver) {
                         room.players.forEach(rp => {
@@ -246,43 +235,38 @@ function checkAndTriggerAI(room, ioForEmit) {
                         });
                         broadcastRoomList();
                     } else {
-                        // 如果游戏未结束，检查下一个回合是否还是AI
                         checkAndTriggerAI(room, ioForEmit);
                     }
                 } else if (result) {
                     console.error(`[AI PLAY FAILED] AI ${currentPlayerInGame.name} action failed: ${result.message}`);
-                    // AI出牌失败，这通常意味着AI逻辑或游戏规则校验有问题。
-                    // 简单处理：让AI pass （如果允许）或者记录错误。
-                    // 为避免卡死，如果AI必须出牌但失败，尝试让它pass
                     if (room.game.lastValidHandInfo && room.game.lastPlayerWhoPlayed !== currentPlayerInGame.id) {
                         const passResult = room.game.handlePass(currentPlayerInGame.id);
                         if (passResult.success) {
-                            // ... 广播 gameStateUpdate ...
                             const newStateForAll = getRoomStateForPlayer(room, null, true);
                             ioForEmit.to(room.roomId).emit('gameStateUpdate', newStateForAll);
-                            checkAndTriggerAI(room, ioForEmit); // 检查下一个
+                            checkAndTriggerAI(room, ioForEmit);
                         } else {
                              console.error(`[AI PLAY FAILED] AI ${currentPlayerInGame.name} also failed to pass after failed play.`);
-                             // 可能需要管理员介入或游戏自动结束
+                             // Consider ending game if AI is stuck
+                             const scoreResult = room.game.endGame(`AI ${currentPlayerInGame.name} 故障，游戏结束`);
+                             ioInstance.to(room.roomId).emit('gameOver', { reason: scoreResult.result, scoreResult });
+                             room.status = 'finished';
+                             broadcastRoomList();
                         }
                     } else {
                         console.error(`[AI PLAY FAILED] AI ${currentPlayerInGame.name} failed mandatory play.`);
-                        // 强制游戏结束或标记错误
-                         room.game.endGame(`AI ${currentPlayerInGame.name} 决策错误`);
-                         const scoreRes = room.game.calculateScores(); // 使用endGame内部的计分
-                         ioInstance.to(room.roomId).emit('gameOver', { reason: scoreRes.result, scoreResult: scoreRes });
+                         const scoreResult = room.game.endGame(`AI ${currentPlayerInGame.name} 决策错误`);
+                         ioInstance.to(room.roomId).emit('gameOver', { reason: scoreResult.result, scoreResult });
+                         room.status = 'finished';
                          broadcastRoomList();
-
                     }
                 }
             }
-        }, room.game.aiPlayDelay || 1500); // 使用game实例中的延迟
+        }, room.game.aiPlayDelay || 1500);
     }
 }
 
-
 function handlePlayerLeavingRoom(room, socket, reason = "left_generic") {
-    // ... (基本逻辑保持不变)
     if (!room || !socket || !socket.userId) {
         console.warn(`[LEAVE ROOM RM] Invalid params. Room:${!!room}, Sock:${!!socket}, UID:${socket?.userId}`);
         return;
@@ -299,40 +283,27 @@ function handlePlayerLeavingRoom(room, socket, reason = "left_generic") {
     const playerInRoom = room.players[playerInRoomIdx];
 
     if (room.status === 'playing' && room.game && !room.game.gameFinished) {
-        // 如果游戏中途离开，可以选择让其变为AI托管，或者直接算作游戏结束/放弃
-        // 当前行为：标记为断开，AI托管状态由客户端切换。这里服务器端可以强制AI接管
         console.log(`[LEAVE ROOM RM] Player ${username} left mid-game. Marking as AI controlled.`);
-        playerInRoom.isAiControlled = true; // 强制AI接管
-        playerInRoom.connected = false; // 标记为断开连接，但AI仍在
+        playerInRoom.isAiControlled = true;
+        playerInRoom.connected = false; // Still mark as socket disconnected
         room.game.setPlayerAI(socket.userId, true);
-        room.game.markPlayerConnected(socket.userId, true, true); // AI在游戏中总是"connected"
+        room.game.markPlayerConnected(socket.userId, true, true); // AI in game is always "connected"
 
-        // 如果离开的是当前回合玩家，AI需要立即行动
         if (room.game.players[room.game.currentPlayerIndex]?.id === socket.userId) {
             console.log(`[LEAVE ROOM RM] Current player ${username} left, AI takes over immediately.`);
             checkAndTriggerAI(room, ioInstance);
         }
-
-    } else { // 等待状态或游戏已结束
-        room.players.splice(playerInRoomIdx, 1); // 从房间玩家列表中移除
+    } else {
+        room.players.splice(playerInRoomIdx, 1);
         if (room.game) {
-            room.game.removePlayer(socket.userId); // 从游戏实例中也移除
+            room.game.removePlayer(socket.userId);
         }
-         // 如果是房主离开，且房间是等待状态，需要选新房主或解散房间
         if (room.hostId === socket.userId && room.status === 'waiting' && room.players.length > 0) {
             const connectedNonAIPlayers = room.players.filter(p => p.connected && !p.isAiControlled);
             if (connectedNonAIPlayers.length > 0) {
                 room.hostId = connectedNonAIPlayers[0].userId;
-                console.log(`[LEAVE ROOM RM] Host ${username} left, new host is ${connectedNonAIPlayers[0].username}`);
-            } else { // 没有其他真人玩家了，全是AI或者空了
-                 // 可以选择解散房间，或者让AI成为房主（如果允许）
-                 // 为简单起见，如果只剩AI或空了，可以考虑清理房间
-                 if (room.players.every(p => p.isAiControlled) && room.players.length > 0) {
-                     room.hostId = room.players[0].userId; // 第一个AI当房主
-                 } else if (room.players.length === 0) {
-                     console.log(`[LEAVE ROOM RM] Host left and room ${room.roomId} is now empty. Will be pruned.`);
-                     // pruneInactiveRooms 会处理
-                 }
+            } else if (room.players.every(p => p.isAiControlled) && room.players.length > 0) {
+                room.hostId = room.players[0].userId;
             }
         }
     }
@@ -348,51 +319,46 @@ function handlePlayerLeavingRoom(room, socket, reason = "left_generic") {
     room.lastActivityTime = Date.now();
     broadcastRoomList();
 
-    // 如果因玩家离开导致人数不足以继续游戏
     if (room.status === 'playing' && room.game && !room.game.gameFinished) {
         const activePlayersInGame = room.game.players.filter(p => !p.finished).length;
-        if (activePlayersInGame < 2) { // 通常至少需要2人
+        if (activePlayersInGame < 2) {
             console.log(`[LEAVE ROOM RM] Not enough players to continue game in ${room.roomId} after ${username} left. Ending game.`);
             const scoreResult = room.game.endGame("玩家离开，人数不足");
             ioInstance.to(room.roomId).emit('gameOver', { reason: scoreResult.result, scoreResult });
-            // 更新房间状态等
-            room.status = 'finished'; // 或 'archived' 如果直接清理
+            room.status = 'finished';
             broadcastRoomList();
         }
     }
 }
 
 function handleDisconnect(socket) {
-    // ... (基本逻辑保持不变，但当玩家断开连接时，如果游戏正在进行，可以考虑将其标记为AI)
     if (!socket || !socket.userId) {
         return;
     }
     const username = socket.username || `User ${socket.userId.substring(0,6)}`;
-
     const room = findRoomByUserId(socket.userId);
     if (room) {
         const playerInRoom = room.players.find(p => p.userId === socket.userId);
         if (playerInRoom) {
-            if (playerInRoom.socketId === socket.id || !playerInRoom.socketId || !ioInstance.sockets.sockets.get(playerInRoom.socketId)) {
+            // Only act if this is the current socket for the player or no socketId was set for them (should not happen if joined)
+            // or if the registered socket is no longer valid in ioInstance (rare edge case)
+            if (playerInRoom.socketId === socket.id || !playerInRoom.socketId || (ioInstance && !ioInstance.sockets.sockets.get(playerInRoom.socketId))) {
                 playerInRoom.connected = false;
                 console.log(`[DISCONNECT RM] Marked ${username} as disconnected in room ${room.roomId}.`);
 
                 if (room.game) {
-                    // 如果游戏正在进行且玩家未完成，可以选择自动切换为AI
                     const gamePlayer = room.game.players.find(p => p.id === socket.userId);
-                    if (room.status === 'playing' && gamePlayer && !gamePlayer.finished && !playerInRoom.isAiControlled) {
+                    if (room.status === 'playing' && gamePlayer && !gamePlayer.finished && !playerInRoom.isAiControlled) { // Only switch to AI if not already AI
                         console.log(`[DISCONNECT RM] Player ${username} disconnected mid-game. Enabling AI control.`);
                         playerInRoom.isAiControlled = true;
                         room.game.setPlayerAI(socket.userId, true);
-                        // AI在游戏中保持"connected"状态
-                        room.game.markPlayerConnected(socket.userId, true, true);
+                        room.game.markPlayerConnected(socket.userId, true, true); // AI is "connected"
 
-                        // 如果断开的是当前回合的玩家，AI需要立即行动
                         if (room.game.players[room.game.currentPlayerIndex]?.id === socket.userId) {
                             checkAndTriggerAI(room, ioInstance);
                         }
-                    } else if (room.game) { // 其他情况，只标记游戏内断开
-                        room.game.markPlayerConnected(socket.userId, false, playerInRoom.isAiControlled);
+                    } else if (room.game) { // If already AI or game not playing, just mark game player disconnected
+                         room.game.markPlayerConnected(socket.userId, false, playerInRoom.isAiControlled);
                     }
                 }
 
@@ -413,7 +379,6 @@ function handleDisconnect(socket) {
 }
 
 function handleReconnect(socket, roomId) {
-    // ... (基本逻辑保持不变，确保重连时如果之前是AI，现在恢复为人类控制)
     const username = socket.username || `User ${socket.userId ? socket.userId.substring(0,6) : 'Anon'}`;
     console.log(`[RECONNECT RM] Attempting reconnect for ${username} (Socket: ${socket.id}) to room ${roomId}.`);
     try {
@@ -431,13 +396,13 @@ function handleReconnect(socket, roomId) {
         playerInRoomData.connected = true;
         playerInRoomData.socketId = socket.id;
         playerInRoomData.username = socket.username;
-        // 如果玩家重连，应该取消AI托管状态（除非客户端再次显式开启）
-        if (playerInRoomData.isAiControlled) {
-            console.log(`[RECONNECT RM] Player ${username} reconnected, disabling AI control.`);
+
+        if (playerInRoomData.isAiControlled) { // If player reconnected, disable AI for them
+            console.log(`[RECONNECT RM] Player ${username} reconnected, disabling previous AI control.`);
             playerInRoomData.isAiControlled = false;
             room.game.setPlayerAI(socket.userId, false);
         }
-        room.game.markPlayerConnected(socket.userId, true, false); // 标记为人类连接
+        room.game.markPlayerConnected(socket.userId, true, false); // Mark as human connected
         const gamePlayer = room.game.players.find(p=>p.id === socket.userId);
         if(gamePlayer) gamePlayer.name = socket.username;
 
@@ -447,9 +412,8 @@ function handleReconnect(socket, roomId) {
 
         const roomStateForReconnectedPlayer = getRoomStateForPlayer(room, socket.userId, room.status !== 'waiting');
         if (ioInstance) {
-            // 给重连的玩家发送他的特定状态
             socket.emit('gameStateUpdate', roomStateForReconnectedPlayer);
-            // 给房间内其他人广播通用状态更新
+            // Broadcast to others that this player's status (esp. AI off) might have changed
             socket.to(roomId).emit('gameStateUpdate', getRoomStateForPlayer(room, null, room.status !== 'waiting'));
         }
         broadcastRoomList();
@@ -460,13 +424,72 @@ function handleReconnect(socket, roomId) {
     }
 }
 
+// 这个函数在 authManager 认证成功后被调用
+// 它的主要目的是让 roomManager 知道一个 socket 已经被认证了，
+// 但实际的重连房间逻辑是在 authManager 内部通过调用 roomManager.handleReconnect 完成的
+function handleAuthentication(socket) {
+    console.log(`[RM Auth CB] Socket ${socket.id} (User: ${socket.username}, ID: ${socket.userId}) confirmed authenticated.`);
+    // No further specific action here, rejoining room is handled by authManager's reauth/login flow.
+}
 
-// init 函数中的 socket 事件监听
+
+function pruneInactiveRooms() {
+    const now = Date.now();
+    let prunedCount = 0;
+    for (const roomId in activeGames) {
+        const room = activeGames[roomId];
+        if (!room || room.status === 'archived') continue;
+
+        // 只计算真实连接的玩家，AI控制的不算作维持房间活跃的“连接”
+        const connectedHumanPlayersCount = room.players.filter(p => p.connected && !p.isAiControlled).length;
+        const timeSinceLastActivity = (now - (room.lastActivityTime || now)) / 1000;
+
+        if ((connectedHumanPlayersCount === 0 && timeSinceLastActivity > PLAYER_RECONNECT_WINDOW_SECONDS) ||
+            (timeSinceLastActivity > ROOM_TTL_SECONDS)) {
+
+            console.log(`[PRUNE RM] Pruning room ${roomId} (${room.roomName}). ConnHumans:${connectedHumanPlayersCount}, Inactive:${timeSinceLastActivity.toFixed(0)}s.`);
+            if (room.game && room.game.gameStarted && !room.game.gameFinished) {
+                const scoreResult = room.game.endGame(`房间因长时间无真实玩家活动而被清理`);
+                if (ioInstance) {
+                    ioInstance.to(room.roomId).emit('gameOver', {
+                        reason: scoreResult.result || "游戏因房间清理而结束",
+                        scoreResult: scoreResult
+                    });
+                }
+                room.players.forEach(rp => {
+                    const gp = room.game.players.find(g => g.id === rp.userId);
+                    if (gp) rp.score = gp.score;
+                });
+            }
+            room.status = 'archived'; // 标记为已归档
+
+            if(ioInstance) {
+                const socketsInIoRoom = ioInstance.sockets.adapter.rooms.get(roomId);
+                if (socketsInIoRoom) {
+                    socketsInIoRoom.forEach(socketIdInRoom => {
+                        const lingeringSocket = ioInstance.sockets.sockets.get(socketIdInRoom);
+                        if(lingeringSocket) lingeringSocket.leave(roomId);
+                    });
+                }
+            }
+            // 不立即删除 activeGames[roomId]，以便进行可能的后续查询或保留记录，
+            // getPublicRoomList 会过滤掉 archived 状态的房间。
+            // 如果需要彻底删除，可以在这里 delete activeGames[roomId];
+            prunedCount++;
+        }
+    }
+    if (prunedCount > 0) {
+        console.log(`[PRUNE RM] Pruned ${prunedCount} room(s).`);
+        broadcastRoomList(); // 更新大厅列表
+    }
+}
+setInterval(pruneInactiveRooms, 1 * 60 * 1000); // Check every minute
+
+
 function init(socket, ioMainInstance) {
     if (!ioInstance && ioMainInstance) ioInstance = ioMainInstance;
     if (!socket) { console.error("[RM INIT] Null socket."); return; }
 
-    // ... (createRoom, joinRoom, playerReady 事件处理逻辑保持不变) ...
     socket.on('createRoom', (data, callback) => {
         if (typeof callback !== 'function') { console.error("[RM createRoom] No CB."); return; }
         if (!socket.userId) return callback({ success: false, message: '请先登录。' });
@@ -479,7 +502,7 @@ function init(socket, ioMainInstance) {
             let newRoomId = generateRoomId();
             while (activeGames[newRoomId]) newRoomId = generateRoomId();
 
-            const game = new Game(newRoomId, 4); // 默认4人，可根据创建参数修改
+            const game = new Game(newRoomId, 4);
             const newRoom = {
                 roomId: newRoomId, roomName: roomName.trim(), password: password || null, game,
                 players: [], status: 'waiting', hostId: socket.userId, lastActivityTime: Date.now()
@@ -492,8 +515,6 @@ function init(socket, ioMainInstance) {
                 return callback({ success: false, message: `创建房间失败: ${addResult.message}` });
             }
             socket.join(newRoomId); socket.roomId = newRoomId;
-            // 主持人默认不准备
-            // if (newRoom.players.length > 0) newRoom.players[0].isReady = false;
 
             callback({ success: true, roomId: newRoomId, roomState: getRoomStateForPlayer(newRoom, socket.userId, false) });
             broadcastRoomList();
@@ -522,7 +543,8 @@ function init(socket, ioMainInstance) {
             const playerInThisRoom = room.players.find(p => p.userId === socket.userId);
             if (playerInThisRoom) {
                  if (!playerInThisRoom.connected) {
-                    return handleReconnect(socket, roomId); // handleReconnect现在返回对象，让调用者处理callback
+                    const reconnResult = handleReconnect(socket, roomId); // handleReconnect现在返回对象
+                    return callback(reconnResult); // 将结果直接传递给原始回调
                  } else {
                     playerInThisRoom.socketId = socket.id;
                     socket.join(roomId); socket.roomId = roomId;
@@ -545,7 +567,6 @@ function init(socket, ioMainInstance) {
                 const fullStateForNewPlayer = getRoomStateForPlayer(room, socket.userId, false);
                 callback({ success: true, roomId, roomState: fullStateForNewPlayer });
 
-                // 给房间内其他玩家也发送更新（因为人数等信息变了）
                 room.players.forEach(p => {
                     if (p.userId !== socket.userId && p.socketId && ioInstance.sockets.sockets.get(p.socketId)) {
                          ioInstance.sockets.sockets.get(p.socketId).emit('gameStateUpdate', getRoomStateForPlayer(room, p.userId, false));
@@ -565,7 +586,7 @@ function init(socket, ioMainInstance) {
 
         const player = room.players.find(p => p.userId === socket.userId);
         if (!player) return callback({ success: false, message: "未找到玩家。" });
-        if (player.isAiControlled) return callback({ success: false, message: "AI托管中，无需准备。" }); // AI 不能手动准备
+        if (player.isAiControlled) return callback({ success: false, message: "AI托管中，无需准备。" });
 
         player.isReady = !!isReady;
         room.lastActivityTime = Date.now();
@@ -576,17 +597,15 @@ function init(socket, ioMainInstance) {
         checkAndStartGame(room, ioInstance);
     });
 
-
     socket.on('playCard', (cards, callback) => {
         if (typeof callback !== 'function') return;
-        // ... (校验保持不变)
         if (!socket.userId || !socket.roomId) return callback({ success: false, message: "无玩家或房间信息。" });
         const room = activeGames[socket.roomId];
         if (!room || !room.game || !room.game.gameStarted || room.game.gameFinished) {
             return callback({ success: false, message: "游戏状态无效。" });
         }
         const player = room.game.players.find(p => p.id === socket.userId);
-        if (player && player.isAiControlled) return callback({ success: false, message: "AI托管中，不能手动出牌。" }); // AI托管时不能手动出牌
+        if (player && player.isAiControlled) return callback({ success: false, message: "AI托管中，不能手动出牌。" });
 
 
         const result = room.game.playCard(socket.userId, cards);
@@ -594,7 +613,6 @@ function init(socket, ioMainInstance) {
             room.lastActivityTime = Date.now();
             const newStateForAll = getRoomStateForPlayer(room, null, true);
             ioInstance.to(socket.roomId).emit('gameStateUpdate', newStateForAll);
-             // 单独给每个真实玩家发送手牌信息
             room.players.forEach(p => {
                 if (p.connected && !p.isAiControlled && p.socketId) {
                     const playerSocket = ioInstance.sockets.sockets.get(p.socketId);
@@ -602,9 +620,7 @@ function init(socket, ioMainInstance) {
                 }
             });
 
-
             if (result.gameOver) {
-                // ... (游戏结束逻辑)
                 room.players.forEach(rp => {
                     const gp = room.game.players.find(g => g.id === rp.userId);
                     if (gp) rp.score = gp.score;
@@ -616,7 +632,6 @@ function init(socket, ioMainInstance) {
                 });
                 broadcastRoomList();
             } else {
-                // 检查下一回合是否是AI
                 checkAndTriggerAI(room, ioInstance);
             }
             callback({ success: true });
@@ -627,7 +642,6 @@ function init(socket, ioMainInstance) {
 
     socket.on('passTurn', (callback) => {
         if (typeof callback !== 'function') return;
-        // ... (校验保持不变)
         if (!socket.userId || !socket.roomId) return callback({ success: false, message: "无玩家或房间信息。" });
         const room = activeGames[socket.roomId];
         if (!room || !room.game || !room.game.gameStarted || room.game.gameFinished) {
@@ -636,21 +650,18 @@ function init(socket, ioMainInstance) {
         const player = room.game.players.find(p => p.id === socket.userId);
         if (player && player.isAiControlled) return callback({ success: false, message: "AI托管中，不能手动操作。" });
 
-
         const result = room.game.handlePass(socket.userId);
         if (result.success) {
             room.lastActivityTime = Date.now();
             const newStateForAll = getRoomStateForPlayer(room, null, true);
             ioInstance.to(socket.roomId).emit('gameStateUpdate', newStateForAll);
-             // 单独给每个真实玩家发送手牌信息
             room.players.forEach(p => {
                 if (p.connected && !p.isAiControlled && p.socketId) {
                     const playerSocket = ioInstance.sockets.sockets.get(p.socketId);
                     if (playerSocket) playerSocket.emit('gameStateUpdate', getRoomStateForPlayer(room, p.userId, true));
                 }
             });
-
-            checkAndTriggerAI(room, ioInstance); // 检查下一回合
+            checkAndTriggerAI(room, ioInstance);
             callback({ success: true });
         } else {
             callback({ success: false, message: result.message });
@@ -658,7 +669,6 @@ function init(socket, ioMainInstance) {
     });
 
     socket.on('requestHint', (clientHintIndex, callback) => {
-        // ... (保持不变，但AI不会通过这个事件请求提示)
         if (typeof callback !== 'function') return;
         if (!socket.userId || !socket.roomId) return callback({ success: false, message: "无玩家或房间信息。" });
         const room = activeGames[socket.roomId];
@@ -668,8 +678,26 @@ function init(socket, ioMainInstance) {
         const player = room.game.players.find(p => p.id === socket.userId);
         if (player && player.isAiControlled) return callback({ success: false, message: "AI托管中。" });
 
-        const result = room.game.findHint(socket.userId, clientHintIndex, false); // forAI is false
+        const result = room.game.findHint(socket.userId, clientHintIndex, false);
         callback(result);
+    });
+
+    socket.on('leaveRoom', (callback) => {
+        if (typeof callback !== 'function') return;
+        if (!socket.userId || !socket.roomId) return callback({ success: false, message: "无玩家或房间信息。" });
+        const room = activeGames[socket.roomId];
+        if (!room) return callback({ success: false, message: "房间不存在。" });
+
+        handlePlayerLeavingRoom(room, socket, "voluntary_leave");
+        callback({ success: true, message: "已离开房间。" });
+    });
+
+    socket.on('requestGameState', (callback) => {
+        if (typeof callback !== 'function') return;
+        if (!socket.userId || !socket.roomId) return callback(null);
+        const room = activeGames[socket.roomId];
+        if (!room) return callback(null);
+        callback(getRoomStateForPlayer(room, socket.userId, room.status !== 'waiting'));
     });
 
     socket.on('toggleAI', (enableAI, callback) => {
@@ -682,24 +710,19 @@ function init(socket, ioMainInstance) {
         if (!playerInRoom) return callback({ success: false, message: "未找到玩家。" });
 
         playerInRoom.isAiControlled = !!enableAI;
-        // AI 玩家在游戏逻辑中总是 connected，但 room.players 中的 connected 反映真实socket连接
-        // 所以，如果开启AI，game.markPlayerConnected 的 connected 参数应为 true
         room.game.setPlayerAI(socket.userId, !!enableAI);
         if (enableAI) {
-            room.game.markPlayerConnected(socket.userId, true, true); // AI is active and "connected" in game logic
-            playerInRoom.isReady = true; // AI 总是准备好的 (如果在等待阶段)
+            room.game.markPlayerConnected(socket.userId, true, true);
+            if(room.status === 'waiting') playerInRoom.isReady = true; // AI在等待阶段自动准备
         } else {
-            // 关闭AI时，恢复玩家真实的连接状态
             room.game.markPlayerConnected(socket.userId, playerInRoom.connected, false);
         }
-
 
         room.lastActivityTime = Date.now();
         console.log(`[EVENT toggleAI] ${socket.username} AI: ${playerInRoom.isAiControlled}`);
 
         const newStateForAll = getRoomStateForPlayer(room, null, room.status !== 'waiting');
         ioInstance.to(socket.roomId).emit('gameStateUpdate', newStateForAll);
-         // 单独给每个真实玩家发送手牌信息
         room.players.forEach(p => {
             if (p.connected && !p.isAiControlled && p.socketId) {
                 const playerSocket = ioInstance.sockets.sockets.get(p.socketId);
@@ -707,22 +730,19 @@ function init(socket, ioMainInstance) {
             }
         });
 
-
         callback({ success: true, isAiEnabled: playerInRoom.isAiControlled });
 
-        // 如果开启AI并且轮到该玩家
         if (playerInRoom.isAiControlled && room.game.gameStarted && !room.game.gameFinished &&
             room.game.players[room.game.currentPlayerIndex]?.id === socket.userId &&
             !room.game.players[room.game.currentPlayerIndex]?.finished) {
             console.log(`[AI] AI for ${socket.username} activated, is current player. Triggering AI play.`);
             checkAndTriggerAI(room, ioInstance);
         }
-        // 如果在等待阶段开启AI，并且所有人都准备好了，则开始游戏
         if (room.status === 'waiting' && playerInRoom.isAiControlled) {
             checkAndStartGame(room, ioInstance);
         }
     });
-    // ... (listRooms 事件处理逻辑保持不变)
+
     socket.on('listRooms', (callback) => {
         if (typeof callback === 'function') {
             callback(getPublicRoomList());
@@ -730,10 +750,15 @@ function init(socket, ioMainInstance) {
             socket.emit('roomListUpdate', getPublicRoomList());
         }
     });
-
 }
 
 module.exports = {
-    init, handleDisconnect, handleAuthentication, getPublicRoomList,
-    findRoomByUserId, handleReconnect, getRoomById, checkAndTriggerAI // 导出 checkAndTriggerAI
+    init,
+    handleDisconnect,
+    handleAuthentication, // 确保这个函数是定义的
+    getPublicRoomList,
+    findRoomByUserId,
+    handleReconnect,
+    getRoomById,
+    checkAndTriggerAI
 };
