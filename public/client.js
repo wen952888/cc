@@ -1,6 +1,6 @@
 // client.js
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM fully loaded and parsed. Client v1.0.29'); // 版本号更新
+    console.log('DOM fully loaded and parsed. Client v1.0.30'); // Version updated
     const socket = io({
         reconnectionAttempts: 5,
         reconnectionDelay: 2000,
@@ -412,15 +412,85 @@ document.addEventListener('DOMContentLoaded', () => {
             areaEl.classList.toggle('current-turn', rStatus==='playing' && cTurnPId===pData.userId && !isGFinished); areaEl.classList.toggle('player-finished',!!pData.finished); areaEl.classList.toggle('player-disconnected',!pData.connected); areaEl.style.opacity=pData.connected?'1':'0.5';
         } else { if(nE)nE.textContent='等待玩家...';if(rE)rE.textContent='';if(cE)cE.textContent='?';if(readyE)readyE.style.display='none'; areaEl.classList.remove('current-turn','player-finished','player-disconnected'); areaEl.removeAttribute('data-player-id');areaEl.style.opacity='0.7'; }
     }
-    function updatePlayerReadyStatusUI(pUserId, isReady) { let tA; if (pUserId===myUserId)tA=document.getElementById('my-info-in-bar'); else tA=document.querySelector(`.opponent-area[data-player-id="${pUserId}"]`); if(tA){const rSE=tA.querySelector('.player-ready-status');if(rSE){rSE.textContent=isReady?"✓ 已准备":"✗ 未准备";rSE.className=`player-ready-status ${isReady?'ready':'not-ready'}`;rSE.style.display=currentRoomState&¤tRoomState.status==='waiting'&&!currentRoomState.gameFinished?'inline-block':'none';}}}
-    function updatePlayerHandUI(hCards, isMTurn, anim=false) { if(!playerHandArea)return;playerHandArea.innerHTML='';if(!hCards||hCards.length===0)return;hCards.forEach((cD,idx)=>{const cDiv=createCardElement(cD);cDiv.classList.add('my-card');if(anim){cDiv.classList.add('card-in-hand');void cDiv.offsetWidth;setTimeout(()=>cDiv.classList.add('dealt'),idx*70+50);}else cDiv.classList.add('card-in-hand','dealt');if(selectedCardsForPlay.some(sC=>cardObjectToKey(sC)===cardObjectToKey(cD)))cDiv.classList.add('selected');playerHandArea.appendChild(cDiv);if(isMTurn){cDiv.classList.add('selectable');cDiv.addEventListener('click',()=>{toggleCardSelection(cDiv,cD);if(currentHint){currentHint=null;currentHintIndexFromServer=0;highlightHintedCards([]);}});}});if(currentHint&¤tHint.length>0)highlightHintedCards(currentHint);}
+    function updatePlayerReadyStatusUI(pUserId, isReady) {
+        let tA;
+        if (pUserId === myUserId) tA = document.getElementById('my-info-in-bar');
+        else tA = document.querySelector(`.opponent-area[data-player-id="${pUserId}"]`);
+        if (tA) {
+            const rSE = tA.querySelector('.player-ready-status');
+            if (rSE) {
+                rSE.textContent = isReady ? "✓ 已准备" : "✗ 未准备";
+                rSE.className = `player-ready-status ${isReady ? 'ready' : 'not-ready'}`;
+                rSE.style.display = currentRoomState && currentRoomState.status === 'waiting' && !currentRoomState.gameFinished ? 'inline-block' : 'none';
+            }
+        }
+    }
+    function updatePlayerHandUI(hCards, isMTurn, anim=false) {
+        if(!playerHandArea)return;
+        playerHandArea.innerHTML='';
+        if(!hCards||hCards.length===0)return;
+        hCards.forEach((cD,idx)=>{
+            const cDiv=createCardElement(cD);
+            cDiv.classList.add('my-card');
+            if(anim){cDiv.classList.add('card-in-hand');void cDiv.offsetWidth;setTimeout(()=>cDiv.classList.add('dealt'),idx*70+50);}
+            else cDiv.classList.add('card-in-hand','dealt');
+            if(selectedCardsForPlay.some(sC=>cardObjectToKey(sC)===cardObjectToKey(cD)))cDiv.classList.add('selected');
+            playerHandArea.appendChild(cDiv);
+            if(isMTurn){
+                cDiv.classList.add('selectable');
+                cDiv.addEventListener('click',()=>{
+                    toggleCardSelection(cDiv,cD);
+                    if(currentHint){currentHint=null;currentHintIndexFromServer=0;highlightHintedCards([]);}
+                });
+            }
+        });
+        if(currentHint && currentHint.length > 0) highlightHintedCards(currentHint);
+    }
     function toggleCardSelection(cDiv,cD){const cK=cardObjectToKey(cD);const idx=selectedCardsForPlay.findIndex(c=>cardObjectToKey(c)===cK);if(idx>-1){selectedCardsForPlay.splice(idx,1);cDiv.classList.remove('selected');}else{selectedCardsForPlay.push(cD);cDiv.classList.add('selected');}console.log("[CLIENT] Selected cards:",selectedCardsForPlay.map(c=>c.rank+c.suit));}
     function updateCenterPileUI(cPileCards,lHInfo) { if(!discardedCardsArea)return;const lHTDisp=document.getElementById('lastHandType');discardedCardsArea.innerHTML='';let csToDisp=[];let hTMsg="等待出牌";if(lHInfo&&lHInfo.cards&&lHInfo.cards.length>0){csToDisp=lHInfo.cards;hTMsg=`类型: ${lHInfo.type||'未知'}`;}else if(cPileCards&&cPileCards.length>0&&(!lHInfo||(lHInfo.cards&&lHInfo.cards.length===0))){csToDisp=cPileCards;hTMsg="当前出牌";}if(lHTDisp)lHTDisp.textContent=hTMsg;if(csToDisp.length>0)csToDisp.forEach(cD=>{const cDiv=createCardElement(cD);cDiv.classList.add('center-pile-card');discardedCardsArea.appendChild(cDiv);});}
     function createCardElement(cD){const cDiv=document.createElement('div');cDiv.className='card';cDiv.dataset.rank=cD.rank;cDiv.dataset.suit=cD.suit;const imgN=`${cD.suit}${cD.rank}.png`;try{cDiv.style.backgroundImage=`url('/images/cards/${imgN}')`;}catch(e){console.error("[GFX] Error setting card img:",e,imgN);cDiv.textContent=`${cD.suit}${cD.rank}`;}return cDiv;}
     
     // Voice Functionality
     if(micButton){micButton.addEventListener('mousedown',handleVoicePress);micButton.addEventListener('mouseup',handleVoiceRelease);micButton.addEventListener('mouseleave',handleVoiceRelease);micButton.addEventListener('touchstart',handleVoicePress,{passive:false});micButton.addEventListener('touchend',handleVoiceRelease);micButton.addEventListener('touchcancel',handleVoiceRelease);}
-    async function handleVoicePress(evt){evt.preventDefault();if(isRecording||!currentRoomId||(currentRoomState&¤tRoomState.gameFinished))return;console.log('[VOICE] Mic pressed');if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){alert("浏览器不支持麦克风访问(getUserMedia不可用)。请更新浏览器或使用HTTPS/localhost。");return;}isRecording=true;audioChunks=[];if(micButton)micButton.classList.add('recording');if(socket&&socket.connected)socket.emit('playerStartSpeaking');try{const strm=await navigator.mediaDevices.getUserMedia({audio:true});const mTs=['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/ogg','audio/mp4'];let selMT='';for(const mT of mTs){if(MediaRecorder.isTypeSupported(mT)){selMT=mT;break;}}console.log("[VOICE] Using MIME:",selMT||'default');mediaRecorder=selMT?new MediaRecorder(strm,{mimeType:selMT}):new MediaRecorder(strm);mediaRecorder.ondataavailable=e=>{if(e.data.size>0)audioChunks.push(e.data);};mediaRecorder.onstop=()=>{console.log('[VOICE] Recorder stopped');if(audioChunks.length>0&¤tRoomId&&socket&&socket.connected){const bMT=selMT||(audioChunks[0]&&audioChunks[0].type)||'application/octet-stream';const aB=new Blob(audioChunks,{type:bMT});console.log(`[VOICE] Sending blob type ${aB.type}, size ${aB.size}`);socket.emit('sendVoiceMessage',{roomId:currentRoomId,audioBlob:aB});}else console.log("[VOICE] No chunks/room/socket to send voice");audioChunks=[];if(strm)strm.getTracks().forEach(t=>t.stop());};mediaRecorder.start();console.log('[VOICE] Recorder started');}catch(err){console.error('[VOICE] Mic err:',err);alert(`麦克风错误: ${err.name} - ${err.message}\n请检查权限和HTTPS。`);isRecording=false;if(micButton)micButton.classList.remove('recording');if(socket&&socket.connected)socket.emit('playerStopSpeaking');if(mediaRecorder&&mediaRecorder.stream)mediaRecorder.stream.getTracks().forEach(t=>t.stop());else if(err.stream)err.stream.getTracks().forEach(t=>t.stop());}}
+    async function handleVoicePress(evt){
+        evt.preventDefault();
+        if(isRecording || !currentRoomId || (currentRoomState && currentRoomState.gameFinished)) return;
+        console.log('[VOICE] Mic pressed');
+        if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){alert("浏览器不支持麦克风访问(getUserMedia不可用)。请更新浏览器或使用HTTPS/localhost。");return;}
+        isRecording=true;audioChunks=[];
+        if(micButton)micButton.classList.add('recording');
+        if(socket&&socket.connected)socket.emit('playerStartSpeaking');
+        try{
+            const strm=await navigator.mediaDevices.getUserMedia({audio:true});
+            const mTs=['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/ogg','audio/mp4'];
+            let selMT='';
+            for(const mT of mTs){if(MediaRecorder.isTypeSupported(mT)){selMT=mT;break;}}
+            console.log("[VOICE] Using MIME:",selMT||'default');
+            mediaRecorder=selMT?new MediaRecorder(strm,{mimeType:selMT}):new MediaRecorder(strm);
+            mediaRecorder.ondataavailable=e=>{if(e.data.size>0)audioChunks.push(e.data);};
+            mediaRecorder.onstop=()=>{
+                console.log('[VOICE] Recorder stopped');
+                if(audioChunks.length > 0 && currentRoomId && socket && socket.connected){
+                    const bMT=selMT||(audioChunks[0]&&audioChunks[0].type)||'application/octet-stream';
+                    const aB=new Blob(audioChunks,{type:bMT});
+                    console.log(`[VOICE] Sending blob type ${aB.type}, size ${aB.size}`);
+                    socket.emit('sendVoiceMessage',{roomId:currentRoomId,audioBlob:aB});
+                } else console.log("[VOICE] No chunks/room/socket to send voice");
+                audioChunks=[];
+                if(strm)strm.getTracks().forEach(t=>t.stop());
+            };
+            mediaRecorder.start();
+            console.log('[VOICE] Recorder started');
+        }catch(err){
+            console.error('[VOICE] Mic err:',err);
+            alert(`麦克风错误: ${err.name} - ${err.message}\n请检查权限和HTTPS。`);
+            isRecording=false;
+            if(micButton)micButton.classList.remove('recording');
+            if(socket&&socket.connected)socket.emit('playerStopSpeaking');
+            if(mediaRecorder&&mediaRecorder.stream)mediaRecorder.stream.getTracks().forEach(t=>t.stop());
+            else if(err.stream)err.stream.getTracks().forEach(t=>t.stop());
+        }
+    }
     function handleVoiceRelease(evt){evt.preventDefault();if(!isRecording)return;console.log('[VOICE] Mic released');isRecording=false;if(micButton)micButton.classList.remove('recording');if(socket&&socket.connected)socket.emit('playerStopSpeaking');if(mediaRecorder&&mediaRecorder.state==='recording')mediaRecorder.stop();else if(mediaRecorder&&mediaRecorder.stream)mediaRecorder.stream.getTracks().forEach(t=>t.stop());}
     function findSpeakingPlayerArea(sUID){if(sUID===myUserId)return document.getElementById('my-info-in-bar');return document.querySelector(`.opponent-area[data-player-id="${sUID}"]`);}
     socket.on('playerStartedSpeaking',({userId,username})=>{console.log(`[VOICE] ${username}(${userId}) started speaking`);const pA=findSpeakingPlayerArea(userId);if(pA){const ind=pA.querySelector('.voice-indicator');if(ind)ind.classList.add('speaking');}});
