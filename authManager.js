@@ -3,53 +3,54 @@ const fs = require('fs');
 const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
 
-const USERS_FILE = './users.json'; // Path relative to server.js
-const saltRounds = 10;
-let users = {}; // In-memory user data: { phoneNumber: { userId, passwordHash, username } }
+const USERS_FILE = './users.json'; // 存储用户数据的文件路径
+const saltRounds = 10; // bcrypt 哈希轮数
+let users = {}; // 内存中的用户数据缓存 { phoneNumber: { userId, passwordHash, username } }
 
+// 从文件加载用户数据到内存
 function loadUsers() {
     try {
         if (fs.existsSync(USERS_FILE)) {
             const data = fs.readFileSync(USERS_FILE, 'utf8');
-            if (data && data.trim() !== "") { // Ensure file is not empty or just whitespace
+            if (data && data.trim() !== "") { // 确保文件不是空的或只包含空白
                 users = JSON.parse(data);
-                console.log(`[AUTH] Loaded ${Object.keys(users).length} users from ${USERS_FILE}`);
+                console.log(`[AUTH] 从 ${USERS_FILE} 加载了 ${Object.keys(users).length} 个用户。`);
             } else {
-                console.log(`[AUTH] ${USERS_FILE} is empty or contains only whitespace. Initializing with empty user list.`);
+                console.log(`[AUTH] ${USERS_FILE} 为空或只包含空白。从空用户列表开始。`);
                 users = {};
             }
         } else {
-            console.log(`[AUTH] ${USERS_FILE} not found. Will be created on first save. Initializing with empty user list.`);
-            users = {}; // Initialize as empty if file doesn't exist
+            console.log(`[AUTH] 未找到 ${USERS_FILE}。将会在首次保存时创建。从空用户列表开始。`);
+            users = {};
         }
     } catch (e) {
-        console.error(`[AUTH] Error loading users from ${USERS_FILE}:`, e.message);
+        console.error(`[AUTH] 从 ${USERS_FILE} 加载用户时出错:`, e.message);
         if (e instanceof SyntaxError) {
-            console.error(`[AUTH] CRITICAL: ${USERS_FILE} contains invalid JSON. Please check its content or delete the file to start fresh.`);
+            console.error(`[AUTH] 警告: ${USERS_FILE} 包含无效的 JSON。请检查文件内容或删除它以重新开始。`);
         }
-        // In case of error (e.g., malformed JSON), start with an empty user list to prevent crash
-        users = {};
+        users = {}; // 如果加载出错，则从空列表开始，防止程序崩溃
     }
 }
 
+// 将内存中的用户数据保存到文件
 function saveUsers() {
     try {
         fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-        // console.log(`[AUTH] Users data saved to ${USERS_FILE}. Total users: ${Object.keys(users).length}`);
+        // console.log(`[AUTH] 用户数据已保存到 ${USERS_FILE}. 总用户数: ${Object.keys(users).length}`);
     } catch (e) {
-        console.error('[AUTH] Error saving users:', e.message, e.stack);
+        console.error('[AUTH] 保存用户数据时出错:', e.message, e.stack);
     }
 }
 
-// Helper to find user by their unique userId (used in reauthentication)
-function findUserByStoredId(userIdToFind) {
+// 通过 userId 查找用户（主要用于重新认证）
+function findUserById(userIdToFind) {
     for (const phone in users) {
         if (users.hasOwnProperty(phone) && users[phone] && users[phone].userId === userIdToFind) {
-            return { // Return a copy of user data relevant for auth
-                userId: users[phone].userId,
+            return { 
+                userId: users[phone].userId, 
                 username: users[phone].username,
-                phoneNumber: phone, // For logging or context
-                passwordHash: users[phone].passwordHash // Though not directly used by reauth itself
+                // phoneNumber: phone, // 可选，用于调试或上下文
+                // passwordHash: users[phone].passwordHash // 通常不需要返回密码哈希给调用者
             };
         }
     }
@@ -58,64 +59,51 @@ function findUserByStoredId(userIdToFind) {
 
 
 function init(socket) {
+    // 处理用户注册请求
     socket.on('register', async (data, callback) => {
-        if (typeof callback !== 'function') { 
-            console.error(`[AUTH SERVER REG] CRITICAL: No callback for 'register' from socket ${socket.id}`); 
-            return; 
-        }
+        if (typeof callback !== 'function') { console.error("[AUTH REG] 注册事件缺少回调函数。"); return; }
         const { phoneNumber, password } = data;
-        console.log(`[AUTH SERVER REG] Received 'register' for phoneNumber: ${phoneNumber}`);
 
-        if (!phoneNumber || typeof phoneNumber !== 'string' || phoneNumber.trim().length < 5) { // Basic validation
-            return callback({ success: false, message: '手机号无效或过短。' });
+        if (!phoneNumber || typeof phoneNumber !== 'string' || phoneNumber.trim().length === 0 ||
+            !password || typeof password !== 'string' || password.length < 4) {
+            return callback({ success: false, message: '需要有效的手机号和至少4位数的密码。' });
         }
-        if (!password || typeof password !== 'string' || password.length < 4) {
-            return callback({ success: false, message: '密码至少需要4位。' });
-        }
-
         const trimmedPhoneNumber = phoneNumber.trim();
         if (users[trimmedPhoneNumber]) {
-            console.log(`[AUTH SERVER REG] Attempt for existing phoneNumber: "${trimmedPhoneNumber}"`);
             return callback({ success: false, message: '该手机号已被注册。' });
         }
 
         try {
             const passwordHash = await bcrypt.hash(password, saltRounds);
             const userId = uuidv4();
-            const username = `玩家${trimmedPhoneNumber.slice(-4)}`; // Default username e.g., "玩家1234"
+            const username = `用户${trimmedPhoneNumber.slice(-4)}`; // 例如 "用户1234"
             users[trimmedPhoneNumber] = { userId, passwordHash, username };
-            saveUsers(); // Save after new registration
-            console.log(`[AUTH SERVER REG] User registered: ${username} (Phone: ${trimmedPhoneNumber}, ID: ${userId})`);
-            callback({ success: true, message: '注册成功！请使用手机号和密码登录。' });
+            saveUsers();
+            console.log(`[AUTH REG] 用户注册成功: ${username} (手机号: ${trimmedPhoneNumber}), 用户ID: ${userId}`);
+            callback({ success: true, message: '注册成功！请登录。' });
         } catch (error) {
-            console.error('[AUTH SERVER REG] bcrypt.hash error or other:', error.message, error.stack);
+            console.error('[AUTH REG] 注册过程中发生错误:', error);
             callback({ success: false, message: '注册过程中发生服务器内部错误。' });
         }
     });
 
+    // 处理用户登录请求
     socket.on('login', async (data, callback) => {
-        if (typeof callback !== 'function') { 
-            console.error(`[AUTH SERVER LOGIN] CRITICAL: No callback for 'login' from socket ${socket.id}`); 
-            return; 
-        }
+        if (typeof callback !== 'function') { console.error("[AUTH LOGIN] 登录事件缺少回调函数。"); return; }
         const { phoneNumber, password } = data;
-        console.log(`[AUTH SERVER LOGIN] Received 'login' for phoneNumber: ${phoneNumber}`);
 
-        if (!phoneNumber || typeof phoneNumber !== 'string' || !password) {
-            return callback({ success: false, message: '手机号和密码均不能为空。' });
+        if (!phoneNumber || !password) {
+            return callback({ success: false, message: '需要手机号和密码。' });
         }
 
         const trimmedPhoneNumber = phoneNumber.trim();
         const userData = users[trimmedPhoneNumber];
-
         if (!userData) {
-            console.log(`[AUTH SERVER LOGIN] Failed: User not found for phoneNumber: "${trimmedPhoneNumber}"`);
-            return callback({ success: false, message: '手机号或密码错误。' });
+            return callback({ success: false, message: '用户不存在或手机号错误。' });
         }
-
-        if (!userData.passwordHash || typeof userData.passwordHash !== 'string') {
-            console.error(`[AUTH SERVER LOGIN] Failed: Invalid or missing passwordHash for user "${trimmedPhoneNumber}". UserData:`, JSON.stringify(userData));
-            return callback({ success: false, message: '账户数据异常，请联系管理员。' });
+        if (!userData.passwordHash) { // 数据完整性检查
+            console.error(`[AUTH LOGIN] 用户 ${trimmedPhoneNumber} 数据异常: 缺少 passwordHash。`);
+            return callback({ success: false, message: '账户数据异常，请联系管理员。'});
         }
 
         try {
@@ -123,58 +111,57 @@ function init(socket) {
             if (match) {
                 socket.userId = userData.userId;
                 socket.username = userData.username;
-                console.log(`[AUTH SERVER LOGIN] Success: ${socket.username} (ID: ${socket.userId}), Socket: ${socket.id}`);
+                console.log(`[AUTH LOGIN] 用户登录成功: ${socket.username} (ID: ${socket.userId}), Socket: ${socket.id}`);
                 
-                const roomManager = require('./roomManager'); // Lazy load to avoid circular deps
-                roomManager.handleAuthentication(socket); // Notify roomManager (optional, if it needs to do something globally)
+                const roomManager = require('./roomManager'); // 延迟加载以避免循环依赖
+                roomManager.handleAuthentication(socket); // 通知 roomManager 该 socket 已认证
 
                 const previousRoom = roomManager.findRoomByUserId(socket.userId);
                 let roomStatePayload = null;
                 let loginMessage = '登录成功！';
 
                 if (previousRoom && previousRoom.status !== 'archived') {
-                    console.log(`[AUTH SERVER LOGIN] User ${socket.username} was in room ${previousRoom.roomId}. Attempting reconnect.`);
-                    const rejoinResult = roomManager.handleReconnect(socket, previousRoom.roomId);
-                    if (rejoinResult && rejoinResult.success) {
-                        roomStatePayload = rejoinResult.roomState;
-                        loginMessage = '登录并重新加入房间成功！';
-                        socket.roomId = previousRoom.roomId; // Ensure socket has roomId
-                    } else {
-                        loginMessage = `登录成功，但重新加入房间失败: ${rejoinResult ? rejoinResult.message : '房间可能已关闭或发生错误'}`;
-                        // Client should be directed to lobby if rejoin fails
-                    }
+                     console.log(`[AUTH LOGIN] 用户 ${socket.username} 之前在房间 ${previousRoom.roomId} (${previousRoom.roomName})。尝试重连...`);
+                     const rejoinResult = roomManager.handleReconnect(socket, previousRoom.roomId);
+                     if (rejoinResult.success) {
+                         roomStatePayload = rejoinResult.roomState;
+                         loginMessage = '登录并成功重新加入之前的房间！';
+                         socket.roomId = previousRoom.roomId; // 确保 socket 对象上有当前房间ID
+                     } else {
+                         loginMessage = `登录成功，但重新加入房间失败: ${rejoinResult.message || '房间可能已关闭或发生错误'}`;
+                         // 此时用户已登录但未在房间内，客户端应导航到大厅
+                         socket.emit('roomListUpdate', roomManager.getPublicRoomList()); // 主动推一次房间列表
+                     }
+                } else {
+                    // 用户登录成功，但之前不在任何房间，或房间已归档
+                    socket.emit('roomListUpdate', roomManager.getPublicRoomList()); // 主动推一次房间列表
                 }
                 callback({ success: true, message: loginMessage, userId: userData.userId, username: userData.username, roomState: roomStatePayload });
             } else {
-                console.log(`[AUTH SERVER LOGIN] Failed: Password mismatch for user: "${trimmedPhoneNumber}"`);
-                callback({ success: false, message: '手机号或密码错误。' });
+                callback({ success: false, message: '密码错误。' });
             }
         } catch (error) {
-            console.error('[AUTH SERVER LOGIN] bcrypt.compare error or other:', error.message, error.stack);
+            console.error('[AUTH LOGIN] 登录过程中发生错误:', error);
             callback({ success: false, message: '登录过程中发生服务器验证错误。' });
         }
     });
 
+    // 处理客户端存储的用户ID进行重新认证
     socket.on('reauthenticate', (storedUserId, callback) => {
-        if (typeof callback !== 'function') { 
-            console.error(`[AUTH SERVER REAUTH] CRITICAL: No callback for 'reauthenticate' from socket ${socket.id}`); 
-            return; 
+        if (typeof callback !== 'function') { console.error("[AUTH REAUTH] 重认证事件缺少回调函数。"); return; }
+        console.log(`[AUTH REAUTH] 收到重认证请求，用户ID: ${storedUserId}, Socket: ${socket.id}`);
+        
+        if (!storedUserId) {
+            return callback({ success: false, message: '无效的用户凭证。'});
         }
-        console.log(`[AUTH SERVER REAUTH] Received 'reauthenticate' for userId: ${storedUserId} from socket: ${socket.id}`);
+        const userData = findUserById(storedUserId); // 使用辅助函数查找
 
-        if (!storedUserId || typeof storedUserId !== 'string') {
-            console.warn(`[AUTH SERVER REAUTH] Failed for socket ${socket.id}: Invalid/missing userId. Value:`, storedUserId);
-            return callback({ success: false, message: '无效的用户凭证。' });
-        }
-
-        const userData = findUserByStoredId(storedUserId); // Uses helper to find by userId
-
-        if (userData && userData.userId && userData.username) { // User found
+        if (userData) {
             socket.userId = userData.userId;
             socket.username = userData.username;
-            console.log(`[AUTH SERVER REAUTH] Success: ${socket.username} (Phone: ${userData.phoneNumber}, UserID: ${socket.userId}), Socket: ${socket.id}`);
+            console.log(`[AUTH REAUTH] 用户重认证成功: ${socket.username} (ID: ${socket.userId}), Socket: ${socket.id}`);
 
-            const roomManager = require('./roomManager'); // Lazy load
+            const roomManager = require('./roomManager'); 
             roomManager.handleAuthentication(socket);
 
             const previousRoom = roomManager.findRoomByUserId(socket.userId);
@@ -182,30 +169,32 @@ function init(socket) {
             let reauthMessage = '重新认证成功！';
 
             if (previousRoom && previousRoom.status !== 'archived') {
-                 console.log(`[AUTH SERVER REAUTH] User ${socket.username} was previously in room ${previousRoom.roomId}. Attempting reconnect.`);
+                 console.log(`[AUTH REAUTH] 用户 ${socket.username} 之前在房间 ${previousRoom.roomId} (${previousRoom.roomName})。尝试重连...`);
                  const rejoinResult = roomManager.handleReconnect(socket, previousRoom.roomId);
-                 if (rejoinResult && rejoinResult.success) {
+                 if (rejoinResult.success) {
                      roomStatePayload = rejoinResult.roomState;
-                     reauthMessage = '重新认证并成功加入房间！';
-                     socket.roomId = previousRoom.roomId; // Ensure socket has roomId
-                     console.log(`[AUTH SERVER REAUTH] Rejoin to room ${previousRoom.roomId} successful for ${socket.username}.`);
+                     reauthMessage = '重新认证并成功加入之前的房间！';
+                     socket.roomId = previousRoom.roomId;
                  } else {
-                     reauthMessage = `重新认证成功，但重新加入房间 ${previousRoom.roomName || previousRoom.roomId} 失败: ${rejoinResult ? rejoinResult.message : '房间不再有效或发生错误'}`;
-                     console.warn(`[AUTH SERVER REAUTH] Rejoin to room ${previousRoom.roomId} failed for ${socket.username}: ${rejoinResult ? rejoinResult.message : 'Rejoin failed'}`);
+                     reauthMessage = `重新认证成功，但重新加入房间 "${previousRoom.roomName}" 失败: ${rejoinResult.message || '房间可能已关闭或发生错误'}`;
+                     socket.emit('roomListUpdate', roomManager.getPublicRoomList());
                  }
             } else {
-                console.log(`[AUTH SERVER REAUTH] User ${socket.username} not found in any active room after reauthentication.`);
+                // 用户重认证成功，但之前不在任何房间，或房间已归档
+                socket.emit('roomListUpdate', roomManager.getPublicRoomList());
             }
             
-            const responsePayload = {
-                success: true, message: reauthMessage,
-                userId: userData.userId, username: userData.username,
-                roomState: roomStatePayload // Can be null if no room or rejoin failed
-            };
-            callback(responsePayload);
+            callback({
+                success: true,
+                message: reauthMessage,
+                userId: userData.userId,
+                username: userData.username,
+                roomState: roomStatePayload // 可能是 null
+            });
+
         } else {
-            console.warn(`[AUTH SERVER REAUTH] Failed for socket ${socket.id}: userId "${storedUserId}" not found or data incomplete.`);
-            callback({ success: false, message: '用户凭证无效或会话已过期，请重新登录。' });
+            console.log(`[AUTH REAUTH] 重认证失败: 未找到用户ID ${storedUserId}。`);
+            callback({ success: false, message: '无效的用户凭证或会话已过期，请重新登录。' });
         }
     });
 }
@@ -213,5 +202,6 @@ function init(socket) {
 module.exports = {
     init,
     loadUsers,
-    // saveUsers // Not typically needed by other modules, but good for potential admin tools/scripts
+    saveUsers, // 导出以备其他模块（如管理脚本）可能需要
+    findUserById // 导出以备其他模块可能需要
 };
