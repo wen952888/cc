@@ -9,39 +9,43 @@ const roomManager = require('./roomManager');
 const app = express();
 const server = http.createServer(app);
 
-// Socket.IO 服务器初始化配置
 const io = new Server(server, {
-    pingTimeout: 60000,    // 客户端在60秒内未发送 PONG 包则认为连接超时 (默认 5000ms)
-    pingInterval: 25000,   // 服务器每25秒发送一个 PING 包 (默认 25000ms)
+    pingTimeout: 60000,    // 客户端在60秒内未发送 PONG 包则认为连接超时
+    pingInterval: 25000,   // 服务器每25秒发送一个 PING 包
     transports: ['websocket', 'polling'], // 明确指定传输方式，优先 WebSocket
-    // 如果您的客户端和服务器不在同一域名或端口（例如开发时），
-    // 或者您通过一个与 Node.js 服务器不同的域名访问客户端，
-    // 您可能需要配置 CORS：
+    // CORS 配置: 如果您的客户端和服务器部署在不同的域或端口，
+    // 或者您通过与 Node.js 服务器不同的域名/端口访问客户端静态页面，
+    // 您需要启用并正确配置 CORS。
+    // 对于 DDNS 场景，如果最终解析到的 IP 和端口与客户端访问的不一致，也需要考虑。
     /*
     cors: {
-        origin: "*", // 允许所有来源，生产环境建议指定具体的客户端域名
-        // origin: "http://your-client-domain.com",
-        // origin: ["http://localhost:xxxx", "http://actual-client-domain.com"],
+        origin: "*", //  "*" 允许所有来源，仅用于测试。生产环境请指定确切的客户端来源。
+        // origin: "http://your-client-domain.com", // 例如您的 DDNS 域名
+        // origin: ["http://localhost:xxxx", "http://actual-client-domain.com"], //允许多个来源
         methods: ["GET", "POST"],
-        allowedHeaders: ["my-custom-header"], // 如果有自定义头部
-        credentials: true // 如果需要传递 cookie
+        // allowedHeaders: ["my-custom-header"], // 如果客户端发送了自定义头部
+        // credentials: true // 如果需要 cookie 或授权头部跨域
     }
     */
 });
 
-app.disable('x-powered-by');
+app.disable('x-powered-by'); // 安全性考虑，移除 Express 的标识
 
 const PORT = process.env.PORT || 23502;
 
 console.log("--- [SERVER] Startup Configuration ---");
-console.log(`Initial process.env.PORT: ${process.env.PORT}`);
 const nodeEnv = process.env.NODE_ENV || 'development';
 console.log(`NODE_ENV: ${nodeEnv}`);
 console.log(`Effective port chosen for listening: ${PORT}`);
 console.log("------------------------------------");
 
-// Serve static files from the 'public' directory
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve static files from the 'public' directory with caching headers
+// 对于不经常更改的静态资源（如图片、CSS、客户端JS），设置较长的缓存时间
+app.use(express.static(path.join(__dirname, 'public'), {
+    maxAge: nodeEnv === 'development' ? '0' : '7d', // 开发模式不缓存或短缓存，生产模式缓存7天
+    etag: true,           // 启用 ETag HTTP 头部
+    lastModified: true    // 启用 Last-Modified HTTP 头部
+}));
 
 // Load user data on startup
 authManager.loadUsers();
@@ -50,19 +54,19 @@ authManager.loadUsers();
 io.on('connection', (socket) => {
     console.log(`[SERVER] Client connected: ${socket.id}`);
 
-    // 传递 io 实例给 roomManager
-    authManager.init(socket); // authManager 可能也需要 io 实例，如果它直接发送消息的话
-    roomManager.init(socket, io);
+    // 初始化认证和房间管理逻辑，传递必要的实例
+    authManager.init(socket);
+    roomManager.init(socket, io); // 确保 io 实例传递给 roomManager
 
+    // 处理客户端发送的语音消息
     socket.on('sendVoiceMessage', (data) => {
         const { roomId, audioBlob } = data;
-        const userId = socket.userId || 'UnknownUser'; // 确保 socket.userId 存在
+        const userId = socket.userId || 'UnknownUser'; // 从认证过的 socket 获取 userId
         console.log(`[SERVER] Received voice message from ${userId} (Socket: ${socket.id}) for room ${roomId}.`);
 
         const room = roomManager.getRoomById(roomId);
         if (room) {
-            // 确保 audioBlob 是有效的数据
-            if (audioBlob && audioBlob.size > 0) {
+            if (audioBlob && audioBlob.size > 0) { // 校验 audioBlob
                 socket.to(roomId).emit('receiveVoiceMessage', { userId: userId, audioBlob: audioBlob });
                 console.log(`[SERVER] Broadcasting voice message to room ${roomId} from ${userId}.`);
             } else {
@@ -73,15 +77,17 @@ io.on('connection', (socket) => {
         }
     });
 
+    // 处理客户端断开连接
     socket.on('disconnect', (reason) => {
         console.log(`[SERVER] Client disconnected: ${socket.id}. Reason: ${reason}`);
         roomManager.handleDisconnect(socket);
     });
 
-    // 初始加载时发送一次房间列表给连接的客户端
+    // 新客户端连接时，发送当前的房间列表
     socket.emit('roomListUpdate', roomManager.getPublicRoomList());
 });
 
+// 启动 HTTP 服务器
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`[SERVER] Server running and listening on 0.0.0.0:${PORT}`);
     if (nodeEnv === 'production') {
@@ -89,13 +95,51 @@ server.listen(PORT, '0.0.0.0', () => {
     }
 });
 
+// 全局未捕获异常处理
+process.on('uncaughtException', (error) => {
+    console.error('UNCAUGHT EXCEPTION! Server is shutting down...', error.name, error.message, error.stack);
+    // 尝试优雅关闭，但未捕获的异常通常表明程序处于不稳定状态
+    if (io) {
+        io.close(() => {
+            console.log('[SERVER] Socket.IO connections closed due to uncaught exception.');
+            process.exit(1); // 非正常退出
+        });
+    } else {
+        process.exit(1); // 非正常退出
+    }
+    // 设置一个超时，以防关闭操作卡住
+    setTimeout(() => {
+        console.error('[SERVER] Graceful shutdown on uncaughtException timed out. Forcing exit.');
+        process.exit(1);
+    }, 5000).unref(); // 5秒超时, unref() 允许程序在超时前正常退出
+});
+
+// 全局未处理的 Promise Rejection 处理
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('UNHANDLED PROMISE REJECTION!');
+    console.error('Reason:', reason);
+    console.error('Promise:', promise);
+    // 根据您的策略，这里可以选择记录错误，或者也让进程退出
+    // process.exit(1); // 如果您认为未处理的 rejection 是致命的
+});
+
+// 处理 SIGINT 信号 (例如 Ctrl+C) 实现优雅关机
 process.on('SIGINT', () => {
-    console.log('[SERVER] Shutting down...');
-    io.close(() => { // 优雅关闭 Socket.IO 连接
+    console.log('[SERVER] SIGINT signal received. Shutting down gracefully...');
+    // 1. 关闭 Socket.IO 服务器，停止接受新连接并尝试关闭现有连接
+    io.close(() => {
         console.log('[SERVER] Socket.IO connections closed.');
+        // 2. 关闭 HTTP 服务器
         server.close(() => {
             console.log('[SERVER] HTTP server closed.');
-            process.exit(0);
+            // 3. 退出进程
+            process.exit(0); // 正常退出
         });
     });
+
+    // 设置一个超时，以防优雅关机过程过长
+    setTimeout(() => {
+        console.error('[SERVER] Graceful shutdown timed out. Forcing exit.');
+        process.exit(1); // 非正常退出
+    }, 10000).unref(); // 10秒超时
 });
