@@ -1,6 +1,6 @@
 // client.js
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM fully loaded and parsed. Client v1.0.31'); // 版本号更新
+    console.log('DOM fully loaded and parsed. Client v1.0.32'); // 版本号更新
     const socket = io({
         reconnectionAttempts: 5,
         reconnectionDelay: 2000,
@@ -68,6 +68,35 @@ document.addEventListener('DOMContentLoaded', () => {
     let mediaRecorder;
     let audioChunks = [];
     let isRecording = false;
+
+    // --- START: Card Image Mapping ---
+    const rankToImageNamePart = {
+        'A': 'ace',
+        'K': 'king',
+        'Q': 'queen',
+        'J': 'jack',
+        'T': '10', // Assuming 'T' in game.js maps to "10" in filename
+        '9': '9',
+        '8': '8',
+        '7': '7',
+        '6': '6',
+        '5': '5',
+        '4': '4',
+        '3': '3',
+        '2': '2'
+    };
+
+    const suitToImageNamePart = {
+        'S': 'spades',   // Spades (黑桃)
+        'H': 'hearts',   // Hearts (红桃)
+        'D': 'diamonds', // Diamonds (方块)
+        'C': 'clubs'     // Clubs (梅花)
+    };
+
+    const CARD_IMAGE_EXTENSION = '.jpg'; // Change to '.png' if your images are PNGs
+    const CARD_BACK_IMAGE = 'back.jpg'; // Change if your card back image has a different name or extension
+    // --- END: Card Image Mapping ---
+
 
     function switchToView(targetViewId) {
         console.log(`[VIEW] Switching to view: ${targetViewId}`);
@@ -174,12 +203,10 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('connect', () => {
         console.log('[SOCKET] Connected to server with ID:', socket.id);
         const lsUserId = localStorage.getItem('userId');
-        // If we are not yet authenticated (myUserId is null) but have a stored ID, try to re-authenticate.
-        // This handles cases where initial reauth might have failed or was missed.
         if (!myUserId && lsUserId) { 
             console.log("[SOCKET] Connect event: Attempting reauthenticate as user not logged in but has stored ID.");
             socket.emit('reauthenticate', lsUserId, handleAuthResponse); 
-        } else if (myUserId) { // If already logged in (myUserId is set), sync state
+        } else if (myUserId) { 
             console.log("[SOCKET] Socket reconnected, user was logged in. Requesting sync data.");
             if (currentRoomId) {
                 socket.emit('requestGameState', (state) => {
@@ -201,9 +228,9 @@ document.addEventListener('DOMContentLoaded', () => {
                      switchToView('lobby-view');
                 }
             }
-        } else { // No myUserId and no lsUserId, new user or cleared storage
+        } else { 
             console.log("[SOCKET] Connect event: No active login session or stored ID. Displaying auth view.");
-            if (loadingView.style.display !== 'none') { // Only switch if still on loading
+            if (loadingView.style.display !== 'none') { 
                 switchToView('auth-view');
             }
         }
@@ -223,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('[CLIENT] Create room response from server:', response);
                 if (response && response.success) {
                     currentRoomId = response.roomId;
-                    displayGameState(response.roomState); // displayGameState will set currentRoomState
+                    displayGameState(response.roomState);
                     switchToView('game-view');
                     alert(`房间 "${roomName}" 创建成功! ID: ${response.roomId}`);
                 } else {
@@ -269,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         console.log('[CLIENT] Join room response:', response);
                         if (response && response.success) {
                             currentRoomId = response.roomId; 
-                            displayGameState(response.roomState);  // displayGameState will set currentRoomState
+                            displayGameState(response.roomState); 
                             switchToView('game-view');
                         } else alert(`加入房间失败: ${response ? response.message : '未知错误'}`);
                     });
@@ -298,7 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Game Socket Event Handlers
     socket.on('gameStarted', (gameState) => { 
         console.log('[EVENT] gameStarted received:', gameState); 
-        currentRoomState = gameState; // Crucial: update global state
+        currentRoomState = gameState; 
         displayGameState(gameState, true); 
         switchToView('game-view'); 
         const mp=gameState.players.find(p=>p.userId===myUserId); 
@@ -306,26 +333,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     socket.on('gameStateUpdate', (gameState) => { 
         console.log('[EVENT] gameStateUpdate received:', gameState); 
-        currentRoomState = gameState; // Crucial: update global state
+        currentRoomState = gameState; 
         displayGameState(gameState, false); 
     });
-    socket.on('playerJoined', (playerInfo) => { // Example handler if server sends this
+    socket.on('playerJoined', (playerInfo) => { 
         console.log('[EVENT] playerJoined:', playerInfo);
         if (currentRoomState && currentRoomState.players) {
             const existingPlayer = currentRoomState.players.find(p => p.userId === playerInfo.userId);
             if (!existingPlayer) {
                 currentRoomState.players.push(playerInfo);
-            } else { // Update existing player (e.g. if they reconnected and details changed)
+            } else { 
                 Object.assign(existingPlayer, playerInfo);
             }
-            displayGameState(currentRoomState); // Re-render with new player
+            displayGameState(currentRoomState); 
         }
     });
-    socket.on('playerLeft', ({userId}) => { // Example handler if server sends this
+    socket.on('playerLeft', ({userId}) => { 
         console.log('[EVENT] playerLeft:', userId);
         if (currentRoomState && currentRoomState.players) {
             currentRoomState.players = currentRoomState.players.filter(p => p.userId !== userId);
-            displayGameState(currentRoomState); // Re-render without the player
+            displayGameState(currentRoomState); 
         }
     });
     socket.on('playerReadyUpdate', ({ userId, isReady }) => {
@@ -378,8 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function displayGameState(state, animateHandOnDisplay = false) {
         if (!state) { console.warn("[DISPLAY] displayGameState called with null state."); if(myUserId)switchToView('lobby-view');else switchToView('auth-view'); return; }
-        // console.log("[DISPLAY] Displaying Game State. MyUserId:", myUserId, "Room Status:", state.status, "Full state:", JSON.stringify(state));
-        currentRoomState = state; // Ensure global state is updated
+        currentRoomState = state; 
         const myPlayer = state.players ? state.players.find(p => p.userId === myUserId) : null;
 
         if (infoBarRoomName) infoBarRoomName.textContent = state.roomName || '未知';
@@ -473,11 +499,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (rSE) {
                 rSE.textContent = isReady ? "✓ 已准备" : "✗ 未准备";
                 rSE.className = `player-ready-status ${isReady ? 'ready' : 'not-ready'}`;
-                // Check currentRoomState before accessing its properties
                 if (currentRoomState) {
                     rSE.style.display = currentRoomState.status === 'waiting' && !currentRoomState.gameFinished ? 'inline-block' : 'none';
                 } else {
-                     rSE.style.display = 'none'; // Default to hidden if state is not available
+                     rSE.style.display = 'none'; 
                 }
             }
         } else {
@@ -506,8 +531,59 @@ document.addEventListener('DOMContentLoaded', () => {
         if(currentHint && currentHint.length > 0) highlightHintedCards(currentHint);
     }
     function toggleCardSelection(cDiv,cD){const cK=cardObjectToKey(cD);const idx=selectedCardsForPlay.findIndex(c=>cardObjectToKey(c)===cK);if(idx>-1){selectedCardsForPlay.splice(idx,1);cDiv.classList.remove('selected');}else{selectedCardsForPlay.push(cD);cDiv.classList.add('selected');}console.log("[CLIENT] Selected cards:",selectedCardsForPlay.map(c=>c.rank+c.suit));}
-    function updateCenterPileUI(cPileCards,lHInfo) { if(!discardedCardsArea)return;const lHTDisp=document.getElementById('lastHandType');discardedCardsArea.innerHTML='';let csToDisp=[];let hTMsg="等待出牌";if(lHInfo&&lHInfo.cards&&lHInfo.cards.length>0){csToDisp=lHInfo.cards;hTMsg=`类型: ${lHInfo.type||'未知'}`;}else if(cPileCards&&cPileCards.length>0&&(!lHInfo||(lHInfo.cards&&lHInfo.cards.length===0))){csToDisp=cPileCards;hTMsg="当前出牌";}if(lHTDisp)lHTDisp.textContent=hTMsg;if(csToDisp.length>0)csToDisp.forEach(cD=>{const cDiv=createCardElement(cD);cDiv.classList.add('center-pile-card');discardedCardsArea.appendChild(cDiv);});}
-    function createCardElement(cD){const cDiv=document.createElement('div');cDiv.className='card';cDiv.dataset.rank=cD.rank;cDiv.dataset.suit=cD.suit;const imgN=`${cD.suit}${cD.rank}.png`;try{cDiv.style.backgroundImage=`url('/images/cards/${imgN}')`;}catch(e){console.error("[GFX] Error setting card img:",e,imgN);cDiv.textContent=`${cD.suit}${cD.rank}`;}return cDiv;}
+    
+    function updateCenterPileUI(cPileCards,lHInfo) { 
+        if(!discardedCardsArea)return;
+        const lHTDisp=document.getElementById('lastHandType');
+        discardedCardsArea.innerHTML='';
+        let csToDisp=[];
+        let hTMsg="等待出牌";
+        if(lHInfo && lHInfo.cards && lHInfo.cards.length > 0){
+            csToDisp=lHInfo.cards;
+            hTMsg=`类型: ${lHInfo.type||'未知'}`;
+        } else if(cPileCards && cPileCards.length > 0 && (!lHInfo || (lHInfo.cards && lHInfo.cards.length===0))){
+            csToDisp=cPileCards;
+            hTMsg="当前出牌";
+        }
+        if(lHTDisp) lHTDisp.textContent=hTMsg;
+        if(csToDisp.length>0) {
+            csToDisp.forEach(cD=>{
+                const cDiv=createCardElement(cD);
+                cDiv.classList.add('center-pile-card');
+                discardedCardsArea.appendChild(cDiv);
+            });
+        }
+    }
+
+    function createCardElement(cardData) {
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'card';
+        cardDiv.dataset.rank = cardData.rank;
+        cardDiv.dataset.suit = cardData.suit;
+
+        const rankPart = rankToImageNamePart[cardData.rank];
+        const suitPart = suitToImageNamePart[cardData.suit];
+
+        let imageName;
+        if (rankPart && suitPart) {
+            imageName = `${rankPart}_of_${suitPart}${CARD_IMAGE_EXTENSION}`;
+        } else {
+            console.warn(`[GFX] Failed to map card data to image name: suit=${cardData.suit}, rank=${cardData.rank}. Using card back.`);
+            imageName = CARD_BACK_IMAGE; 
+            cardDiv.textContent = `${cardData.suit}${cardData.rank}`; 
+        }
+
+        const imagePath = `/images/cards/${imageName}`;
+        // console.log(`[GFX] Setting card image: ${imagePath}`); // Uncomment for deep debugging of image paths
+
+        try {
+            cardDiv.style.backgroundImage = `url('${imagePath}')`;
+        } catch (e) {
+            console.error(`[GFX] Error setting card image for ${imagePath}:`, e);
+            cardDiv.textContent = `${cardData.suit}${cardData.rank}`;
+        }
+        return cardDiv;
+    }
     
     // Voice Functionality
     if(micButton){micButton.addEventListener('mousedown',handleVoicePress);micButton.addEventListener('mouseup',handleVoiceRelease);micButton.addEventListener('mouseleave',handleVoiceRelease);micButton.addEventListener('touchstart',handleVoicePress,{passive:false});micButton.addEventListener('touchend',handleVoiceRelease);micButton.addEventListener('touchcancel',handleVoiceRelease);}
