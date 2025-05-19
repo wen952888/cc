@@ -18,7 +18,6 @@ html, body {
 .flex-center-center { align-items: center; justify-content: center; text-align: center; }
 
 /* Auth & Lobby Styles - (保持不变) */
-/* ... (省略以节省篇幅) ... */
 #loadingView p { font-size: 1.2em; color: #a5d6a7; }
 .auth-form-container { background-color: rgba(102, 187, 106, 0.1); padding: 25px 30px; border-radius: 12px; box-shadow: 0 5px 25px rgba(0, 0, 0, 0.4); width: 100%; max-width: 380px; }
 #auth-view h2 { color: #e8f5e9; margin-bottom: 20px; }
@@ -52,8 +51,7 @@ html, body {
 #logoutButtonLobby:hover { background-color: #b71c1c; }
 
 
-/* Game View Layout - (大部分保持不变) */
-/* ... (省略以节省篇幅) ... */
+/* Game View Layout */
 #game-view { background-color: #356035; display: flex; flex-direction: column; }
 #gameInfoBar { min-height: 30px; padding: 5px 10px; display: flex; justify-content: space-between; align-items: center; background-color: rgba(0, 0, 0, 0.4); color: #a5d6a7; font-size: 0.8em; border-bottom: 1px solid rgba(129, 199, 132, 0.2); flex-shrink: 0; }
 #infoBarRoomName, #infoBarRoomId, #infoBarCurrentTurn { font-weight: bold; color: #e8f5e9; }
@@ -94,72 +92,153 @@ html, body {
 
 #player-hand-area-wrapper {
     width: 100%;
-    min-height: 145px; /* 增加以适应更大的牌和抬高效果 */
+    min-height: 155px; /* 增加以适应更大的牌和抬高效果 */
     display: flex;
     align-items: flex-end;
     justify-content: center;
     flex-shrink: 0;
-    padding-bottom: 5px;
+    padding-bottom: 8px; /* 增加一点底部padding */
     box-sizing: border-box;
 }
 
 #player-hand-area {
     display: flex;
-    justify-content: center;
+    justify-content: center; 
     align-items: flex-end;
-    width: 100vw; /* 强制占据整个视口宽度 */
-    /* max-width: 100vw; */ /* 与 width: 100vw 效果一致，可省略 */
-    padding: 0; /* 移除左右内边距，让牌紧贴边缘（第一张和最后一张） */
+    width: 100%; /* 容器宽度占满包装器 */
+    max-width: 100vw; 
+    padding: 0; 
     box-sizing: border-box;
-    min-height: 130px; /* 适应牌高 */
+    min-height: 140px; /* 适应牌高 */
     overflow-x: hidden; 
     overflow-y: hidden;
     position: relative;
 }
 
-#bottom-bar { /* (保持不变) */ }
-/* ... (省略 #bottom-bar 内元素) ... */
-#my-info-in-bar { /* (保持不变) */ }
+#bottom-bar {
+    height: 60px;
+    display: flex;
+    justify-content: space-between; /* 两端对齐，中间元素自动分配空间 */
+    align-items: center;
+    padding: 0 5px; /* 稍微减少整体左右padding，让内容更充分利用宽度 */
+    background-color: rgba(0, 0, 0, 0.7);
+    width: 100%;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    z-index: 1100;
+}
+
+.bottom-bar-button-group {
+    display: flex;
+    align-items: center;
+    gap: 5px; /* 按钮之间的间距可以小一点 */
+    flex-shrink: 0; /* 防止按钮组被压缩 */
+}
+/* 为左右按钮组分别指定 flex 以控制其内部对齐（如果需要） */
+.bottom-bar-button-group.left-buttons {
+    justify-content: flex-start;
+}
+.bottom-bar-button-group.right-buttons {
+    justify-content: flex-end;
+}
+
+
+#bottom-bar button {
+    padding: 7px 9px; 
+    font-size: 0.85em; /* 稍微减小字体以适应更多按钮 */
+    min-width: 45px; 
+    border-radius: 5px;
+    border: 1px solid rgba(129, 199, 132, 0.3);
+    background-color: rgba(129, 199, 132, 0.2);
+    color: #e8f5e9;
+    transition: background-color 0.2s, transform 0.1s;
+    cursor: pointer;
+    line-height: 1.2; 
+    white-space: nowrap; /* 防止按钮文字换行 */
+}
+#bottom-bar button:hover:not(:disabled) { background-color: rgba(129, 199, 132, 0.35); }
+#bottom-bar button:active:not(:disabled) { transform: scale(0.95); }
+#bottom-bar button:disabled { background-color: rgba(102, 135, 103, 0.2); color: #81a281; border-color: rgba(102, 135, 103, 0.3); cursor: not-allowed; }
+
+#bottom-bar #ready-button { background-color: #2196F3; border-color: #1976D2; }
+#bottom-bar #ready-button:hover:not(:disabled) { background-color: #1976D2; }
+#bottom-bar #ready-button.cancel-ready { background-color: #FF9800; border-color: #F57C00; }
+#bottom-bar #ready-button.cancel-ready:hover:not(:disabled) { background-color: #F57C00; }
+#bottom-bar #play-button { background-color: #4caf50; border-color: #388e3c;}
+#bottom-bar #play-button:hover:not(:disabled) { background-color: #388e3c;}
+#bottom-bar #pass-button { background-color: #ffc107; color: #212529; border-color: #dba000;}
+#bottom-bar #pass-button:hover:not(:disabled) { background-color: #e0a800;}
+#bottom-bar #hint-button { background-color: #009688; border-color: #00796b;}
+#bottom-bar #hint-button:hover:not(:disabled) { background-color: #00796b;}
+#bottom-bar #micButton { font-size: 1.1em; padding: 6px 8px; }
+#bottom-bar #micButton.recording { background-color: #d32f2f; border-color: #b71c1c; color:white;}
+
+#ai-toggle-button { background-color: #607D8B; border-color: #455A64; }
+#ai-toggle-button:hover:not(:disabled) { background-color: #546E7A; }
+#ai-toggle-button.ai-active { background-color: #03A9F4; border-color: #0288D1; color: white; }
+
+
+#my-info-in-bar { 
+    padding: 3px 5px;
+    background-color: rgba(0,0,0,0.2); 
+    border-radius: 6px;
+    display: flex; 
+    align-items: center;
+    margin: 0 5px; /* 给中间的头像信息区一点左右边距 */
+    flex-shrink: 1; /* 允许它在空间不足时被轻微压缩 */
+    min-width: 100px; /* 给头像和名字一个最小宽度保证 */
+}
+#my-info-in-bar .player-avatar { width: 30px; height: 30px; }
+#my-info-in-bar .voice-indicator-container { width:11px; height:11px; }
+#my-info-in-bar .voice-indicator { width:7px; height:7px;}
+#my-info-in-bar .player-details { font-size: 0.75em; margin-left: 5px; }
+#my-info-in-bar .playerName { font-size: 0.9em; max-width: 70px;} /* 限制名字宽度 */
+#my-info-in-bar .playerInfo { font-size: 0.9em; }
+#my-info-in-bar .player-ready-status { display: inline; }
 
 
 .card {
-    /* 基础尺寸，优先考虑在手机上看起来足够大 */
-    width: 70px;  /* 默认再增大一点 */
-    height: 105px; /* 保持约1.5的宽高比 */
+    /* 目标：在手机上尽可能大，同时13张牌能放下 */
+    width: 72px;  /* 再次增大 */
+    height: 108px; /* 保持约1.5的宽高比 */
     background-size: cover; background-repeat: no-repeat;
     background-position: center; border: 1px solid #698c69;
-    border-radius: 6px; /* 稍大圆角 */
+    border-radius: 6px; 
     display: inline-block; 
-    box-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+    box-shadow: 1px 1px 4px rgba(0,0,0,0.35);
     position: relative;
     background-color: #e8f5e9;
-    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, margin-left 0.2s ease-out;
+    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, margin-left 0.15s ease-out; /* margin过渡可以快一点 */
     user-select: none;
     flex-shrink: 0; 
 }
 
 .my-card {
-    /* 牌宽70px，想露出约18-20px，则 margin-left = -(70-19) = -51px */
-    margin-left: -51px; 
+    /* 牌宽72px。手机宽度390px。第一张牌左边距0。*/
+    /* 露出部分 = (390 - 72) / 12 = 318 / 12 = 26.5 px */
+    /* margin-left = -(72 - 26.5) = -45.5px.  取 -46px 或 -45px */
+    margin-left: -54px; /* 示例值，需要根据目标屏幕宽度和13张牌精确计算 */
+                        /* 72宽，露18px。总宽72+12*18 = 72+216 = 288px。适合窄屏 */
 }
 
 .my-card:first-child {
-    margin-left: 2px; /* 给第一张牌左边留一点点空隙，避免完全贴边 */
+    margin-left: 0; /* 第一张牌的左边紧贴 #player-hand-area 的左边缘 (因为 padding:0) */
 }
+
 
 .my-card.selectable { cursor: pointer; }
 .my-card.selectable:hover:not(.selected) {
-    transform: translateY(-16px) scale(1.06); 
+    transform: translateY(-18px) scale(1.07); 
     z-index: 10;
 }
 .my-card.selected {
-    transform: translateY(-25px) scale(1.09); 
-    box-shadow: 0 0 18px 5px #81c784;
+    transform: translateY(-30px) scale(1.12); 
+    box-shadow: 0 0 22px 6px #81c784;
     border-color: #81c784;
     z-index: 20;
 }
 .my-card.hinted {
-    box-shadow: 0 0 18px 6px #ffeb3b, inset 0 0 0 3px #ffeb3b;
+    box-shadow: 0 0 22px 7px #ffeb3b, inset 0 0 0 3px #ffeb3b;
     z-index: 15;
 }
 
@@ -167,75 +246,71 @@ html, body {
 .card.card-in-hand.dealt { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
 
 #gameOverOverlay { /* (保持不变) */ }
-/* ... (省略 #gameOverOverlay 内元素) ... */
+/* ... (省略) ... */
 
 /* --- Responsive Adjustments --- */
 
-/* 手机竖屏 (例如宽度 <= 480px) - 这是主要的优化目标区域 */
-@media (max-width: 480px) {
+/* 主要针对竖屏手机 (例如宽度 <= 450px) */
+@media (max-width: 450px) { /* 稍微放宽这个断点 */
     .card {
-        width: 58px;  /* 在这个断点，牌面尺寸相对较大 */
-        height: 87px; /* 约1.5比例 */
-        border-radius: 4px;
+        width: 68px; 
+        height: 102px;
+        border-radius: 5px;
     }
     .my-card {
-        /* 牌宽58, 想露出约12-14px (根据13张牌和屏幕宽度估算) */
-        /* 例如：(360px屏幕 - 58px第一张) / 12张 = 25.1px 可见部分 */
-        /* margin-left = -(58 - 25) = -33px.  可以稍微多重叠一点点 */
-        /* 实际测试：如果你的手机屏幕宽度是 360px，13张牌 */
-        /* (360px - 58px) / 12 = 25.16px -> 理想露出宽度 */
-        /* margin-left = -(58 - 25.16) = -32.84px.  取 -33px 或 -34px */
-        /* 假设针对更窄的平均宽度 (如375px): (375-58)/12 = 26.4 -> -(58-26.4) = -31.6px. 取 -32px */
-        margin-left: -42px; /* 牌宽58，露出16px，总宽 58 + 12*16 = 250px (需要你的手机屏幕宽度数据来精确计算) */
-                            /* 假设你的手机宽度是 390px。 */
-                            /* 第一张牌 58px。剩余 390-58 = 332px 给12张牌。*/
-                            /* 每张牌可见部分：332/12 = 27.6px。 */
-                            /* margin-left = -(58 - 27.6) = -30.4px。我们取 -31px 或 -30px */
+        /* 手机宽度例如 390px。牌宽68px。*/
+        /* 可见部分 = (390 - 68) / 12 = 322 / 12 = 26.83 px */
+        /* margin-left = -(68 - 26.83) = -41.17px.  取 -41px 或 -42px */
+        margin-left: -50px; /* 68宽，露18px。总宽 68 + 12*18 = 284px。 */
     }
     .my-card:first-child { 
-        margin-left: 2px; /* 适配窄屏幕，给第一张牌左边一点点空间 */
+        margin-left: 0; 
     }
 
-    #player-hand-area-wrapper { min-height: 115px; padding-bottom: 3px; }
-    #player-hand-area { min-height: 100px; padding: 0 1px; } /* 进一步减少padding */
+    #player-hand-area-wrapper { min-height: 135px; padding-bottom: 5px; }
+    #player-hand-area { min-height: 120px; }
 
-    .my-card.selectable:hover:not(.selected) { transform: translateY(-12px) scale(1.06); }
-    .my-card.selected { transform: translateY(-20px) scale(1.1); }
+    .my-card.selectable:hover:not(.selected) { transform: translateY(-16px) scale(1.08); }
+    .my-card.selected { transform: translateY(-26px) scale(1.13); }
 
-    #bottom-bar { height: 48px; }
-    #bottom-bar button { font-size: 0.78em; padding: 5px 7px; min-width: 45px; }
+    #bottom-bar { height: 58px; padding: 0 4px; } 
+    #bottom-bar button { font-size: 0.82em; padding: 6px 7px; min-width: 42px; }
+    .bottom-bar-button-group { gap: 4px; }
+    #my-info-in-bar .player-avatar { width: 28px; height: 28px;}
 }
 
 /* 针对极窄屏幕 (例如宽度 <= 375px) */
 @media (max-width: 375px) {
     .card {
-        width: 50px; 
-        height: 75px;
+        width: 62px; 
+        height: 93px;
     }
     .my-card {
-        /* 牌宽50。屏幕宽360px。 (360-50)/12 = 25.8px 可见 */
-        /* margin-left = -(50-25.8) = -24.2px. 取 -25px 或 -24px */
-        margin-left: -38px; /* 牌宽50，露出12px。总宽 50 + 12*12 = 194px (依然需要精确计算)*/
+        /* 屏幕宽度例如 360px。牌宽62px。*/
+        /* 可见部分 = (360 - 62) / 12 = 298 / 12 = 24.83 px */
+        /* margin-left = -(62 - 24.83) = -37.17px. 取 -37px */
+        margin-left: -46px; /* 62宽，露16px。总宽 62 + 12*16 = 254px。 */
     }
-    .my-card:first-child { margin-left: 1px; }
-    #player-hand-area-wrapper { min-height: 105px; }
-    #player-hand-area { min-height: 90px; }
-    .my-card.selected { transform: translateY(-18px) scale(1.1); }
+    .my-card:first-child { margin-left: 0; }
+    #player-hand-area-wrapper { min-height: 125px; }
+    #player-hand-area { min-height: 110px; }
+    .my-card.selected { transform: translateY(-22px) scale(1.13); }
 }
 
 
 /* 横屏模式下的调整 */
 @media (orientation: landscape) and (max-height: 500px) {
     .card {
-        width: 60px; /* 横屏时牌可以更高更宽一些 */
-        height: 90px;
+        width: 70px; /* 横屏时牌可以高一些 */
+        height: 105px;
     }
     .my-card {
-        margin-left: -40px; /* 牌宽60，露出20px */
+        /* 假设横屏可用宽度约500-600px给手牌。 (550-70)/12 = 40. -(70-40) = -30px */
+        margin-left: -50px; 
     }
-    .my-card:first-child { margin-left: 3px; }
+    .my-card:first-child { margin-left: 4px; }
 
-    #player-hand-area-wrapper { min-height: 115px; }
-    #player-hand-area { min-height: 100px; padding: 0 5px; } /* 横屏时可以多点padding */
-    #bottom-bar { height: 42px; }
+    #player-hand-area-wrapper { min-height: 130px; }
+    #player-hand-area { min-height: 115px; padding: 0 5px; }
+    #bottom-bar { height: 50px; }
 }
