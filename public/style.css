@@ -4,19 +4,21 @@ html, body {
     height: 100%;
     margin: 0;
     padding: 0;
-    overflow: hidden; /* Prevent scrollbars on body */
+    overflow: hidden; /* Prevent scrollbars on body, crucial for PWA feel */
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
     background-color: #1a3a1a; /* Dark green background, good for cards */
     color: #c8e6c9; /* Light green text, good contrast */
-    font-size: 16px; /* Base font size */
+    font-size: 16px; /* Base font size for rem calculations if used */
     -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
     overscroll-behavior: none; /* Prevent pull-to-refresh or overscroll effects */
     user-select: none; /* Prevent text selection globally, can be overridden per element */
+    -webkit-font-smoothing: antialiased; /* Smoother fonts on WebKit */
+    -moz-osx-font-smoothing: grayscale; /* Smoother fonts on Firefox */
 }
 
 /* --- View Management --- */
 .hidden-view {
-    display: none !important;
+    display: none !important; /* Ensure it's hidden */
 }
 .view {
     width: 100%;
@@ -27,18 +29,18 @@ html, body {
     top: 0;
     left: 0;
 }
-.fullscreen-view {
+.fullscreen-view { /* Base for views that take up the whole screen */
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 15px; /* Default padding for views like auth, lobby */
 }
-#game-view.fullscreen-view { /* Game view specific padding */
-    padding: 0;
+#game-view.fullscreen-view { /* Game view specific padding & layout */
+    padding: 0; /* Game view manages its own internal padding */
     justify-content: space-between; /* Distribute space for info bar, game area, hand, bottom bar */
 }
-.flex-center-center { /* Utility class for centering content */
+.flex-center-center { /* Utility class for centering content within a flex container */
     align-items: center;
     justify-content: center;
     text-align: center;
@@ -48,24 +50,26 @@ html, body {
 #loadingView p {
     font-size: 1.2em;
     color: #a5d6a7;
-    padding: 10px 20px;
-    background-color: rgba(0,0,0,0.3);
+    padding: 12px 22px;
+    background-color: rgba(0,0,0,0.35);
     border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
 }
 
 /* --- Auth & Lobby Styles --- */
 .auth-form-container {
-    background-color: rgba(102, 187, 106, 0.1); /* Semi-transparent green tint */
+    background-color: rgba(102, 187, 106, 0.08); /* Very subtle tint */
     padding: 25px 30px;
     border-radius: 12px;
     box-shadow: 0 5px 25px rgba(0, 0, 0, 0.4);
     width: 100%;
-    max-width: 380px; /* Limit width of auth forms */
+    max-width: 380px;
 }
 #auth-view h2, #lobby-view h2 {
-    color: #e8f5e9; /* Lighter text for headings */
+    color: #e8f5e9;
     margin-top: 0;
     margin-bottom: 20px;
+    font-weight: 500;
 }
 #auth-view input[type="text"],
 #auth-view input[type="password"] {
@@ -75,19 +79,21 @@ html, body {
     padding: 12px;
     border-radius: 6px;
     margin-bottom: 15px;
-    width: calc(100% - 26px); /* Full width minus padding */
+    width: calc(100% - 26px); /* Full width minus horizontal padding */
     font-size: 1em;
+    box-sizing: border-box;
 }
-#auth-view input::placeholder {
-    color: #a5d6a7;
-    opacity: 0.7;
-}
-#auth-view button, #lobby-view button, #game-view button { /* Base button style */
+#auth-view input::placeholder { color: #a5d6a7; opacity: 0.7; }
+
+/* Base button style for consistency */
+#auth-view button, #lobby-view button, #game-view button, .overlay-content button {
     cursor: pointer;
-    transition: background-color 0.2s, transform 0.1s;
+    transition: background-color 0.2s ease-out, transform 0.1s ease-out, box-shadow 0.2s ease-out;
     border: none;
     border-radius: 6px;
     font-weight: bold;
+    padding: 10px 15px; /* Default padding */
+    font-size: 1em; /* Default font size */
 }
 #auth-view button { /* Specific to auth buttons */
     background-color: #388e3c; /* Darker green for primary action */
@@ -95,311 +101,158 @@ html, body {
     padding: 12px 18px;
     width: 100%;
     font-size: 1.05em;
+    margin-top: 5px; /* Space above button */
 }
-#auth-view button:hover {
-    background-color: #2e7d32; /* Darken on hover */
-}
-#auth-view p {
-    font-size: 0.9em;
-    margin-top: 15px;
-    color: #c8e6c9;
-}
-#auth-view a {
-    color: #81c784; /* Brighter green for links */
-    text-decoration: none;
-}
-#auth-view a:hover {
-    text-decoration: underline;
-}
-.message { /* For auth errors or success messages */
-    margin-top: 12px;
-    font-weight: bold;
-    text-align: center;
-    font-size: 0.85em;
-    min-height: 1.1em; /* Prevent layout shift */
-    padding: 8px;
-    border-radius: 4px;
-}
-.message.error {
-    color: #ffcdd2; /* Light red text for errors */
-    background-color: #c62828; /* Dark red background */
-    border: 1px solid #b71c1c;
-    display: block; /* Ensure it takes space */
-}
-.message.success { /* If you add success messages */
-    color: #c8e6c9;
-    background-color: #2e7d32;
-    border: 1px solid #1b5e20;
-}
+#auth-view button:hover:not(:disabled) { background-color: #2e7d32; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+#auth-view button:active:not(:disabled) { transform: scale(0.98); }
+
+#auth-view p { font-size: 0.9em; margin-top: 15px; color: #c8e6c9; }
+#auth-view a { color: #81c784; text-decoration: none; }
+#auth-view a:hover { text-decoration: underline; color: #a5d6a7; }
+
+.message { min-height: 1.1em; padding: 8px 12px; border-radius: 4px; font-size: 0.85em; margin-top: 12px; text-align: center; }
+.message.error { color: #ffcdd2; background-color: #c62828; border: 1px solid #b71c1c; display: block; }
+.message.success { color: #c8e6c9; background-color: #2e7d32; border: 1px solid #1b5e20; }
 
 .lobby-content {
-    background-color: rgba(67, 160, 71, 0.1);
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 3px 15px rgba(0,0,0,0.3);
-    width: 100%;
-    max-width: 600px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    gap: 15px; /* Spacing between elements */
+    background-color: rgba(67, 160, 71, 0.05);
+    padding: 20px; border-radius: 10px; box-shadow: 0 3px 15px rgba(0,0,0,0.3);
+    width: 100%; max-width: 600px; text-align: center; display: flex; flex-direction: column; gap: 15px;
 }
-#lobbyWelcomeMessage {
-    font-size: 1.1em;
-    margin-bottom: 10px;
-    color: #c8e6c9;
-}
-#createRoomForm {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 15px;
-    border-radius: 6px;
-    background-color: rgba(0,0,0,0.15); /* Slightly darker background for form area */
-}
-#createRoomForm input { /* Similar to auth inputs but maybe slightly smaller */
-    background-color: rgba(200, 230, 201, 0.1);
-    border: 1px solid rgba(165, 214, 167, 0.3);
-    color: #e8f5e9;
-    padding: 10px;
-    border-radius: 4px;
-}
+#lobbyWelcomeMessage { font-size: 1.1em; margin-bottom: 10px; color: #c8e6c9; }
+#createRoomForm { display: flex; flex-direction: column; gap: 10px; padding: 15px; border-radius: 6px; background-color: rgba(0,0,0,0.1); }
+#createRoomForm input { background-color: rgba(200, 230, 201, 0.1); border: 1px solid rgba(165, 214, 167, 0.3); color: #e8f5e9; padding: 10px; border-radius: 4px; }
 #createRoomForm input::placeholder { color: #a5d6a7; opacity: 0.7; }
-#createRoomForm button {
-    background-color: #4caf50; /* Standard green */
-    color: #fff;
-    padding: 10px 15px;
-}
+#createRoomForm button { background-color: #4caf50; color: #fff; }
 #createRoomForm button:hover { background-color: #388e3c; }
 
-#roomList {
-    background-color: rgba(0,0,0,0.15);
-    padding: 10px;
-    border-radius: 6px;
-    max-height: 40vh; /* Limit height and enable scroll */
-    overflow-y: auto;
-}
-#roomList h3 {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    color: #c8e6c9;
-    margin-top: 0;
-    margin-bottom: 8px;
-    font-size: 1em;
-}
-#refreshRoomListButton {
-    background: none;
-    border: none;
-    color: #81c784;
-    font-size: 1.3em; /* Make refresh icon a bit larger */
-    cursor: pointer;
-    padding: 0 5px;
-}
+#roomList { background-color: rgba(0,0,0,0.1); padding: 10px; border-radius: 6px; max-height: 40vh; overflow-y: auto; }
+#roomList h3 { display: flex; justify-content: space-between; align-items: center; color: #c8e6c9; margin: 0 0 8px 0; font-size: 1em; font-weight: 500; }
+#refreshRoomListButton { background: none; border: none; color: #81c784; font-size: 1.3em; cursor: pointer; padding: 0 5px; }
 #refreshRoomListButton:hover { color: #a5d6a7; }
-#rooms {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-#rooms li {
-    background-color: rgba(165, 214, 167, 0.1);
-    padding: 10px 12px;
-    margin-bottom: 8px;
-    border-radius: 4px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.9em;
-    color: #c8e6c9;
-}
-#rooms li button { /* Join button in list */
-    font-size: 0.85em;
-    padding: 6px 10px;
-    background-color: #388e3c;
-    color: #fff;
-}
-#rooms li button:hover { background-color: #2e7d32; }
-#rooms li button:disabled { background-color: #555; color: #aaa; cursor:not-allowed; }
-#logoutButtonLobby {
-    background-color: #d32f2f; /* Red for logout/destructive action */
-    color: #fff;
-    padding: 10px 15px;
-    margin-top: 10px; /* Space from room list */
-}
+#rooms { list-style: none; padding: 0; margin: 0; }
+#rooms li { background-color: rgba(165, 214, 167, 0.08); padding: 10px 12px; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 0.9em; color: #c8e6c9; }
+#rooms li button { font-size: 0.85em; padding: 6px 10px; background-color: #388e3c; color: #fff; }
+#rooms li button:hover:not(:disabled) { background-color: #2e7d32; }
+#rooms li button:disabled { background-color: #555; color: #aaa; cursor:not-allowed; opacity: 0.6; }
+#logoutButtonLobby { background-color: #d32f2f; color: #fff; margin-top: 10px; }
 #logoutButtonLobby:hover { background-color: #b71c1c; }
 
 /* --- Game View Styles --- */
-#game-view {
-    background-color: #356035; /* Slightly lighter green for game table */
-    display: flex; /* Already set by .fullscreen-view, but ensure it's column */
-    flex-direction: column;
-}
-
+#game-view { background-color: #356035; /* Main game table color */ }
 #gameInfoBar {
-    min-height: 30px;
-    padding: 5px 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: rgba(0, 0, 0, 0.4); /* Darker bar for info */
-    color: #a5d6a7;
-    font-size: 0.8em;
-    border-bottom: 1px solid rgba(129, 199, 132, 0.2); /* Subtle separator */
-    flex-shrink: 0; /* Prevent bar from shrinking */
+    min-height: 30px; padding: 5px 10px; display: flex; justify-content: space-between; align-items: center;
+    background-color: rgba(0, 0, 0, 0.45); color: #a5d6a7; font-size: 0.8em;
+    border-bottom: 1px solid rgba(129, 199, 132, 0.2); flex-shrink: 0;
 }
 #infoBarRoomName, #infoBarRoomId, #infoBarCurrentTurn { font-weight: bold; color: #e8f5e9; }
 #infoBarRoomStatus { font-style: italic; color: #ffeb3b; margin: 0 8px; }
-#leaveRoomButton {
-    padding: 5px 10px;
-    font-size: 0.9em;
-    background-color: #b71c1c; /* Darker red */
-    color: white;
-}
+#leaveRoomButton { padding: 5px 10px; font-size: 0.9em; background-color: #b71c1c; color: white; }
 #leaveRoomButton:hover { background-color: #8c1616; }
 
-#gameArea {
-    flex-grow: 1; /* Take remaining vertical space */
-    position: relative; /* For absolute positioning of player areas */
-    width: 100%;
-    overflow: hidden; /* Prevent elements from spilling out */
-}
+#gameArea { flex-grow: 1; position: relative; width: 100%; overflow: hidden; }
 
 .player-area {
-    display: flex;
-    align-items: center;
-    padding: 5px;
-    box-sizing: border-box;
-    border-radius: 6px;
+    display: flex; align-items: center; padding: 5px; box-sizing: border-box; border-radius: 6px;
     transition: box-shadow 0.3s ease, background-color 0.3s ease, opacity 0.3s ease;
-    color: #c8e6c9;
-    position: relative; /* For ::after turn indicator */
+    color: #c8e6c9; position: relative;
 }
 .player-area.current-turn {
-    box-shadow: 0 0 10px 3px #a5d6a7, inset 0 0 0 2px #a5d6a7; /* Existing highlight */
-    background-color: rgba(165, 214, 167, 0.08); /* Slightly more pronounced */
+    box-shadow: 0 0 12px 4px #a5d6a7, inset 0 0 0 2px #a5d6a7; /* Enhanced glow */
+    background-color: rgba(165, 214, 167, 0.1);
 }
-.player-area.current-turn .player-avatar-container::after { /* Turn indicator SVG */
-    content: '';
-    background-image: url('/images/turn-indicator.svg'); /* ENSURE THIS PATH IS CORRECT */
-    background-repeat: no-repeat;
-    background-size: contain;
-    background-position: center;
-    position: absolute;
-    width: 22px; height: 22px;
-    z-index: 5; /* Above avatar if overlapping */
-    animation: bounceIndicator 1.5s infinite ease-in-out;
+.player-area.current-turn .player-avatar-container::after { /* Turn indicator (ensure SVG exists and has fill) */
+    content: ''; background-image: url('/images/turn-indicator.svg'); background-repeat: no-repeat;
+    background-size: contain; background-position: center; position: absolute;
+    width: 22px; height: 22px; z-index: 5; animation: bounceIndicator 1.5s infinite ease-in-out;
 }
-/* Specific positioning for turn indicators */
-#my-info-in-bar.current-turn .player-avatar-container::after { top: -18px; left: 50%; transform: translateX(-50%); }
-#player-top.opponent-area.current-turn .player-avatar-container::after { bottom: -25px; left: 50%; transform: translateX(-50%); }
-#player-left.opponent-area.current-turn .player-avatar-container::after { top: 50%; right: -28px; transform: translateY(-50%); animation-name: bounceIndicatorSidewaysRight; }
-#player-right.opponent-area.current-turn .player-avatar-container::after { top: 50%; left: -28px; transform: translateY(-50%); animation-name: bounceIndicatorSidewaysLeft; }
+/* Turn indicator positioning */
+#my-info-in-bar.current-turn .player-avatar-container::after { top: -18px; left: 50%; transform: translateX(-50%) rotate(0deg); }
+#player-top.opponent-area.current-turn .player-avatar-container::after { bottom: -25px; left: 50%; transform: translateX(-50%) rotate(180deg); }
+#player-left.opponent-area.current-turn .player-avatar-container::after { top: 50%; right: -28px; transform: translateY(-50%) rotate(90deg); animation-name: bounceIndicatorSidewaysRight; }
+#player-right.opponent-area.current-turn .player-avatar-container::after { top: 50%; left: -28px; transform: translateY(-50%) rotate(-90deg); animation-name: bounceIndicatorSidewaysLeft; }
 
-@keyframes bounceIndicator { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-4px); } }
-@keyframes bounceIndicatorSidewaysLeft { 0%, 100% { transform: translateY(-50%) translateX(0); } 50% {  transform: translateY(-50%) translateX(-4px); } }
-@keyframes bounceIndicatorSidewaysRight { 0%, 100% { transform: translateY(-50%) translateX(0); } 50% {  transform: translateY(-50%) translateX(4px); } }
+@keyframes bounceIndicator { 0%, 100% { transform: translateX(-50%) translateY(0) rotate(0deg); } 50% { transform: translateX(-50%) translateY(-4px) rotate(0deg); } }
+@keyframes bounceIndicatorSidewaysLeft { 0%, 100% { transform: translateY(-50%) translateX(0) rotate(-90deg); } 50% {  transform: translateY(-50%) translateX(-4px) rotate(-90deg); } }
+@keyframes bounceIndicatorSidewaysRight { 0%, 100% { transform: translateY(-50%) translateX(0) rotate(90deg); } 50% {  transform: translateY(-50%) translateX(4px) rotate(90deg); } }
 
-.player-area.player-disconnected { opacity: 0.5; filter: grayscale(50%); }
+.player-area.player-disconnected { opacity: 0.55; filter: grayscale(60%); }
 .player-area.player-finished .playerName::after { content: " (已出完)"; font-style: italic; font-size: 0.9em; color: #a5d6a7; margin-left: 4px; }
 
 .player-avatar-container { position: relative; margin-right: 8px; flex-shrink: 0; }
 .player-avatar { width: 35px; height: 35px; border-radius: 50%; background-color: #4a704a; border: 1px solid #698c69; background-size: cover; background-position: center; }
 .voice-indicator-container { position: absolute; bottom: -1px; right: -1px; width: 12px; height: 12px; display: flex; align-items: center; justify-content: center; }
 .voice-indicator { width: 8px; height: 8px; background-color: #698c69; border-radius: 50%; transition: all 0.2s; }
-.voice-indicator.speaking { background-color: #81c784; box-shadow: 0 0 6px #81c784; transform: scale(1.2); }
+.voice-indicator.speaking { background-color: #81c784; box-shadow: 0 0 6px #81c784; transform: scale(1.3); }
 
 .player-details { text-align: left; font-size: 0.75em; line-height: 1.3; }
 .playerName { font-weight: bold; font-size: 0.9em; color: #e8f5e9; white-space: nowrap; max-width: 90px; overflow: hidden; text-overflow: ellipsis;}
-.playerRole { font-size: 0.8em; font-style: italic; color: #a5d6a7; }
+.playerRole { font-size: 0.8em; font-style: italic; color: #a5d6a7; display: block; } /* Ensure role is visible */
 .playerInfo { font-size: 0.8em; color: #c8e6c9; display: flex; align-items: center; flex-wrap: nowrap; gap: 3px;}
 .playerInfo .card-count { font-weight: bold; }
 .player-ready-status { font-size: 0.8em; font-weight: bold; padding: 1px 4px; border-radius: 3px; display: inline-block; white-space: nowrap; }
-.player-ready-status.ready { color: #4CAF50; /* background-color: rgba(76, 175, 80, 0.1); */}
-.player-ready-status.not-ready { color: #f44336; /* background-color: rgba(244, 67, 54, 0.1); */ }
+.player-ready-status.ready { color: #4CAF50; }
+.player-ready-status.not-ready { color: #f44336; }
 
 .opponent-area { position: absolute; }
 #player-top.opponent-area { top: 8px; left: 50%; transform: translateX(-50%); flex-direction: column; align-items: center; }
 #player-top .player-avatar-container { margin-right: 0; margin-bottom: 3px; }
 #player-top .player-details { text-align: center; }
-#player-left.opponent-area { left: 8px; top: 38%; transform: translateY(-50%); } /* Adjusted top for better centering */
+#player-left.opponent-area { left: 8px; top: 38%; transform: translateY(-50%); }
 #player-right.opponent-area { right: 8px; top: 38%; transform: translateY(-50%); flex-direction: row-reverse; }
 #player-right .player-avatar-container { margin-right: 0; margin-left: 8px;}
 #player-right .player-details { text-align: right; }
 
 #centerPileArea {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: auto; max-width: 70%; /* Max width for discarded cards area */
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 5px; min-height: 90px; /* Min height for card + type */
+    width: auto; max-width: 70%; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 5px; min-height: 90px; /* Card height + type display */
 }
 #lastHandType { font-size: 0.8em; color: #a5d6a7; margin-bottom: 4px; font-style: italic; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
 #discarded-cards-area {
-    display: flex;
-    flex-wrap: nowrap; /* Prevent wrapping of cards in pile */
-    justify-content: center;
-    align-items: center;
-    gap: -30px; /* Negative gap for overlapping cards, adjust as needed */
-    min-height: 80px; /* Height of a card */
-    padding: 0 15px; /* Padding if cards might overflow the gap visually */
+    display: flex; flex-wrap: nowrap; justify-content: center; align-items: center;
+    gap: -30px; /* Overlap cards. Adjust based on card width in this area */
+    min-height: 80px; padding: 0 15px;
 }
-.center-pile-card { /* Cards in the center pile */
+.center-pile-card { /* Cards in center pile */
     width: 50px; height: 75px; /* Smaller than hand cards */
-    border-color: #527552; /* Darker border for pile cards */
-    flex-shrink: 0;
-    box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+    border-color: #527552; flex-shrink: 0; box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
 }
 
-#player-hand-area-wrapper {
-    width: 100%;
-    min-height: 155px; /* Default: card 108 + selected lift 30 + padding 8 = ~146px. 155px is safe. */
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    flex-shrink: 0; /* Prevent shrinking */
-    padding-bottom: 8px; /* Space below hand */
-    box-sizing: border-box;
-    position: relative; /* For z-indexing context if needed */
+#player-hand-area-wrapper { /* Wraps hand area to control its placement and min-height */
+    width: 100%; min-height: 155px; /* card height + lift + padding */
+    display: flex; align-items: flex-end; justify-content: center;
+    flex-shrink: 0; padding-bottom: 8px; box-sizing: border-box; position: relative;
 }
-#player-hand-area {
-    display: flex;
-    justify-content: center;
-    align-items: flex-end;
-    width: 100%;
-    max-width: 100vw; /* Ensure it doesn't exceed viewport */
-    padding: 0; /* No internal padding, manage card margins for overlap */
-    box-sizing: border-box;
-    min-height: 138px; /* Default card 108px + selected lift 30px */
-    overflow-x: auto;  /* Allow horizontal scroll for many cards */
-    overflow-y: hidden; /* CRITICAL: Clip parts of cards that go above this (e.g. during animation) */
-    position: relative; /* For z-index of cards */
+#player-hand-area { /* Actual scrolling container for cards */
+    display: flex; justify-content: center; align-items: flex-end;
+    width: 100%; max-width: 100vw; /* Prevent exceeding viewport */
+    padding: 0; box-sizing: border-box;
+    min-height: 138px; /* Default card height 108px + selected lift 30px */
+    overflow-x: auto;  /* Horizontal scroll for many cards */
+    overflow-y: hidden; /* CRITICAL: Clip parts of cards that go above (e.g. during animation/selection) */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }
 
 #bottom-bar {
     height: 60px; display: flex; justify-content: space-between; align-items: center;
-    padding: 0 8px; /* Slightly more padding */
-    background-color: rgba(0, 0, 0, 0.75); /* Darker, more opaque */
+    padding: 0 8px; background-color: rgba(0, 0, 0, 0.8); /* Darker, more opaque */
     width: 100%; box-sizing: border-box; flex-shrink: 0;
-    z-index: 1100; /* Above hand area */
-    border-top: 1px solid rgba(129, 199, 132, 0.15); /* Subtle top border */
+    z-index: 1100; border-top: 1px solid rgba(129, 199, 132, 0.15);
 }
-.bottom-bar-button-group { display: flex; align-items: center; gap: 6px; /* Slightly more gap */ flex-shrink: 0; }
+.bottom-bar-button-group { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .bottom-bar-button-group.left-buttons { justify-content: flex-start; }
 .bottom-bar-button-group.right-buttons { justify-content: flex-end; }
 
 #bottom-bar button {
-    padding: 7px 10px; /* Adjusted padding */
-    font-size: 0.88em; /* Adjusted font size */
-    min-width: 48px; /* Adjusted min-width */
-    border-radius: 5px;
-    border: 1px solid rgba(129, 199, 132, 0.3);
-    background-color: rgba(129, 199, 132, 0.2);
-    color: #e8f5e9;
+    padding: 7px 10px; font-size: 0.88em; min-width: 48px;
+    border-radius: 5px; border: 1px solid rgba(129, 199, 132, 0.3);
+    background-color: rgba(129, 199, 132, 0.2); color: #e8f5e9;
     line-height: 1.2; white-space: nowrap;
 }
 #bottom-bar button:hover:not(:disabled) { background-color: rgba(129, 199, 132, 0.4); }
 #bottom-bar button:active:not(:disabled) { transform: scale(0.95); }
-#bottom-bar button:disabled { background-color: rgba(102, 135, 103, 0.15); color: #81a281; border-color: rgba(102, 135, 103, 0.2); cursor: not-allowed; }
+#bottom-bar button:disabled { background-color: rgba(102, 135, 103, 0.15); color: #81a281; border-color: rgba(102, 135, 103, 0.2); cursor: not-allowed; opacity: 0.7; }
 
 #bottom-bar #ready-button { background-color: #2196F3; border-color: #1976D2; color:white; }
 #bottom-bar #ready-button:hover:not(:disabled) { background-color: #1976D2; }
@@ -412,66 +265,78 @@ html, body {
 #bottom-bar #hint-button { background-color: #009688; border-color: #00796b; color:white;}
 #bottom-bar #hint-button:hover:not(:disabled) { background-color: #00796b;}
 #bottom-bar #micButton { font-size: 1.1em; padding: 6px 8px; background-color: #78909c; border-color: #546e7a; color:white;}
-#bottom-bar #micButton.recording { background-color: #d32f2f; border-color: #b71c1c; color:white;}
+#bottom-bar #micButton.recording { background-color: #d32f2f; border-color: #b71c1c; color:white; animation: pulseRecording 1.5s infinite; }
+@keyframes pulseRecording { 0% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.7); } 70% { box-shadow: 0 0 0 8px rgba(211, 47, 47, 0); } 100% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0); } }
 #ai-toggle-button { background-color: #607D8B; border-color: #455A64; color:white;}
 #ai-toggle-button:hover:not(:disabled) { background-color: #546E7A; }
 #ai-toggle-button.ai-active { background-color: #03A9F4; border-color: #0288D1; color: white; }
 
-#my-info-in-bar {
+#my-info-in-bar { /* Container for self info in bottom bar */
     padding: 3px 5px; background-color: rgba(0,0,0,0.2); border-radius: 6px;
     display: flex; align-items: center; margin: 0 5px;
-    flex-shrink: 1; min-width: 100px;
+    flex-shrink: 1; min-width: 100px; overflow: hidden; /* Prevent name overflow issues */
 }
 #my-info-in-bar .player-avatar { width: 30px; height: 30px; }
 #my-info-in-bar .voice-indicator-container { width:11px; height:11px; }
 #my-info-in-bar .voice-indicator { width:7px; height:7px;}
 #my-info-in-bar .player-details { font-size: 0.75em; margin-left: 5px; }
-#my-info-in-bar .playerName { font-size: 0.9em; max-width: 70px;}
+#my-info-in-bar .playerName { font-size: 0.9em; max-width: 70px; } /* Limit name width */
 #my-info-in-bar .playerInfo { font-size: 0.9em; }
 #my-info-in-bar .player-ready-status { display: inline; margin-left: 4px;}
 
+/* Card base style (ensure images folder is correct) */
 .card {
     width: 72px; height: 108px; background-size: cover; background-repeat: no-repeat;
     background-position: center; border: 1px solid #698c69; border-radius: 6px;
     display: inline-block; box-shadow: 1px 1px 4px rgba(0,0,0,0.35); position: relative;
-    background-color: #e8f5e9;
-    transition: transform 0.2s cubic-bezier(0.25, 0.1, 0.25, 1), /* Smoother transition */
-                box-shadow 0.2s ease-out,
-                margin-left 0.15s ease-out;
-    user-select: none; flex-shrink: 0;
+    background-color: #e8f5e9; /* Fallback color if image fails */
+    transition: transform 0.2s cubic-bezier(0.25, 0.1, 0.25, 1),
+                box-shadow 0.2s ease-out, margin-left 0.15s ease-out;
+    user-select: none; flex-shrink: 0; /* Prevent cards from shrinking in flex container */
 }
-.my-card { margin-left: -54px; } /* Default overlap */
-.my-card:first-child { margin-left: 0; }
+.my-card { margin-left: -54px; } /* Default overlap for hand cards. Adjust for desired overlap */
+.my-card:first-child { margin-left: 0; } /* First card no negative margin */
 .my-card.selectable { cursor: pointer; }
 .my-card.selectable:hover:not(.selected) { transform: translateY(-20px) scale(1.08); z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
 .my-card.selected {
-    transform: translateY(-30px) scale(1.05); /* Pop-up effect */
-    box-shadow: 0 6px 15px rgba(46, 125, 50, 0.5); /* Themed shadow */
-    border-color: #66bb6a;
-    z-index: 20;
+    transform: translateY(-30px) scale(1.05);
+    box-shadow: 0 6px 15px rgba(46, 125, 50, 0.5);
+    border-color: #66bb6a; z-index: 20;
 }
-.my-card.hinted {
-    box-shadow: 0 0 12px 4px #ffeb3b, inset 0 0 0 2px #ffeb3b; /* Adjusted hint glow */
-    z-index: 15;
+.my-card.hinted { /* Hinted cards visual */
+    box-shadow: 0 0 12px 4px #ffeb3b, inset 0 0 0 2px #ffeb3b;
+    z-index: 15; /* Above normal cards but below selected (if selection isn't cleared for hint) */
 }
-.card.card-in-hand { opacity: 0; transform: translateY(60px) rotate(12deg) scale(0.5); } /* Initial deal animation state */
-.card.card-in-hand.dealt { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); } /* Final deal animation state */
+.card.card-in-hand { /* Initial state for deal animation */
+    opacity: 0; transform: translateY(60px) rotate(12deg) scale(0.5);
+}
+.card.card-in-hand.dealt { /* Final state for deal animation */
+    opacity: 1; transform: translateY(0) rotate(0deg) scale(1);
+}
 
-#gameOverOverlay { background-color: rgba(0,0,0,0.88); z-index: 10000; }
-#gameOverOverlay .overlay-content { background-color: rgba(53, 96, 53, 0.9); padding: 30px; border-radius: 12px; box-shadow: 0 0 35px rgba(0,0,0,0.6); text-align: center; max-width: 90%; width: 380px; border: 1px solid rgba(129,199,132,0.3); }
+/* Game Over Overlay */
+#gameOverOverlay { background-color: rgba(0,0,0,0.88); z-index: 10000; } /* Ensure high z-index */
+#gameOverOverlay .overlay-content {
+    background-color: rgba(53, 96, 53, 0.95); padding: 30px; border-radius: 12px;
+    box-shadow: 0 0 35px rgba(0,0,0,0.6); text-align: center; max-width: 90%; width: 380px;
+    border: 1px solid rgba(129,199,132,0.3);
+}
 #gameOverOverlay h3 { color: #e8f5e9; margin-bottom: 18px; font-size: 1.7em; }
 #gameOverOverlay p { margin-bottom: 12px; font-size: 1em; color: #c8e6c9; }
 #gameOverScores p { margin: 6px 0; font-size: 0.95em; color: #e8f5e9; }
 #gameOverScores .score-plus { color: #a5d6a7; font-weight: bold; }
 #gameOverScores .score-minus { color: #ef9a9a; font-weight: bold; }
 #gameOverScores .score-zero { color: #c8e6c9; }
-#backToLobbyBtn { padding: 12px 24px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1.05em; margin-top: 25px; }
+#backToLobbyBtn {
+    padding: 12px 24px; background-color: #4CAF50; color: white;
+    font-size: 1.05em; margin-top: 25px;
+}
 #backToLobbyBtn:hover { background-color: #388e3c; }
 
 /* --- Responsive Adjustments --- */
-@media (max-width: 450px) {
+@media (max-width: 450px) and (orientation: portrait) { /* Small portrait devices */
     .card { width: 68px; height: 102px; } .my-card { margin-left: -50px; }
-    #player-hand-area-wrapper { min-height: 133px; padding-bottom: 5px; }
+    #player-hand-area-wrapper { min-height: 133px; } /* 102 + 26 + 5 */
     #player-hand-area { min-height: 128px; } /* 102 + 26 */
     .my-card.selectable:hover:not(.selected) { transform: translateY(-18px) scale(1.07); }
     .my-card.selected { transform: translateY(-26px) scale(1.04); }
@@ -484,7 +349,7 @@ html, body {
     #player-left.opponent-area.current-turn .player-avatar-container::after { right: -25px; }
     #player-right.opponent-area.current-turn .player-avatar-container::after { left: -25px; }
 }
-@media (max-width: 375px) {
+@media (max-width: 375px) and (orientation: portrait) { /* Very small portrait devices */
     .card { width: 62px; height: 93px; } .my-card { margin-left: -46px; }
     #player-hand-area-wrapper { min-height: 120px; } /* 93 + 22 + 5 */
     #player-hand-area { min-height: 115px; } /* 93 + 22 */
@@ -499,13 +364,14 @@ html, body {
     #player-left.opponent-area.current-turn .player-avatar-container::after { right: -22px; }
     #player-right.opponent-area.current-turn .player-avatar-container::after { left: -22px; }
 }
-@media (orientation: landscape) and (max-height: 500px) { /* Primarily for small landscape devices */
-    .card { width: 66px; height: 99px; } /* Slightly smaller in very short landscape */ .my-card { margin-left: -48px; }
+/* Adjustments for landscape on smaller height devices */
+@media (orientation: landscape) and (max-height: 500px) {
+    .card { width: 66px; height: 99px; } .my-card { margin-left: -48px; }
     #player-hand-area-wrapper { min-height: 129px; } /* 99 + 25 + 5 */
     #player-hand-area { min-height: 124px; padding: 0 5px; } /* 99 + 25 */
     .my-card.selectable:hover:not(.selected) { transform: translateY(-16px) scale(1.05); }
     .my-card.selected { transform: translateY(-25px) scale(1.03); }
-    #bottom-bar { height: 48px; } /* Shorter bar in landscape */
+    #bottom-bar { height: 48px; } /* Shorter bar */
     #bottom-bar button { font-size: 0.75em; padding: 5px 7px; min-width: 38px; }
     #my-info-in-bar .player-avatar { width: 26px; height: 26px; } #my-info-in-bar .playerName { max-width: 50px; }
     .player-area.current-turn .player-avatar-container::after { width: 18px; height: 18px; }
@@ -513,4 +379,7 @@ html, body {
     #player-top.opponent-area.current-turn .player-avatar-container::after { bottom: -20px; }
     #player-left.opponent-area.current-turn .player-avatar-container::after { right: -22px; }
     #player-right.opponent-area.current-turn .player-avatar-container::after { left: -22px; }
+    #gameInfoBar { font-size: 0.75em; min-height: 26px; } /* Slightly smaller info bar */
+    .player-details { font-size: 0.7em; } .playerName { font-size: 0.85em; }
+    #centerPileArea { min-height: 80px; } .center-pile-card { width: 45px; height: 67px; } #discarded-cards-area { gap: -25px; }
 }
