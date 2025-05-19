@@ -8,7 +8,7 @@
     <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
     <link rel="shortcut icon" href="/images/favicon.ico" type="image/x-icon">
     <!-- Stylesheet with version for cache busting -->
-    <link rel="stylesheet" href="style.css?v=1.1.0">
+    <link rel="stylesheet" href="style.css?v=1.1.0"> <!-- 请确保这里的版本号与style.css一致 -->
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1a3a1a"/> <!-- Consistent with manifest.json -->
@@ -78,7 +78,10 @@
                 | 状态: <span id="infoBarRoomStatus">等待中</span>
                 | 当前回合: <span id="infoBarCurrentTurn">N/A</span>
             </div>
-            <button id="leaveRoomButton" title="离开房间">离开</button>
+            <div class="top-bar-actions"> <!-- 新增一个容器方便布局 -->
+                <button id="toggleVoiceBroadcastButton" title="切换语音接收">🔊 开</button> <!-- 新增按钮 -->
+                <button id="leaveRoomButton" title="离开房间">离开</button>
+            </div>
         </div>
 
         <!-- Main Game Area (Opponents, Center Pile) -->
@@ -143,7 +146,7 @@
                 <button id="hint-button" title="提示">提示</button>
                 <button id="ai-toggle-button" title="AI托管/取消托管">AI托管</button>
             </div>
-        
+
             <!-- Self Info Area (within bottom bar) -->
             <div id="my-info-in-bar" class="player-area self-info-in-bar" data-player-id="">
                 <div class="player-avatar-container">
@@ -156,11 +159,11 @@
                     <div class="playerInfo" id="myPlayerStatus">手牌: <span class="card-count">?</span> <span class="player-ready-status"></span></div>
                 </div>
             </div>
-        
+
             <div class="bottom-bar-button-group right-buttons">
                 <button id="pass-button" title="不出 / 过">过</button>
                 <button id="play-button" title="出牌">出牌</button>
-                <button id="micButton" title="按住说话">🎤</button>
+                <button id="micButton" title="点击录音/停止">🎤</button> <!-- 修改 title -->
             </div>
         </div>
 
@@ -180,6 +183,6 @@
     <!-- Socket.IO client library -->
     <script src="/socket.io/socket.io.js"></script>
     <!-- Client-side game logic with version for cache busting -->
-    <script src="client.js?v=1.1.0"></script>
+    <script src="client.js?v=1.1.0"></script> <!-- 请确保这里的版本号与client.js一致 -->
 </body>
 </html>
