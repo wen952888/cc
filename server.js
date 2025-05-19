@@ -13,20 +13,15 @@ const io = new Server(server, {
     pingTimeout: 60000,    // 客户端在60秒内未发送 PONG 包则认为连接超时
     pingInterval: 25000,   // 服务器每25秒发送一个 PING 包
     transports: ['websocket', 'polling'], // 明确指定传输方式，优先 WebSocket
-    // CORS 配置: 如果您的客户端和服务器部署在不同的域或端口，
-    // 或者您通过与 Node.js 服务器不同的域名/端口访问客户端静态页面，
-    // 您需要启用并正确配置 CORS。
-    // 对于 DDNS 场景，如果最终解析到的 IP 和端口与客户端访问的不一致，也需要考虑。
-    /*
+    // CORS 配置:
     cors: {
-        origin: "*", //  "*" 允许所有来源，仅用于测试。生产环境请指定确切的客户端来源。
-        // origin: "http://your-client-domain.com", // 例如您的 DDNS 域名
-        // origin: ["http://localhost:xxxx", "http://actual-client-domain.com"], //允许多个来源
+        origin: "https://9525.ip-ddns.com", // 替换成你客户端实际访问的域名
+        // 对于本地开发，你可能需要允许多个来源，例如:
+        // origin: ["http://localhost:PORT_YOUR_CLIENT_USES_LOCALLY", "https://9525.ip-ddns.com"],
         methods: ["GET", "POST"],
         // allowedHeaders: ["my-custom-header"], // 如果客户端发送了自定义头部
         // credentials: true // 如果需要 cookie 或授权头部跨域
     }
-    */
 });
 
 app.disable('x-powered-by'); // 安全性考虑，移除 Express 的标识
