@@ -4,15 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>KK 在线纸牌</title>
-    <link rel="stylesheet" href="style.css?v=1.0.28"> <!-- 假设版本号递增 -->
+    <!-- CSS将通过JS动态添加版本号，或手动保持一致 -->
+    <link rel="stylesheet" href="style.css?v=1.1.0">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#333"/>
+    <meta name="theme-color" content="#1a3a1a"/> <!-- 与 manifest.json 中 theme_color 一致 -->
     <link rel="apple-touch-icon" href="/images/icon-192x192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
     <!-- 加载视图 -->
     <div id="loadingView" class="view fullscreen-view flex-center-center">
-        <p>连接中...</p>
+        <p id="loadingMessage">连接中...</p>
     </div>
 
     <!-- 认证视图 -->
@@ -20,7 +23,7 @@
         <div class="auth-form-container">
             <div id="login-form">
                 <h2>登录</h2>
-                <input type="text" id="login-username" placeholder="手机号" autocomplete="username">
+                <input type="text" id="login-username" placeholder="手机号" autocomplete="username" inputmode="tel">
                 <input type="password" id="login-password" placeholder="密码" autocomplete="current-password">
                 <button id="login-button">登录</button>
                 <p>没有账号？<a href="#" id="show-register">注册</a></p>
@@ -28,7 +31,7 @@
 
             <div id="register-form" style="display: none;">
                 <h2>注册</h2>
-                <input type="text" id="register-username" placeholder="手机号" autocomplete="username">
+                <input type="text" id="register-username" placeholder="手机号" autocomplete="username" inputmode="tel">
                 <input type="password" id="register-password" placeholder="密码" autocomplete="new-password">
                 <button id="register-button">注册</button>
                 <p>已有账号？<a href="#" id="show-login">登录</a></p>
@@ -44,13 +47,13 @@
             <p id="lobbyWelcomeMessage">你好, <span id="lobbyUsername">玩家</span>!</p>
             <div id="createRoomForm">
                 <input type="text" id="roomNameInput" placeholder="房间名称 (最多10字符)" maxlength="10">
-                <input type="password" id="roomPasswordInput" placeholder="房间密码 (可选)" maxlength="10">
+                <input type="password" id="roomPasswordInput" placeholder="房间密码 (可选, 最多10字符)" maxlength="10">
                 <button id="createRoomButton">创建房间</button>
             </div>
             <div id="roomList">
                 <h3>
                     房间列表
-                    <button id="refreshRoomListButton" title="刷新列表">↻</button>
+                    <button id="refreshRoomListButton" title="刷新列表">↻</button> <!-- 刷新图标 -->
                 </h3>
                 <ul id="rooms">
                     <!-- 房间列表项将在这里由 JavaScript 动态生成 -->
@@ -62,6 +65,7 @@
 
     <!-- 游戏视图 -->
     <div id="game-view" class="view hidden-view fullscreen-view">
+        <!-- 顶部信息栏 -->
         <div id="gameInfoBar">
             <div class="room-name-id">
                 房间: <span id="infoBarRoomName">未知</span> (<span id="infoBarRoomId">----</span>)
@@ -71,11 +75,12 @@
             <button id="leaveRoomButton" title="离开房间">离开</button>
         </div>
 
+        <!-- 主要游戏区域 -->
         <div id="gameArea">
-            <!-- 对手区域 -->
+            <!-- 对手区域 (上) -->
             <div id="player-top" class="player-area opponent-area opponent-top" data-player-id="">
                 <div class="player-avatar-container">
-                    <div class="player-avatar"></div>
+                    <div class="player-avatar" data-avatar-id="top-avatar"></div> <!-- 可用于JS设置背景图 -->
                     <div class="voice-indicator-container"><div class="voice-indicator"></div></div>
                 </div>
                 <div class="player-details">
@@ -84,9 +89,10 @@
                     <div class="playerInfo">手牌: <span class="card-count">?</span> <span class="player-ready-status"></span></div>
                 </div>
             </div>
+            <!-- 对手区域 (左) -->
             <div id="player-left" class="player-area opponent-area opponent-left" data-player-id="">
                  <div class="player-avatar-container">
-                    <div class="player-avatar"></div>
+                    <div class="player-avatar" data-avatar-id="left-avatar"></div>
                     <div class="voice-indicator-container"><div class="voice-indicator"></div></div>
                 </div>
                 <div class="player-details">
@@ -95,9 +101,10 @@
                     <div class="playerInfo">手牌: <span class="card-count">?</span> <span class="player-ready-status"></span></div>
                 </div>
             </div>
+            <!-- 对手区域 (右) -->
             <div id="player-right" class="player-area opponent-area opponent-right" data-player-id="">
                 <div class="player-avatar-container">
-                    <div class="player-avatar"></div>
+                    <div class="player-avatar" data-avatar-id="right-avatar"></div>
                     <div class="voice-indicator-container"><div class="voice-indicator"></div></div>
                 </div>
                 <div class="player-details">
@@ -107,22 +114,28 @@
                 </div>
             </div>
 
+            <!-- 中央牌堆区域 -->
             <div id="centerPileArea">
                 <div id="lastHandType" class="last-hand-type">等待出牌</div>
-                <div id="discarded-cards-area"></div>
+                <div id="discarded-cards-area">
+                    <!-- 打出的牌会显示在这里 -->
+                </div>
             </div>
         </div>
 
+        <!-- 玩家手牌区域 -->
         <div id="player-hand-area-wrapper">
-             <div id="player-hand-area"></div>
+             <div id="player-hand-area">
+                 <!-- 自己的手牌会显示在这里 -->
+             </div>
         </div>
 
-        <!-- MODIFIED #bottom-bar structure -->
+        <!-- 底部操作栏 -->
         <div id="bottom-bar">
             <div class="bottom-bar-button-group left-buttons">
                 <button id="ready-button" title="准备/取消准备">准备</button>
                 <button id="hint-button" title="提示">提示</button>
-                <button id="ai-toggle-button" title="AI托管">AI托管</button> 
+                <button id="ai-toggle-button" title="AI托管/取消托管">AI托管</button>
             </div>
         
             <div id="my-info-in-bar" class="player-area self-info-in-bar" data-player-id="">
@@ -132,6 +145,8 @@
                 </div>
                 <div class="player-details">
                     <div class="playerName" id="myPlayerName">我</div>
+                    <!-- 自己的角色信息可以考虑放在这里，如果需要一直显示 -->
+                    <!-- <div class="playerRole" id="myPlayerRole"></div> -->
                     <div class="playerInfo" id="myPlayerStatus">手牌: <span class="card-count">?</span> <span class="player-ready-status"></span></div>
                 </div>
             </div>
@@ -142,20 +157,22 @@
                 <button id="micButton" title="按住说话">🎤</button>
             </div>
         </div>
-        <!-- END MODIFIED #bottom-bar structure -->
 
-
+        <!-- 游戏结束遮罩 -->
         <div id="gameOverOverlay" class="overlay hidden-view flex-center-center">
             <div class="overlay-content">
                 <h3 id="gameOverTitle">游戏结束</h3>
                 <p id="gameOverReasonText"></p>
-                <div id="gameOverScores"></div>
+                <div id="gameOverScores">
+                    <!-- 得分详情会显示在这里 -->
+                </div>
                 <button id="backToLobbyBtn">返回大厅</button>
             </div>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="client.js?v=1.0.28"></script> <!-- 假设版本号递增 -->
+    <!-- JS将通过JS动态添加版本号，或手动保持一致 -->
+    <script src="client.js?v=1.1.0"></script>
 </body>
 </html>
