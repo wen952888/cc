@@ -8,7 +8,26 @@ const roomManager = require('./roomManager');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+
+// Socket.IO 服务器初始化配置
+const io = new Server(server, {
+    pingTimeout: 60000,    // 客户端在60秒内未发送 PONG 包则认为连接超时 (默认 5000ms)
+    pingInterval: 25000,   // 服务器每25秒发送一个 PING 包 (默认 25000ms)
+    transports: ['websocket', 'polling'], // 明确指定传输方式，优先 WebSocket
+    // 如果您的客户端和服务器不在同一域名或端口（例如开发时），
+    // 或者您通过一个与 Node.js 服务器不同的域名访问客户端，
+    // 您可能需要配置 CORS：
+    /*
+    cors: {
+        origin: "*", // 允许所有来源，生产环境建议指定具体的客户端域名
+        // origin: "http://your-client-domain.com",
+        // origin: ["http://localhost:xxxx", "http://actual-client-domain.com"],
+        methods: ["GET", "POST"],
+        allowedHeaders: ["my-custom-header"], // 如果有自定义头部
+        credentials: true // 如果需要传递 cookie
+    }
+    */
+});
 
 app.disable('x-powered-by');
 
@@ -31,29 +50,35 @@ authManager.loadUsers();
 io.on('connection', (socket) => {
     console.log(`[SERVER] Client connected: ${socket.id}`);
 
-    authManager.init(socket);
+    // 传递 io 实例给 roomManager
+    authManager.init(socket); // authManager 可能也需要 io 实例，如果它直接发送消息的话
     roomManager.init(socket, io);
 
-    // 添加语音消息处理
     socket.on('sendVoiceMessage', (data) => {
         const { roomId, audioBlob } = data;
-        console.log(`[SERVER] Received voice message from ${socket.id} for room ${roomId}.`);
+        const userId = socket.userId || 'UnknownUser'; // 确保 socket.userId 存在
+        console.log(`[SERVER] Received voice message from ${userId} (Socket: ${socket.id}) for room ${roomId}.`);
 
-        // 查找房间
-        const room = roomManager.getRoomById(roomId); // 假设 roomManager 有 getRoomById 方法
+        const room = roomManager.getRoomById(roomId);
         if (room) {
-            // 广播语音消息给房间内除发送者外的其他玩家
-            socket.to(roomId).emit('receiveVoiceMessage', { userId: socket.userId, audioBlob: audioBlob }); // 假设 socket.userId 已经被 authManager 设置
-            console.log(`[SERVER] Broadcasting voice message to room ${roomId}.`);
+            // 确保 audioBlob 是有效的数据
+            if (audioBlob && audioBlob.size > 0) {
+                socket.to(roomId).emit('receiveVoiceMessage', { userId: userId, audioBlob: audioBlob });
+                console.log(`[SERVER] Broadcasting voice message to room ${roomId} from ${userId}.`);
+            } else {
+                console.warn(`[SERVER] Received empty or invalid audioBlob for room ${roomId} from ${userId}.`);
+            }
         } else {
-            console.warn(`[SERVER] Room ${roomId} not found for voice message.`);
+            console.warn(`[SERVER] Room ${roomId} not found for voice message from ${userId}.`);
         }
     });
+
     socket.on('disconnect', (reason) => {
         console.log(`[SERVER] Client disconnected: ${socket.id}. Reason: ${reason}`);
         roomManager.handleDisconnect(socket);
     });
 
+    // 初始加载时发送一次房间列表给连接的客户端
     socket.emit('roomListUpdate', roomManager.getPublicRoomList());
 });
 
@@ -66,8 +91,11 @@ server.listen(PORT, '0.0.0.0', () => {
 
 process.on('SIGINT', () => {
     console.log('[SERVER] Shutting down...');
-    server.close(() => {
-        console.log('[SERVER] Server closed.');
-        process.exit(0);
+    io.close(() => { // 优雅关闭 Socket.IO 连接
+        console.log('[SERVER] Socket.IO connections closed.');
+        server.close(() => {
+            console.log('[SERVER] HTTP server closed.');
+            process.exit(0);
+        });
     });
 });
