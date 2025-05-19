@@ -9,6 +9,10 @@ function generateRoomId() {
     return crypto.randomBytes(3).toString('hex'); // 6-char hex string
 }
 
+function getRoomById(roomId) { // Added function
+    return activeGames[roomId];
+}
+
 function init(socket, io) {
     if (!ioInstance) ioInstance = io;
 
@@ -190,18 +194,84 @@ function init(socket, io) {
 
     socket.on('playCard', (cards, callback) => {
         // ... (playCard logic - unchanged, ensure logging is present)
+        if (!socket.userId || !socket.roomId) return callback({ success: false, message: '无效操作。' });
+        const room = activeGames[socket.roomId];
+        if (!room || !room.game) return callback({ success: false, message: '房间或游戏不存在。' });
+        if (room.status !== 'playing') return callback({ success: false, message: '游戏未在进行中。' });
+
+        const result = room.game.playCard(socket.userId, cards);
+        console.log(`[PLAY CARD] User: ${socket.username}, Room: ${socket.roomId}, Cards: ${JSON.stringify(cards)}, Result: ${JSON.stringify(result)}`);
+        if (result.success) {
+            if (result.gameOver) {
+                room.status = 'finished';
+                const finalRoomState = getRoomStateForPlayer(room, socket.userId, true); // isGameUpdate=true
+                ioInstance.to(socket.roomId).emit('gameOver', finalRoomState); // Use finalRoomState for gameOver event
+                console.log(`[GAME OVER] Room ${socket.roomId} finished. Result: ${result.scoreResult.result}`);
+                broadcastRoomList(); // Update lobby with finished status
+            } else {
+                // Emit gameStateUpdate to all players in the room
+                room.players.forEach(p => {
+                    if (p.connected && p.socketId) {
+                        const playerSocket = ioInstance.sockets.sockets.get(p.socketId);
+                        if (playerSocket) {
+                             playerSocket.emit('gameStateUpdate', getRoomStateForPlayer(room, p.userId, true));
+                        }
+                    }
+                });
+            }
+        }
+        if (typeof callback === 'function') callback(result);
     });
 
     socket.on('passTurn', (callback) => {
         // ... (passTurn logic - unchanged, ensure logging is present)
+        if (!socket.userId || !socket.roomId) return callback({ success: false, message: '无效操作。' });
+        const room = activeGames[socket.roomId];
+        if (!room || !room.game) return callback({ success: false, message: '房间或游戏不存在。' });
+        if (room.status !== 'playing') return callback({ success: false, message: '游戏未在进行中。' });
+
+        const result = room.game.handlePass(socket.userId);
+        console.log(`[PASS TURN] User: ${socket.username}, Room: ${socket.roomId}, Result: ${JSON.stringify(result)}`);
+        if (result.success) {
+            room.players.forEach(p => {
+                if (p.connected && p.socketId) {
+                    const playerSocket = ioInstance.sockets.sockets.get(p.socketId);
+                    if (playerSocket) {
+                        playerSocket.emit('gameStateUpdate', getRoomStateForPlayer(room, p.userId, true));
+                    }
+                }
+            });
+        }
+        if (typeof callback === 'function') callback(result);
     });
 
-    socket.on('requestHint', (currentHintIndex, callback) => {
+    socket.on('requestHint', (currentHintCycleIndex, callback) => {
         // ... (requestHint logic - unchanged, ensure logging is present)
+        if (!socket.userId || !socket.roomId) return callback({ success: false, message: '无效操作。' });
+        const room = activeGames[socket.roomId];
+        if (!room || !room.game) return callback({ success: false, message: '房间或游戏不存在。' });
+        if (room.status !== 'playing') return callback({ success: false, message: '游戏未在进行中。' });
+        
+        const result = room.game.findHint(socket.userId, currentHintCycleIndex);
+        console.log(`[REQUEST HINT] User: ${socket.username}, Room: ${socket.roomId}, Result: ${result.success ? 'Hint found' : result.message}`);
+        if (typeof callback === 'function') callback(result);
     });
 
     socket.on('leaveRoom', (callback) => {
         // ... (leaveRoom logic - unchanged, ensure logging is present)
+        if (!socket.userId || !socket.roomId) {
+            console.warn(`[LEAVE ROOM] Invalid op: User ${socket.userId} trying to leave room ${socket.roomId} but one is missing. Socket: ${socket.id}`);
+            return callback({ success: false, message: '无效操作，无法确定用户或房间。' });
+        }
+        const room = activeGames[socket.roomId];
+        if (!room) {
+            console.warn(`[LEAVE ROOM] Room ${socket.roomId} not found for user ${socket.username} (ID: ${socket.userId}).`);
+            socket.roomId = null; // Clear potentially stale roomId on socket
+            return callback({ success: true, message: '房间已不存在。' }); // Success as user is effectively out
+        }
+
+        handlePlayerLeavingRoom(room, socket);
+        if (typeof callback === 'function') callback({ success: true });
     });
 
     socket.on('requestGameState', (callback) => {
@@ -286,8 +356,8 @@ function checkAndStartGame(room) {
          const playerStartInfo = connectedPlayers.map(p => ({
              id: p.userId,
              name: p.username,
-             slot: p.slot
-             // score could be passed if game.js needs to preserve it across rounds
+             slot: p.slot,
+             score: p.score // Pass current score to game instance
          }));
 
          const startResult = room.game.startGame(playerStartInfo);
@@ -390,12 +460,234 @@ function getRoomStateForPlayer(room, requestingUserId, isGameUpdate = false) {
     };
 }
 
-function handleDisconnect(socket) { /* ... (unchanged, ensure logging and player.isReady = false) ... */ }
-function findRoomByUserId(userId) { /* ... (unchanged) ... */ }
-function handleReconnect(socket, roomId) { /* ... (unchanged, ensure logging) ... */ }
-function getPublicRoomList() { /* ... (unchanged) ... */ }
-function broadcastRoomList() { /* ... (unchanged) ... */ }
-function handleAuthentication(socket) { /* ... (unchanged) ... */ }
+function handlePlayerLeavingRoom(room, socket) {
+    const playerIndex = room.players.findIndex(p => p.userId === socket.userId);
+    if (playerIndex === -1) {
+        console.warn(`[LEAVE ROOM] Player ${socket.username} (ID: ${socket.userId}) not found in room ${room.roomId} player list.`);
+        return; // Player not in list, nothing to do for room.players
+    }
+
+    const leavingPlayer = room.players[playerIndex];
+    console.log(`[LEAVE ROOM] Player ${leavingPlayer.username} (ID: ${leavingPlayer.userId}) is leaving room "${room.roomName}" (${room.roomId}). Socket: ${socket.id}`);
+    
+    socket.leave(room.roomId);
+    socket.roomId = null; // Clear roomId from socket
+
+    if (room.status === 'playing' && room.game) {
+        console.log(`[LEAVE ROOM] Game in progress in room ${room.roomId}. Marking player ${leavingPlayer.username} as disconnected in game.`);
+        room.game.markPlayerConnected(leavingPlayer.userId, false); // Mark as disconnected in game logic
+        leavingPlayer.connected = false; // Mark as disconnected in room.players
+        leavingPlayer.isReady = false; // Player is no longer ready
+
+        // Notify other players about disconnection
+        ioInstance.to(room.roomId).emit('playerDisconnected', { userId: leavingPlayer.userId, username: leavingPlayer.username });
+        
+        // Check if game needs to end due to disconnections
+        const connectedGamePlayers = room.game.players.filter(p => p.connected && !p.finished);
+        if (connectedGamePlayers.length < 2 && room.game.gameStarted && !room.game.gameFinished) { // Or your game's minimum player rule
+            console.log(`[LEAVE ROOM] Not enough players to continue game in room ${room.roomId}. Ending game.`);
+            const gameEndResult = room.game.endGame("玩家离开导致人数不足");
+            room.status = 'finished';
+            ioInstance.to(room.roomId).emit('gameOver', getRoomStateForPlayer(room, null, true)); // Send final state to everyone
+        } else {
+            // If game continues, just update state
+             room.players.forEach(p => {
+                if (p.connected && p.socketId) {
+                    const playerSocket = ioInstance.sockets.sockets.get(p.socketId);
+                    if (playerSocket) {
+                        playerSocket.emit('gameStateUpdate', getRoomStateForPlayer(room, p.userId, true));
+                    }
+                }
+            });
+        }
+
+    } else { // Room is 'waiting' or 'finished', or game object is missing
+        room.players.splice(playerIndex, 1); // Remove player from waiting room list entirely
+        console.log(`[LEAVE ROOM] Player ${leavingPlayer.username} removed from room ${room.roomId} (status: ${room.status}).`);
+        ioInstance.to(room.roomId).emit('playerLeft', { userId: leavingPlayer.userId, username: leavingPlayer.username });
+         // Update game instance if it exists
+        if (room.game) {
+            room.game.removePlayer(leavingPlayer.userId); // Ensure game instance is also updated
+        }
+    }
+
+    // If room becomes empty, delete it
+    const connectedPlayersInRoom = room.players.filter(p => p.connected);
+    if (connectedPlayersInRoom.length === 0 && room.status !== 'playing') { // Only delete if not in active play or ensure game handles cleanup
+        console.log(`[LEAVE ROOM] Room ${room.roomId} is now empty. Deleting.`);
+        delete activeGames[room.roomId];
+    } else {
+        // If creator leaves a waiting room, might need to assign a new creator or close room
+        if (room.creatorId === leavingPlayer.userId && room.status === 'waiting' && room.players.length > 0) {
+            room.creatorId = room.players[0].userId; // Assign to next player
+            console.log(`[LEAVE ROOM] Creator left waiting room ${room.roomId}. New creator: ${room.players[0].username}`);
+             // Notify clients about new creator if necessary (not implemented on client)
+        }
+    }
+    broadcastRoomList(); // Update lobby for everyone
+}
+
+
+function handleDisconnect(socket) {
+    if (!socket.userId) { // User wasn't logged in or reauthenticated fully
+        console.log(`[DISCONNECT] Socket ${socket.id} disconnected (was not fully authenticated or in a room).`);
+        return;
+    }
+
+    const room = findRoomByUserId(socket.userId); // This needs to check activeGames
+    if (room) {
+        console.log(`[DISCONNECT] Player ${socket.username} (ID: ${socket.userId}) disconnected from room "${room.roomName}" (${room.roomId}). Socket: ${socket.id}`);
+        const playerInRoom = room.players.find(p => p.userId === socket.userId);
+
+        if (playerInRoom) {
+            playerInRoom.connected = false;
+            playerInRoom.isReady = false; // Player is no longer ready upon disconnect
+            
+            if (room.status === 'playing' && room.game) {
+                room.game.markPlayerConnected(socket.userId, false);
+                ioInstance.to(room.roomId).emit('playerDisconnected', { userId: socket.userId, username: socket.username, message: "玩家已断开连接。" });
+
+                // Check if game needs to end
+                const connectedGamePlayers = room.game.players.filter(p => p.connected && !p.finished);
+                if (connectedGamePlayers.length < 2 && room.game.gameStarted && !room.game.gameFinished) {
+                     console.log(`[DISCONNECT] Not enough players to continue game in room ${room.roomId} after disconnect. Ending game.`);
+                     const gameEndResult = room.game.endGame("玩家断线导致人数不足");
+                     room.status = 'finished';
+                     ioInstance.to(room.roomId).emit('gameOver', getRoomStateForPlayer(room, null, true));
+                } else {
+                    // If game continues, update other players
+                    room.players.forEach(p => {
+                        if (p.connected && p.socketId && p.userId !== socket.userId) {
+                            const otherPlayerSocket = ioInstance.sockets.sockets.get(p.socketId);
+                            if (otherPlayerSocket) {
+                                otherPlayerSocket.emit('gameStateUpdate', getRoomStateForPlayer(room, p.userId, true));
+                            }
+                        }
+                    });
+                     // If it was the disconnected player's turn, advance it if game logic doesn't handle it
+                    if (room.game.currentPlayerIndex !== -1 && room.game.players[room.game.currentPlayerIndex]?.id === socket.userId) {
+                        console.log(`[DISCONNECT] It was ${socket.username}'s turn. Advancing turn.`);
+                        room.game.nextTurn(true); // Force advance due to player action (disconnect)
+                        // Send updated state after turn advance
+                        room.players.forEach(p => {
+                           if (p.connected && p.socketId) {
+                               const playerSocket = ioInstance.sockets.sockets.get(p.socketId);
+                               if (playerSocket) {
+                                   playerSocket.emit('gameStateUpdate', getRoomStateForPlayer(room, p.userId, true));
+                               }
+                           }
+                        });
+                    }
+                }
+            } else if (room.status === 'waiting') {
+                // In waiting room, player is just marked disconnected.
+                // Could remove them if they don't reconnect after a timeout, or upon next interaction.
+                // For now, just update the room list and player status in room.
+                ioInstance.to(room.roomId).emit('playerDisconnected', { userId: socket.userId, username: socket.username, message: "玩家已离开等待。" });
+            }
+
+            // If all players in a room are disconnected, consider closing the room
+            const anyConnected = room.players.some(p => p.connected);
+            if (!anyConnected && room.status !== 'playing') { // Or add a timeout for playing rooms
+                console.log(`[DISCONNECT] All players in room ${room.roomId} are disconnected. Deleting room.`);
+                delete activeGames[room.roomId];
+            }
+        }
+        broadcastRoomList();
+    } else {
+        console.log(`[DISCONNECT] Player ${socket.username || socket.id} (ID: ${socket.userId}) disconnected (was not in an active room).`);
+    }
+}
+function findRoomByUserId(userId) {
+    for (const roomId in activeGames) {
+        if (activeGames[roomId].players.some(p => p.userId === userId)) {
+            return activeGames[roomId];
+        }
+    }
+    return null;
+}
+function handleReconnect(socket, roomId) {
+    const room = activeGames[roomId];
+    if (!room || !socket.userId) {
+        console.warn(`[RECONNECT] Room ${roomId} or socket.userId missing for re-connection.`);
+        return { success: false, message: '无法重新连接: 房间或用户信息丢失。' };
+    }
+
+    const player = room.players.find(p => p.userId === socket.userId);
+    if (!player) {
+        console.warn(`[RECONNECT] Player ${socket.username} (ID: ${socket.userId}) not found in room ${roomId} for re-connection.`);
+        // This might happen if player was removed due to inactivity. Treat as fresh join?
+        // For now, fail reconnect if not in player list.
+        return { success: false, message: '重新连接失败: 玩家数据未在房间内找到。' };
+    }
+
+    player.connected = true;
+    player.socketId = socket.id; // Update socket ID
+    socket.join(roomId);
+    socket.roomId = roomId;
+
+    if (room.game) {
+        room.game.markPlayerConnected(socket.userId, true);
+    }
+
+    console.log(`[RECONNECT] Player ${player.username} (ID: ${player.userId}) reconnected to room "${room.roomName}" (${roomId}). Socket: ${socket.id}`);
+
+    // Notify other players about re-connection (optional, gameStateUpdate usually covers it)
+    socket.to(roomId).emit('playerReconnected', { userId: player.userId, username: player.username });
+
+    // Send current game state to reconnected player
+    const roomStateForPlayer = getRoomStateForPlayer(room, socket.userId, room.status !== 'waiting');
+
+    // Update all players in the room with the potentially new connection status / socketId linkage
+    // This is important if the game state UI depends on player.connected status for everyone.
+    room.players.forEach(p => {
+        if (p.socketId && p.userId !== socket.userId) { // Exclude the rejoining player, they get it from callback
+            const otherPlayerSocket = ioInstance.sockets.sockets.get(p.socketId);
+            if (otherPlayerSocket) {
+                 otherPlayerSocket.emit('gameStateUpdate', getRoomStateForPlayer(room, p.userId, room.status !== 'waiting'));
+            }
+        }
+    });
+    broadcastRoomList(); // Player count might effectively change if they were the only one disconnected.
+    return { success: true, roomState: roomStateForPlayer };
+}
+function getPublicRoomList() {
+    return Object.values(activeGames).map(room => ({
+        roomId: room.roomId,
+        roomName: room.roomName,
+        playerCount: room.players.filter(p => p.connected).length, // Count only connected players for public list
+        maxPlayers: 4, // Or room.game.maxPlayers if dynamic
+        status: room.status,
+        hasPassword: !!room.password
+    }));
+}
+function broadcastRoomList() {
+    if (ioInstance) {
+        ioInstance.emit('roomListUpdate', getPublicRoomList());
+        console.log("[BROADCAST] Room list updated for all clients.");
+    }
+}
+function handleAuthentication(socket) {
+    // This function can be called after successful login or reauthentication
+    // to ensure the user's socket is known to the roomManager if they were in a room.
+    if (socket.userId) {
+        const room = findRoomByUserId(socket.userId);
+        if (room) {
+            const player = room.players.find(p => p.userId === socket.userId);
+            if (player && !player.connected) { // If player was in a room but marked disconnected
+                console.log(`[AUTH SYNC] Player ${socket.username} authenticated and was in room ${room.roomId}, marking as reconnected.`);
+                handleReconnect(socket, room.roomId); // This will set connected=true, update socketId, and send state
+            } else if (player && player.connected && player.socketId !== socket.id) {
+                 console.log(`[AUTH SYNC] Player ${socket.username} authenticated with new socket ${socket.id} (old: ${player.socketId}). Updating socketId.`);
+                 player.socketId = socket.id; // Update socket ID if it changed (e.g. new tab)
+                 socket.join(room.roomId); // Ensure this new socket is in the room
+                 socket.roomId = room.roomId;
+                 // Send current state to this specific socket
+                 socket.emit('gameStateUpdate', getRoomStateForPlayer(room, socket.userId, room.status !== 'waiting'));
+            }
+        }
+    }
+}
 
 
 module.exports = {
@@ -404,5 +696,6 @@ module.exports = {
     handleAuthentication,
     getPublicRoomList,
     findRoomByUserId,
-    handleReconnect // Make sure this is exported if used elsewhere (e.g. authManager)
+    handleReconnect, // Make sure this is exported if used elsewhere (e.g. authManager)
+    getRoomById // Export the new function
 };
