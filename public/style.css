@@ -220,7 +220,7 @@ html, body {
 }
 
 #player-hand-area-wrapper { /* Wraps hand area to control its placement and min-height */
-    width: 100%; min-height: 155px; /* card height + lift + padding */
+    width: 100%; min-height: 165px; /* MODIFIED: Was 155px, 108(card) + 40(lift) + ~17(padding/buffer) */
     display: flex; align-items: flex-end; justify-content: center;
     flex-shrink: 0; padding-bottom: 8px; box-sizing: border-box; position: relative;
 }
@@ -228,7 +228,7 @@ html, body {
     display: flex; justify-content: center; align-items: flex-end;
     width: 100%; max-width: 100vw; /* Prevent exceeding viewport */
     padding: 0; box-sizing: border-box;
-    min-height: 138px; /* Default card height 108px + selected lift 30px */
+    min-height: 148px; /* MODIFIED: Was 138px. Card height (108px) + Selected Lift (40px) */
     overflow-x: auto;  /* Horizontal scroll for many cards */
     overflow-y: hidden; /* CRITICAL: Clip parts of cards that go above (e.g. during animation/selection) */
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
@@ -294,12 +294,12 @@ html, body {
                 box-shadow 0.2s ease-out, margin-left 0.15s ease-out;
     user-select: none; flex-shrink: 0; /* Prevent cards from shrinking in flex container */
 }
-.my-card { margin-left: -54px; } /* Default overlap for hand cards. Adjust for desired overlap */
+.my-card { margin-left: -48px; } /* MODIFIED: Was -54px. Reduced overlap to make hand wider. */
 .my-card:first-child { margin-left: 0; } /* First card no negative margin */
 .my-card.selectable { cursor: pointer; }
 .my-card.selectable:hover:not(.selected) { transform: translateY(-20px) scale(1.08); z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
 .my-card.selected {
-    transform: translateY(-30px) scale(1.05);
+    transform: translateY(-40px) scale(1.05); /* MODIFIED: Was -30px. Lift selected cards higher. */
     box-shadow: 0 6px 15px rgba(46, 125, 50, 0.5);
     border-color: #66bb6a; z-index: 20;
 }
@@ -335,11 +335,11 @@ html, body {
 
 /* --- Responsive Adjustments --- */
 @media (max-width: 450px) and (orientation: portrait) { /* Small portrait devices */
-    .card { width: 68px; height: 102px; } .my-card { margin-left: -50px; }
-    #player-hand-area-wrapper { min-height: 133px; } /* 102 + 26 + 5 */
-    #player-hand-area { min-height: 128px; } /* 102 + 26 */
+    .card { width: 68px; height: 102px; } .my-card { margin-left: -45px; } /* MODIFIED: Was -50px */
+    #player-hand-area-wrapper { min-height: 148px; } /* MODIFIED: (102card + 35lift + ~11padding) */
+    #player-hand-area { min-height: 137px; } /* MODIFIED: Card height (102px) + Selected Lift (35px) */
     .my-card.selectable:hover:not(.selected) { transform: translateY(-18px) scale(1.07); }
-    .my-card.selected { transform: translateY(-26px) scale(1.04); }
+    .my-card.selected { transform: translateY(-35px) scale(1.04); } /* MODIFIED: Was -26px */
     #bottom-bar { height: 58px; padding: 0 4px; }
     #bottom-bar button { font-size: 0.82em; padding: 6px 7px; min-width: 42px; }
     #my-info-in-bar { min-width: 90px; margin: 0 4px; } #my-info-in-bar .player-avatar { width: 28px; height: 28px;} #my-info-in-bar .playerName { max-width: 50px; }
@@ -350,11 +350,11 @@ html, body {
     #player-right.opponent-area.current-turn .player-avatar-container::after { left: -25px; }
 }
 @media (max-width: 375px) and (orientation: portrait) { /* Very small portrait devices */
-    .card { width: 62px; height: 93px; } .my-card { margin-left: -46px; }
-    #player-hand-area-wrapper { min-height: 120px; } /* 93 + 22 + 5 */
-    #player-hand-area { min-height: 115px; } /* 93 + 22 */
+    .card { width: 62px; height: 93px; } .my-card { margin-left: -42px; } /* MODIFIED: Was -46px */
+    #player-hand-area-wrapper { min-height: 135px; } /* MODIFIED: (93card + 30lift + ~12padding) */
+    #player-hand-area { min-height: 123px; } /* MODIFIED: Card height (93px) + Selected Lift (30px) */
     .my-card.selectable:hover:not(.selected) { transform: translateY(-16px) scale(1.06); }
-    .my-card.selected { transform: translateY(-22px) scale(1.03); }
+    .my-card.selected { transform: translateY(-30px) scale(1.03); } /* MODIFIED: Was -22px */
     #bottom-bar { height: 55px; padding: 0 3px; }
     #bottom-bar button { font-size: 0.78em; padding: 5px 5px; min-width: 36px; }
     #my-info-in-bar { min-width: 80px; margin: 0 3px; padding: 2px 4px; } #my-info-in-bar .player-avatar { width: 26px; height: 26px; } #my-info-in-bar .playerName { max-width: 40px; }
@@ -366,11 +366,11 @@ html, body {
 }
 /* Adjustments for landscape on smaller height devices */
 @media (orientation: landscape) and (max-height: 500px) {
-    .card { width: 66px; height: 99px; } .my-card { margin-left: -48px; }
-    #player-hand-area-wrapper { min-height: 129px; } /* 99 + 25 + 5 */
-    #player-hand-area { min-height: 124px; padding: 0 5px; } /* 99 + 25 */
+    .card { width: 66px; height: 99px; } .my-card { margin-left: -44px; } /* MODIFIED: Was -48px */
+    #player-hand-area-wrapper { min-height: 140px; } /* MODIFIED: (99card + 30lift + ~11padding) */
+    #player-hand-area { min-height: 129px; padding: 0 5px; } /* MODIFIED: Card height (99px) + Selected Lift (30px) */
     .my-card.selectable:hover:not(.selected) { transform: translateY(-16px) scale(1.05); }
-    .my-card.selected { transform: translateY(-25px) scale(1.03); }
+    .my-card.selected { transform: translateY(-30px) scale(1.03); } /* MODIFIED: Was -25px */
     #bottom-bar { height: 48px; } /* Shorter bar */
     #bottom-bar button { font-size: 0.75em; padding: 5px 7px; min-width: 38px; }
     #my-info-in-bar .player-avatar { width: 26px; height: 26px; } #my-info-in-bar .playerName { max-width: 50px; }
