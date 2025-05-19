@@ -4,24 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>KK 在线纸牌</title>
-    <!-- 添加 Favicon 链接 -->
+    <!-- Favicon Links -->
     <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
-    <link rel="shortcut icon" href="/images/favicon.ico" type="image/x-icon"> <!-- 兼容旧版浏览器 -->
-    <!-- CSS将通过JS动态添加版本号，或手动保持一致 -->
+    <link rel="shortcut icon" href="/images/favicon.ico" type="image/x-icon">
+    <!-- Stylesheet with version for cache busting -->
     <link rel="stylesheet" href="style.css?v=1.1.0">
+    <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1a3a1a"/> <!-- 与 manifest.json 中 theme_color 一致 -->
-    <link rel="apple-touch-icon" href="/images/icon-192x192.png">
+    <meta name="theme-color" content="#1a3a1a"/> <!-- Consistent with manifest.json -->
+    <!-- iOS specific PWA settings -->
+    <link rel="apple-touch-icon" href="/images/icon-192x192.png"> <!-- Larger icon for iOS home screen -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="KK纸牌"> <!-- Title for iOS Home Screen -->
 </head>
 <body>
-    <!-- 加载视图 -->
+    <!-- Loading View: Shown initially and during connection issues -->
     <div id="loadingView" class="view fullscreen-view flex-center-center">
         <p id="loadingMessage">连接中...</p>
     </div>
 
-    <!-- 认证视图 -->
+    <!-- Authentication View: Login and Registration -->
     <div id="auth-view" class="view hidden-view fullscreen-view flex-center-center">
         <div class="auth-form-container">
             <div id="login-form">
@@ -35,7 +38,7 @@
             <div id="register-form" style="display: none;">
                 <h2>注册</h2>
                 <input type="text" id="register-username" placeholder="手机号" autocomplete="username" inputmode="tel">
-                <input type="password" id="register-password" placeholder="密码" autocomplete="new-password">
+                <input type="password" id="register-password" placeholder="密码 (至少4位)" autocomplete="new-password">
                 <button id="register-button">注册</button>
                 <p>已有账号？<a href="#" id="show-login">登录</a></p>
             </div>
@@ -43,7 +46,7 @@
         </div>
     </div>
 
-    <!-- 大厅视图 -->
+    <!-- Lobby View: Create or Join Rooms -->
     <div id="lobby-view" class="view hidden-view fullscreen-view">
         <div class="lobby-content">
             <h2>游戏大厅</h2>
@@ -56,19 +59,19 @@
             <div id="roomList">
                 <h3>
                     房间列表
-                    <button id="refreshRoomListButton" title="刷新列表">↻</button> <!-- 刷新图标 -->
+                    <button id="refreshRoomListButton" title="刷新列表">↻</button>
                 </h3>
                 <ul id="rooms">
-                    <!-- 房间列表项将在这里由 JavaScript 动态生成 -->
+                    <!-- Room list items will be dynamically generated here -->
                 </ul>
             </div>
             <button id="logoutButtonLobby">退出登录</button>
         </div>
     </div>
 
-    <!-- 游戏视图 -->
+    <!-- Game View: Main Gameplay Area -->
     <div id="game-view" class="view hidden-view fullscreen-view">
-        <!-- 顶部信息栏 -->
+        <!-- Top Info Bar -->
         <div id="gameInfoBar">
             <div class="room-name-id">
                 房间: <span id="infoBarRoomName">未知</span> (<span id="infoBarRoomId">----</span>)
@@ -78,12 +81,12 @@
             <button id="leaveRoomButton" title="离开房间">离开</button>
         </div>
 
-        <!-- 主要游戏区域 -->
+        <!-- Main Game Area (Opponents, Center Pile) -->
         <div id="gameArea">
-            <!-- 对手区域 (上) -->
+            <!-- Opponent Area (Top) -->
             <div id="player-top" class="player-area opponent-area opponent-top" data-player-id="">
                 <div class="player-avatar-container">
-                    <div class="player-avatar" data-avatar-id="top-avatar"></div> <!-- 可用于JS设置背景图 -->
+                    <div class="player-avatar" data-avatar-id="top-avatar"></div>
                     <div class="voice-indicator-container"><div class="voice-indicator"></div></div>
                 </div>
                 <div class="player-details">
@@ -92,7 +95,7 @@
                     <div class="playerInfo">手牌: <span class="card-count">?</span> <span class="player-ready-status"></span></div>
                 </div>
             </div>
-            <!-- 对手区域 (左) -->
+            <!-- Opponent Area (Left) -->
             <div id="player-left" class="player-area opponent-area opponent-left" data-player-id="">
                  <div class="player-avatar-container">
                     <div class="player-avatar" data-avatar-id="left-avatar"></div>
@@ -104,7 +107,7 @@
                     <div class="playerInfo">手牌: <span class="card-count">?</span> <span class="player-ready-status"></span></div>
                 </div>
             </div>
-            <!-- 对手区域 (右) -->
+            <!-- Opponent Area (Right) -->
             <div id="player-right" class="player-area opponent-area opponent-right" data-player-id="">
                 <div class="player-avatar-container">
                     <div class="player-avatar" data-avatar-id="right-avatar"></div>
@@ -117,23 +120,23 @@
                 </div>
             </div>
 
-            <!-- 中央牌堆区域 -->
+            <!-- Center Pile Area -->
             <div id="centerPileArea">
                 <div id="lastHandType" class="last-hand-type">等待出牌</div>
                 <div id="discarded-cards-area">
-                    <!-- 打出的牌会显示在这里 -->
+                    <!-- Played cards will be displayed here -->
                 </div>
             </div>
         </div>
 
-        <!-- 玩家手牌区域 -->
+        <!-- Player Hand Area Wrapper (for layout control) -->
         <div id="player-hand-area-wrapper">
              <div id="player-hand-area">
-                 <!-- 自己的手牌会显示在这里 -->
+                 <!-- Current player's hand cards will be displayed here -->
              </div>
         </div>
 
-        <!-- 底部操作栏 -->
+        <!-- Bottom Action Bar -->
         <div id="bottom-bar">
             <div class="bottom-bar-button-group left-buttons">
                 <button id="ready-button" title="准备/取消准备">准备</button>
@@ -141,14 +144,14 @@
                 <button id="ai-toggle-button" title="AI托管/取消托管">AI托管</button>
             </div>
         
+            <!-- Self Info Area (within bottom bar) -->
             <div id="my-info-in-bar" class="player-area self-info-in-bar" data-player-id="">
                 <div class="player-avatar-container">
-                    <div class="player-avatar" id="myAvatar"></div>
+                    <div class="player-avatar" id="myAvatar"></div> <!-- Example avatar, style with CSS -->
                     <div class="voice-indicator-container"><div class="voice-indicator" id="myVoiceIndicator"></div></div>
                 </div>
                 <div class="player-details">
                     <div class="playerName" id="myPlayerName">我</div>
-                    <!-- 自己的角色信息可以考虑放在这里，如果需要一直显示 -->
                     <!-- <div class="playerRole" id="myPlayerRole"></div> -->
                     <div class="playerInfo" id="myPlayerStatus">手牌: <span class="card-count">?</span> <span class="player-ready-status"></span></div>
                 </div>
@@ -161,21 +164,22 @@
             </div>
         </div>
 
-        <!-- 游戏结束遮罩 -->
-        <div id="gameOverOverlay" class="overlay hidden-view flex-center-center">
+        <!-- Game Over Overlay -->
+        <div id="gameOverOverlay" class="view overlay hidden-view flex-center-center">
             <div class="overlay-content">
                 <h3 id="gameOverTitle">游戏结束</h3>
                 <p id="gameOverReasonText"></p>
                 <div id="gameOverScores">
-                    <!-- 得分详情会显示在这里 -->
+                    <!-- Score details will be displayed here -->
                 </div>
                 <button id="backToLobbyBtn">返回大厅</button>
             </div>
         </div>
     </div>
 
+    <!-- Socket.IO client library -->
     <script src="/socket.io/socket.io.js"></script>
-    <!-- JS将通过JS动态添加版本号，或手动保持一致 -->
+    <!-- Client-side game logic with version for cache busting -->
     <script src="client.js?v=1.1.0"></script>
 </body>
 </html>
