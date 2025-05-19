@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>KK 在线纸牌</title>
-    <link rel="stylesheet" href="style.css?v=1.0.27"> <!-- 版本号更新 -->
+    <link rel="stylesheet" href="style.css?v=1.0.28"> <!-- 假设版本号递增 -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#333"/>
     <link rel="apple-touch-icon" href="/images/icon-192x192.png">
@@ -117,10 +117,14 @@
              <div id="player-hand-area"></div>
         </div>
 
+        <!-- MODIFIED #bottom-bar structure -->
         <div id="bottom-bar">
-            <button id="ready-button" title="准备/取消准备">准备</button>
-            <button id="hint-button" title="提示">提示</button>
-            <button id="pass-button" title="不出 / 过">过</button>
+            <div class="bottom-bar-button-group left-buttons">
+                <button id="ready-button" title="准备/取消准备">准备</button>
+                <button id="hint-button" title="提示">提示</button>
+                <button id="ai-toggle-button" title="AI托管">AI托管</button> 
+            </div>
+        
             <div id="my-info-in-bar" class="player-area self-info-in-bar" data-player-id="">
                 <div class="player-avatar-container">
                     <div class="player-avatar" id="myAvatar"></div>
@@ -131,9 +135,15 @@
                     <div class="playerInfo" id="myPlayerStatus">手牌: <span class="card-count">?</span> <span class="player-ready-status"></span></div>
                 </div>
             </div>
-            <button id="play-button" title="出牌">出牌</button>
-            <button id="micButton" title="按住说话">🎤</button>
+        
+            <div class="bottom-bar-button-group right-buttons">
+                <button id="pass-button" title="不出 / 过">过</button>
+                <button id="play-button" title="出牌">出牌</button>
+                <button id="micButton" title="按住说话">🎤</button>
+            </div>
         </div>
+        <!-- END MODIFIED #bottom-bar structure -->
+
 
         <div id="gameOverOverlay" class="overlay hidden-view flex-center-center">
             <div class="overlay-content">
@@ -146,6 +156,6 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="client.js?v=1.0.27"></script> <!-- 版本号更新 -->
+    <script src="client.js?v=1.0.28"></script> <!-- 假设版本号递增 -->
 </body>
 </html>
