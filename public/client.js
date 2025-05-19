@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentHintCards = null;
     let currentHintIndexFromServer = 0;
     let initialReauthAttempted = false;
-    let isAi托管激活 = false;
+    let isAi托管激活 = false; // 这个变量主要由服务器状态驱动
 
     // Voice recording state
     let mediaRecorder;
@@ -25,11 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let isRecording = false;
     let recordingTimer = null; // 用于20秒超时
     const MAX_RECORDING_TIME = 20000; // 20秒
-    let allowVoiceBroadcast = true; // 新增：控制是否播放收到的语音
-    let currentStream = null; // 保存当前的 MediaStream
+    let allowVoiceBroadcast = true;
+    let currentStream = null;
 
     // --- DOM Elements ---
-    // ... (其他DOM元素获取保持不变) ...
     const loadingView = document.getElementById('loadingView');
     const authView = document.getElementById('auth-view');
     const lobbyView = document.getElementById('lobby-view');
@@ -80,6 +79,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const backToLobbyBtnOverlay = gameOverOverlay.querySelector('#backToLobbyBtn');
 
     const toggleVoiceBroadcastButton = document.getElementById('toggleVoiceBroadcastButton');
+
+    // Card GFX
+    const rankToImageNamePart = { 'A': 'ace', 'K': 'king', 'Q': 'queen', 'J': 'jack', 'T': '10', '9': '9', '8': '8', '7': '7', '6': '6', '5': '5', '4': '4', '3': '3', '2': '2' };
+    const suitToImageNamePart = { 'S': 'spades', 'H': 'hearts', 'D': 'diamonds', 'C': 'clubs' };
+    const CARD_IMAGE_EXTENSION = '.jpg';
+    const CARD_BACK_IMAGE = 'back.jpg';
+    const CARD_IMAGE_PATH = '/images/cards/';
 
     // --- Utility Functions ---
     function cardObjectToKey(card) {
@@ -207,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('disconnect', (reason) => {
         console.warn('[SOCKET CLIENT] Disconnected from server. Reason:', reason);
         if (isRecording) {
-            forceStopRecording(); // 修改：强制停止，但不一定发送
+            forceStopRecording();
         }
         if (reason === 'io server disconnect') {
             showTemporaryMessage('与服务器连接已断开。请稍后重试。', 5000, true);
@@ -230,13 +236,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginButton) loginButton.addEventListener('click', () => {
         clearAuthError(); const phone = loginUsernameInput.value.trim(); const pass = loginPasswordInput.value;
         if (!phone || !pass) { showAuthError("手机号和密码均不能为空。"); return; }
-        console.log(`[AUTH CLIENT] Attempting login for: ${phone}`);
         socket.emit('login', { phoneNumber: phone, password: pass }, handleAuthResponse);
     });
     if (registerButton) registerButton.addEventListener('click', () => {
         clearAuthError(); const phone = registerUsernameInput.value.trim(); const pass = registerPasswordInput.value;
         if (!phone || pass.length < 4) { showAuthError("手机号不能为空，密码至少4位。"); return; }
-        console.log(`[AUTH CLIENT] Attempting registration for: ${phone}`);
         socket.emit('register', { phoneNumber: phone, password: pass }, (response) => {
             showTemporaryMessage(response.message, 3000, !response.success);
             if (response.success) {
@@ -253,10 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!roomName) { showTemporaryMessage("请输入房间名称。", 2000, true); return; }
         if (roomName.length > 10) { showTemporaryMessage("房间名称不能超过10个字符。", 2000, true); return; }
         if (password && password.length > 10) { showTemporaryMessage("房间密码不能超过10个字符。", 2000, true); return; }
-
-        console.log(`[LOBBY CLIENT] Creating room: "${roomName}", Pwd: ${password ? 'Yes' : 'No'}`);
         socket.emit('createRoom', { roomName, password }, (response) => {
-            console.log('[LOBBY CLIENT] Create room response:', response);
             if (response.success) {
                 currentRoomId = response.roomId;
                 currentRoomState = response.roomState;
@@ -272,7 +273,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (refreshRoomListButton) {
         refreshRoomListButton.addEventListener('click', () => {
             if(socket.connected) {
-                console.log("[LOBBY CLIENT] Refreshing room list manually...");
                 socket.emit('listRooms', updateRoomList);
             } else {
                 showTemporaryMessage("网络未连接，无法刷新房间列表。", 2000, true);
@@ -281,7 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (logoutButtonLobby) logoutButtonLobby.addEventListener('click', () => {
-        console.log('[LOBBY CLIENT] Logging out...');
         if (isRecording) forceStopRecording();
         if (socket.connected) socket.disconnect();
         localStorage.removeItem('userId'); localStorage.removeItem('username');
@@ -292,11 +291,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function updateRoomList(rooms) {
-        if (!roomsListUl) { console.warn("[UI CLIENT] roomsListUl element not found."); return; }
+        if (!roomsListUl) return;
         roomsListUl.innerHTML = '';
         if (rooms && Array.isArray(rooms) && rooms.length > 0) {
             rooms.forEach(room => {
-                if (!room || typeof room.roomId === 'undefined') { console.warn("[UI CLIENT] Invalid room object in list:", room); return; }
+                if (!room || typeof room.roomId === 'undefined') return;
                 const li = document.createElement('li');
                 const maxP = room.maxPlayers || 4;
                 const countP = room.playerCount || 0;
@@ -321,9 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         passwordToJoin = prompt(`请输入房间 "${e.target.dataset.roomname || roomIdToJoin}" 的密码:`);
                         if (passwordToJoin === null) return;
                     }
-                    console.log(`[LOBBY CLIENT] Attempting to join room: ${roomIdToJoin}, Pwd: ${!!passwordToJoin}`);
                     socket.emit('joinRoom', { roomId: roomIdToJoin, password: passwordToJoin }, (response) => {
-                        console.log('[LOBBY CLIENT] Join room response:', response);
                         if (response && response.success) {
                             currentRoomId = response.roomId;
                             currentRoomState = response.roomState;
@@ -345,23 +342,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Game View Listeners & Logic (大部分保持不变) ---
-    const CARD_IMAGE_EXTENSION = '.jpg';
-    const CARD_BACK_IMAGE = 'back.jpg';
-    const CARD_IMAGE_PATH = '/images/cards/';
-    const rankToImageNamePart = { 'A': 'ace', 'K': 'king', 'Q': 'queen', 'J': 'jack', 'T': '10', '9': '9', '8': '8', '7': '7', '6': '6', '5': '5', '4': '4', '3': '3', '2': '2' };
-    const suitToImageNamePart = { 'S': 'spades', 'H': 'hearts', 'D': 'diamonds', 'C': 'clubs' };
-
+    // --- Game View Listeners & Logic ---
     if (readyButton) readyButton.addEventListener('click', () => {
         if (!currentRoomState || !myUserId || currentRoomState.status !== 'waiting') {
             showTemporaryMessage("无法准备：不在等待状态或信息错误。", 2000, true); return;
         }
         const myPlayer = currentRoomState.players.find(p => p.userId === myUserId);
         if (!myPlayer) { showTemporaryMessage("错误：找不到您的玩家信息。", 2000, true); return; }
-        if (isAi托管激活 || myPlayer.isAiControlled) { showTemporaryMessage("AI托管中，请先取消托管再准备。", 2500, true); return; }
+        if (myPlayer.isAiControlled) { showTemporaryMessage("AI托管中，无需操作。", 2500, true); return; }
 
         const newReadyState = !myPlayer.isReady;
-        console.log(`[ACTION CLIENT] Emitting 'playerReady': ${newReadyState}`);
         socket.emit('playerReady', newReadyState, (response) => {
             if (!response || !response.success) {
                 showTemporaryMessage(`设置准备状态失败: ${response ? response.message : '无响应'}`, 2500, true);
@@ -373,7 +363,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentRoomState || !myUserId || currentRoomState.currentPlayerId !== myUserId || selectedCardsForPlay.length === 0) {
             showTemporaryMessage("不满足出牌条件。", 2000, true); return;
         }
-        console.log(`[ACTION CLIENT] Playing cards:`, selectedCardsForPlay.map(c=>cardObjectToKey(c)));
+        const myPlayer = currentRoomState.players.find(p => p.userId === myUserId);
+        if (myPlayer && myPlayer.isAiControlled) {
+            showTemporaryMessage("AI托管中，不能手动出牌。", 2000, true); return;
+        }
         socket.emit('playCard', selectedCardsForPlay, (response) => {
             if (response && response.success) {
                 selectedCardsForPlay = [];
@@ -390,12 +383,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentRoomState || !myUserId || currentRoomState.currentPlayerId !== myUserId) {
              showTemporaryMessage("现在不是您的回合。", 2000, true); return;
         }
+        const myPlayer = currentRoomState.players.find(p => p.userId === myUserId);
+        if (myPlayer && myPlayer.isAiControlled) {
+            showTemporaryMessage("AI托管中，不能手动操作。", 2000, true); return;
+        }
         const iAmStarterOfNewRound = !currentRoomState.lastHandInfo || currentRoomState.lastPlayerWhoPlayedId === myUserId;
         if (iAmStarterOfNewRound && !currentRoomState.isFirstTurn) {
             showTemporaryMessage("您是本轮首个出牌者，必须出牌。", 2500, true); return;
         }
-
-        console.log('[ACTION CLIENT] Passing turn.');
         socket.emit('passTurn', (response) => {
             if (response && response.success) {
                 selectedCardsForPlay = []; currentHintCards = null; currentHintIndexFromServer = 0;
@@ -410,9 +405,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentRoomState || !myUserId || currentRoomState.currentPlayerId !== myUserId) {
              showTemporaryMessage("现在不是您的回合。", 2000, true); return;
         }
-        console.log(`[ACTION CLIENT] Requesting hint, current server index: ${currentHintIndexFromServer}`);
+        const myPlayer = currentRoomState.players.find(p => p.userId === myUserId);
+        if (myPlayer && myPlayer.isAiControlled) {
+            showTemporaryMessage("AI托管中。", 2000, true); return;
+        }
         socket.emit('requestHint', currentHintIndexFromServer, (response) => {
-            console.log('[ACTION CLIENT] Hint response:', response);
             if (response && response.success && response.hint) {
                 clearSelectionAndHighlights();
                 selectedCardsForPlay = response.hint.map(cardKey => ({ rank: cardKey.rank, suit: cardKey.suit }));
@@ -435,13 +432,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!myPlayer) { showTemporaryMessage("错误：找不到您的玩家信息。", 2000, true); return; }
 
         const newAiState = !myPlayer.isAiControlled;
-        console.log(`[ACTION CLIENT] Toggling AI to: ${newAiState}`);
         socket.emit('toggleAI', newAiState, (response) => {
             if (response && response.success) {
-                isAi托管激活 = response.isAiEnabled;
-                aiToggleButton.textContent = isAi托管激活 ? "取消托管" : "AI托管";
-                aiToggleButton.classList.toggle('ai-active', isAi托管激活);
-                showTemporaryMessage(isAi托管激活 ? "AI托管已激活。" : "AI托管已取消。", 2000);
+                // isAi托管激活 状态将由 gameStateUpdate 更新
+                showTemporaryMessage(response.isAiEnabled ? "AI托管已激活。" : "AI托管已取消。", 2000);
             } else {
                 showTemporaryMessage(`AI切换失败: ${response ? response.message : '未知错误'}`, 2500, true);
             }
@@ -449,9 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const commonLeaveRoomLogic = () => {
-        console.log('[ACTION CLIENT] Leaving room...');
         if (isRecording) forceStopRecording();
-
         socket.emit('leaveRoom', (response) => {
             if (response && response.success) {
                 currentRoomId = null; currentRoomState = null; selectedCardsForPlay = []; currentHintCards = null; currentHintIndexFromServer = 0;
@@ -467,57 +459,45 @@ document.addEventListener('DOMContentLoaded', () => {
     if (leaveRoomButton) leaveRoomButton.addEventListener('click', commonLeaveRoomLogic);
     if (backToLobbyBtnOverlay) backToLobbyBtnOverlay.addEventListener('click', commonLeaveRoomLogic);
 
+    // --- Socket Event Handlers for Game Updates ---
     socket.on('gameStateUpdate', (state) => {
         if (state && state.roomId === currentRoomId) {
             currentRoomState = state;
             displayGameState(state);
         } else if (state && state.roomId && !currentRoomId) {
-             console.log('[EVENT CLIENT] Received gameStateUpdate for a new room, likely auto-joined:', state.roomId);
              currentRoomId = state.roomId; currentRoomState = state; displayGameState(state); switchToView('game-view');
         } else if (state && state.roomId !== currentRoomId) {
-            console.warn(`[EVENT CLIENT] Received gameStateUpdate for a different room (${state.roomId}) than current (${currentRoomId}). Ignoring.`);
+            // console.warn(`[EVENT CLIENT] Received gameStateUpdate for a different room (${state.roomId}) than current (${currentRoomId}). Ignoring.`);
         }
     });
 
     socket.on('gameStarted', (initialGameState) => {
-        console.log('[EVENT CLIENT] GameStarted received:', initialGameState);
         if (initialGameState && initialGameState.roomId === currentRoomId) {
             currentRoomState = initialGameState;
             selectedCardsForPlay = []; currentHintCards = null; currentHintIndexFromServer = 0;
-            const myPlayer = initialGameState.players.find(p => p.userId === myUserId);
-            isAi托管激活 = myPlayer ? myPlayer.isAiControlled : false;
-            if (aiToggleButton) {
-                aiToggleButton.textContent = isAi托管激活 ? "取消托管" : "AI托管";
-                aiToggleButton.classList.toggle('ai-active', isAi托管激活);
-            }
-            displayGameState(initialGameState, true);
+            displayGameState(initialGameState, true); // Animate hand on game start
             if (gameOverOverlay) gameOverOverlay.classList.add('hidden-view');
-        }  else {
-            console.warn(`[EVENT CLIENT] 'gameStarted' for room ${initialGameState?.roomId} but current is ${currentRoomId}.`);
         }
     });
 
     socket.on('playerJoined', (playerInfo) => {
-        console.log(`[EVENT CLIENT] Player ${playerInfo.username} joined.`);
         showTemporaryMessage(`玩家 ${playerInfo.username} 加入了房间。`, 2000);
     });
 
     socket.on('playerLeft', ({ userId, username }) => {
-        console.log(`[EVENT CLIENT] Player ${username} left.`);
         showTemporaryMessage(`玩家 ${username} 离开了房间。`, 2000);
-        if (currentRoomState && currentRoomState.players) {
+        if (currentRoomState && currentRoomState.players) { // Optimistic update
             const player = currentRoomState.players.find(p => p.userId === userId);
             if (player) player.connected = false;
-            displayGameState(currentRoomState);
+            // displayGameState will be called by a full gameStateUpdate from server
         }
     });
 
     socket.on('playerReadyUpdate', ({ userId, isReady }) => {
-        console.log(`[EVENT CLIENT] PlayerReadyUpdate: User ${userId}, Ready: ${isReady}`);
         if (currentRoomState && currentRoomState.players) {
             const player = currentRoomState.players.find(p => p.userId === userId);
             if (player) {
-                player.isReady = isReady;
+                player.isReady = isReady; // Update local state cache
                 updatePlayerReadyStatusUI(userId, isReady);
                 if (userId === myUserId && readyButton) {
                     readyButton.textContent = isReady ? "取消准备" : "准备";
@@ -537,8 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     socket.on('gameOver', ({ reason, scoreResult }) => {
-        console.log('[EVENT CLIENT] GameOver:', reason, scoreResult);
-        if (currentRoomState) {
+        if (currentRoomState) { // Update local state for display purposes
             currentRoomState.status = 'finished';
             currentRoomState.gameFinished = true;
             if (scoreResult) {
@@ -559,10 +538,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const change = scoreResult.scoreChanges ? (scoreResult.scoreChanges[ps.id] || 0) : 0;
                 const changeStr = change > 0 ? `+${change}` : (change < 0 ? `${change}` : '0');
                 const scoreClass = change > 0 ? 'score-plus' : (change < 0 ? 'score-minus' : 'score-zero');
-                gameOverScoresDiv.innerHTML += `<p>${ps.name} (${ps.role || '农民'}): <span class="${scoreClass}">${changeStr}</span> (总分: ${ps.score})</p>`;
+                gameOverScoresDiv.innerHTML += `<p>${ps.name} (${ps.role || '玩家'}): <span class="${scoreClass}">${changeStr}</span> (总分: ${ps.score})</p>`;
             });
         }
-        switchToView('game-view');
+        switchToView('game-view'); // Ensure game view is active
         gameOverOverlay.classList.remove('hidden-view');
         gameOverOverlay.style.display = 'flex';
 
@@ -570,8 +549,9 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedCardsForPlay = []; currentHintCards = null; currentHintIndexFromServer = 0; updatePlayButtonState();
     });
 
+    // --- UI Update Functions ---
     function displayGameState(state, animateHand = false) {
-        currentRoomState = state;
+        currentRoomState = state; // Critical: always update the master state object
 
         if (infoBarRoomName) infoBarRoomName.textContent = state.roomName || '未知房间';
         if (infoBarRoomId) infoBarRoomId.textContent = state.roomId || '----';
@@ -582,31 +562,32 @@ document.addEventListener('DOMContentLoaded', () => {
         if (infoBarCurrentTurn) infoBarCurrentTurn.textContent = state.gameStarted && !state.gameFinished && currentPlayer ? currentPlayer.username : (state.gameFinished ? '游戏结束' : 'N/A');
 
         const myPlayer = state.players.find(p => p.userId === myUserId);
-        const opponents = state.players.filter(p => p.userId !== myUserId);
+        isAi托管激活 = myPlayer ? myPlayer.isAiControlled : false; // Update global AI flag from server state
+        if (aiToggleButton) {
+            aiToggleButton.textContent = isAi托管激活 ? "取消托管" : "AI托管";
+            aiToggleButton.classList.toggle('ai-active', isAi托管激活);
+        }
 
         if (myPlayer) {
             updateMyPlayerArea(myPlayer, state.currentPlayerId === myUserId, state.gameFinished, state.status);
             if (myPlayer.hand) {
-                updatePlayerHandUI(myPlayer.hand, state.currentPlayerId === myUserId && !state.gameFinished && !myPlayer.finished, animateHand);
+                updatePlayerHandUI(myPlayer.hand, state.currentPlayerId === myUserId && !state.gameFinished && !myPlayer.finished && !isAi托管激活, animateHand);
             } else if(playerHandArea) {
-                 playerHandArea.innerHTML = state.status === 'playing' ? '<p style="font-size:0.8em; color:#aaa;">等待发牌...</p>' : '';
-            }
-            isAi托管激活 = myPlayer.isAiControlled;
-            if (aiToggleButton) {
-                aiToggleButton.textContent = isAi托管激活 ? "取消托管" : "AI托管";
-                aiToggleButton.classList.toggle('ai-active', isAi托管激活);
+                 playerHandArea.innerHTML = (state.status === 'playing' && !myPlayer.finished) ? '<p style="font-size:0.8em; color:#aaa;">等待发牌...</p>' : '';
             }
         }
 
+        const opponents = state.players.filter(p => p.userId !== myUserId);
         if (myPlayer && opponents.length > 0) {
             const mySlot = myPlayer.slot;
-            const maxP = state.players.length > 0 ? state.players.length : 4;
+            const maxP = state.players.length > 0 ? state.players.length : (state.game ? state.game.maxPlayers : 4);
 
             const opponentSlots = opponents.map(op => ({...op, relativeSlot: (op.slot - mySlot + maxP) % maxP }));
 
             const topOpponent = opponentSlots.find(op => op.relativeSlot === Math.floor(maxP / 2));
-            const leftOpponent = opponentSlots.find(op => maxP === 4 && op.relativeSlot === 1 || maxP === 3 && op.relativeSlot === 1 );
-            const rightOpponent = opponentSlots.find(op => maxP === 4 && op.relativeSlot === 3 || maxP === 3 && op.relativeSlot === 2);
+            const leftOpponent = opponentSlots.find(op => (maxP === 4 && op.relativeSlot === 1) || (maxP === 3 && op.relativeSlot === 1) || (maxP === 2 && op.relativeSlot === 1));
+            const rightOpponent = opponentSlots.find(op => (maxP === 4 && op.relativeSlot === 3) || (maxP === 3 && op.relativeSlot === 2));
+
 
             updateOpponentUIElement(document.getElementById('player-top'), topOpponent, state.currentPlayerId, state.gameFinished, state.status);
             updateOpponentUIElement(document.getElementById('player-left'), leftOpponent, state.currentPlayerId, state.gameFinished, state.status);
@@ -618,12 +599,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         updateCenterPileUI(state.centerPile, state.lastHandInfo);
-        updateGameActionButtons(state);
+        updateGameActionButtons(state); // This will now use the updated isAi托管激活
 
         if (state.gameFinished && gameOverOverlay.classList.contains('hidden-view')) {
-            socket.emit('requestGameState', (finalState) => {
+            socket.emit('requestGameState', (finalState) => { // Request one last time to ensure scores are final
                 if (finalState && finalState.gameFinished) {
-                     currentRoomState = finalState;
+                     currentRoomState = finalState; // Update with most final state
                      gameOverTitle.textContent = finalState.gameResultText || "游戏结束";
                      gameOverReasonText.textContent = `当局结果: ${finalState.gameResultText}`;
                      gameOverScoresDiv.innerHTML = '';
@@ -632,7 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
                              const change = finalState.scoreChanges ? (finalState.scoreChanges[ps.id] || 0) : 0;
                              const changeStr = change > 0 ? `+${change}` : (change < 0 ? `${change}` : '0');
                              const scoreClass = change > 0 ? 'score-plus' : (change < 0 ? 'score-minus' : 'score-zero');
-                             gameOverScoresDiv.innerHTML += `<p>${ps.name} (${ps.role || '农民'}): <span class="${scoreClass}">${changeStr}</span> (总分: ${ps.score})</p>`;
+                             gameOverScoresDiv.innerHTML += `<p>${ps.name} (${ps.role || '玩家'}): <span class="${scoreClass}">${changeStr}</span> (总分: ${ps.score})</p>`;
                          });
                      }
                      gameOverOverlay.classList.remove('hidden-view');
@@ -648,20 +629,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateMyPlayerArea(playerData, isMyTurn, isGameFinished, roomStatus) {
         if (!myInfoInBar) return;
         const nameEl = myInfoInBar.querySelector('.playerName');
-        // const avatarEl = myInfoInBar.querySelector('.player-avatar'); // Not used for image updates here
         const cardCountEl = myInfoInBar.querySelector('.card-count');
         const readyStatusEl = myInfoInBar.querySelector('.player-ready-status');
 
         if (nameEl) nameEl.textContent = playerData.username || "我";
         if (cardCountEl) cardCountEl.textContent = playerData.handCount;
 
-        myInfoInBar.classList.toggle('current-turn', isMyTurn && !isGameFinished && roomStatus === 'playing');
+        myInfoInBar.classList.toggle('current-turn', isMyTurn && !isGameFinished && roomStatus === 'playing' && !playerData.isAiControlled); // AI托管时不显示轮转光圈
         myInfoInBar.classList.toggle('player-disconnected', !playerData.connected && !playerData.isAiControlled);
         myInfoInBar.classList.toggle('player-finished', playerData.finished);
 
         if (readyStatusEl) {
             if (roomStatus === 'waiting') {
-                readyStatusEl.textContent = playerData.isReady ? "已准备" : "未准备";
+                readyStatusEl.textContent = playerData.isReady ? "已准备" : (playerData.isAiControlled ? "AI托管" : "未准备");
                 readyStatusEl.className = 'player-ready-status ' + (playerData.isReady ? 'ready' : 'not-ready');
                 readyStatusEl.style.display = 'inline';
             } else {
@@ -692,7 +672,7 @@ document.addEventListener('DOMContentLoaded', () => {
             cardDiv.dataset.suit = card.suit;
             cardDiv.dataset.key = cardObjectToKey(card);
 
-            if (isMyTurnAndCanAct) {
+            if (isMyTurnAndCanAct) { // isMyTurnAndCanAct 已经包含了对 AI 托管的判断
                 cardDiv.classList.add('selectable');
                 cardDiv.addEventListener('click', () => toggleCardSelection(cardDiv, card));
             }
@@ -713,6 +693,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function toggleCardSelection(cardDiv, cardData) {
+        const myPlayer = currentRoomState ? currentRoomState.players.find(p => p.userId === myUserId) : null;
+        if (myPlayer && myPlayer.isAiControlled) return; // AI托管时不允许选牌
+
         const cardKey = cardObjectToKey(cardData);
         const index = selectedCardsForPlay.findIndex(c => cardObjectToKey(c) === cardKey);
         if (index > -1) {
@@ -731,15 +714,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updatePlayButtonState() {
-        if (!playButton || !currentRoomState) return;
+        if (!currentRoomState) return; // Guard against no state
         const myPlayer = currentRoomState.players.find(p => p.userId === myUserId);
-        const canPlay = currentRoomState.gameStarted &&
-                        !currentRoomState.gameFinished &&
-                        myPlayer &&
-                        !myPlayer.finished &&
-                        currentRoomState.currentPlayerId === myUserId &&
-                        selectedCardsForPlay.length > 0;
-        playButton.disabled = !canPlay;
+        const amAICcontrolled = myPlayer && myPlayer.isAiControlled;
+
+        if (playButton) {
+            const canPlay = currentRoomState.gameStarted &&
+                            !currentRoomState.gameFinished &&
+                            myPlayer &&
+                            !myPlayer.finished &&
+                            currentRoomState.currentPlayerId === myUserId &&
+                            selectedCardsForPlay.length > 0 &&
+                            !amAICcontrolled; // AI托管时禁用
+            playButton.disabled = !canPlay;
+        }
 
         if(passButton) {
             const canPass = currentRoomState.gameStarted &&
@@ -747,7 +735,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             myPlayer &&
                             !myPlayer.finished &&
                             currentRoomState.currentPlayerId === myUserId &&
-                            (!!currentRoomState.lastHandInfo && currentRoomState.lastPlayerWhoPlayedId !== myUserId);
+                            (!!currentRoomState.lastHandInfo && currentRoomState.lastPlayerWhoPlayedId !== myUserId) &&
+                            !amAICcontrolled; // AI托管时禁用
             passButton.disabled = !canPass;
         }
         if(hintButton) {
@@ -755,7 +744,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             !currentRoomState.gameFinished &&
                             myPlayer &&
                             !myPlayer.finished &&
-                            currentRoomState.currentPlayerId === myUserId;
+                            currentRoomState.currentPlayerId === myUserId &&
+                            !amAICcontrolled; // AI托管时禁用
             hintButton.disabled = !canHint;
         }
     }
@@ -796,14 +786,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateOpponentUIElement(areaElement, playerData, currentTurnPlayerId, isGameFinished, roomStatus) {
         if (!areaElement) return;
         const nameEl = areaElement.querySelector('.playerName');
-        // const avatarEl = areaElement.querySelector('.player-avatar');
         const cardCountEl = areaElement.querySelector('.card-count');
         const roleEl = areaElement.querySelector('.playerRole');
         const readyStatusEl = areaElement.querySelector('.player-ready-status');
 
         if (playerData) {
             areaElement.style.visibility = 'visible';
-            if (nameEl) nameEl.textContent = playerData.username;
+            if (nameEl) nameEl.textContent = playerData.username + (playerData.isAiControlled ? " (AI)" : ""); // 显示AI标记
             if (cardCountEl) cardCountEl.textContent = playerData.handCount;
 
             if (roleEl && roomStatus === 'playing' && playerData.role) {
@@ -815,15 +804,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (readyStatusEl) {
                 if (roomStatus === 'waiting') {
-                    readyStatusEl.textContent = playerData.isReady ? "已准备" : "未准备";
+                    readyStatusEl.textContent = playerData.isReady ? "已准备" : (playerData.isAiControlled ? "AI托管" : "未准备");
                     readyStatusEl.className = 'player-ready-status ' + (playerData.isReady ? 'ready' : 'not-ready');
                     readyStatusEl.style.display = 'inline';
                 } else {
                     readyStatusEl.style.display = 'none';
                 }
             }
-            areaElement.classList.toggle('current-turn', playerData.userId === currentTurnPlayerId && !isGameFinished && roomStatus === 'playing');
-            areaElement.classList.toggle('player-disconnected', !playerData.connected && !playerData.isAiControlled);
+            // AI托管的玩家不显示轮转光圈，除非需要明确指示AI正在“思考”
+            areaElement.classList.toggle('current-turn', playerData.userId === currentTurnPlayerId && !isGameFinished && roomStatus === 'playing' && !playerData.isAiControlled);
+            areaElement.classList.toggle('player-disconnected', !playerData.connected && !playerData.isAiControlled); // AI 在逻辑上总是 connected
             areaElement.classList.toggle('player-finished', playerData.finished);
             areaElement.dataset.playerId = playerData.userId;
         } else {
@@ -845,8 +835,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (playerArea) {
             const readyStatusEl = playerArea.querySelector('.player-ready-status');
             if (readyStatusEl) {
+                const player = currentRoomState.players.find(pl => pl.userId === pUserId);
                 if (currentRoomState && currentRoomState.status === 'waiting') {
-                    readyStatusEl.textContent = isReady ? "已准备" : "未准备";
+                    readyStatusEl.textContent = isReady ? "已准备" : (player && player.isAiControlled ? "AI托管" : "未准备");
                     readyStatusEl.className = 'player-ready-status ' + (isReady ? 'ready' : 'not-ready');
                     readyStatusEl.style.display = 'inline';
                 } else {
@@ -887,9 +878,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!state || !myUserId) return;
         const myPlayer = state.players.find(p => p.userId === myUserId);
         const isMyTurn = state.gameStarted && !state.gameFinished && myPlayer && !myPlayer.finished && state.currentPlayerId === myUserId;
+        const amAICcontrolledByServer = myPlayer && myPlayer.isAiControlled; // 从服务器获取的AI状态
 
         if (readyButton) {
-            readyButton.disabled = state.status !== 'waiting' || (myPlayer && myPlayer.isAiControlled);
+            readyButton.disabled = state.status !== 'waiting' || amAICcontrolledByServer;
             if (myPlayer && state.status === 'waiting') {
                 readyButton.textContent = myPlayer.isReady ? "取消准备" : "准备";
                 readyButton.classList.toggle('cancel-ready', myPlayer.isReady);
@@ -898,20 +890,20 @@ document.addEventListener('DOMContentLoaded', () => {
                  readyButton.classList.remove('cancel-ready');
             }
         }
-        if (playButton) playButton.disabled = !isMyTurn || selectedCardsForPlay.length === 0;
-        if (passButton) passButton.disabled = !isMyTurn || (!state.lastHandInfo || state.lastPlayerWhoPlayedId === myUserId && !state.isFirstTurn);
-        if (hintButton) hintButton.disabled = !isMyTurn;
-        if (aiToggleButton) aiToggleButton.disabled = state.status === 'finished';
-        if (micButton) micButton.disabled = !currentRoomId || !myUserId;
+        if (playButton) playButton.disabled = !isMyTurn || selectedCardsForPlay.length === 0 || amAICcontrolledByServer;
+        if (passButton) passButton.disabled = !isMyTurn || (!state.lastHandInfo || state.lastPlayerWhoPlayedId === myUserId && !state.isFirstTurn) || amAICcontrolledByServer;
+        if (hintButton) hintButton.disabled = !isMyTurn || amAICcontrolledByServer;
+        if (aiToggleButton) aiToggleButton.disabled = state.status === 'finished' || (myPlayer && !myPlayer.connected && !amAICcontrolledByServer); // 如果断线且非AI，则禁用切换
+
+        if (micButton) micButton.disabled = !currentRoomId || !myUserId; // Mic button logic
     }
 
-
-    // --- Voice Functionality (MODIFIED AGAIN) ---
+    // --- Voice Functionality ---
     async function startRecording() {
         if (isRecording || !currentRoomId || !myUserId) return;
         console.log('[VOICE CLIENT] Attempting to start recording...');
         try {
-            currentStream = await navigator.mediaDevices.getUserMedia({ audio: true }); // 保存 stream
+            currentStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(currentStream);
             audioChunks = [];
 
@@ -921,18 +913,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
 
-            mediaRecorder.onstop = () => { // 这个 onstop 现在主要负责发送数据和清理UI
+            mediaRecorder.onstop = () => {
                 console.log('[VOICE CLIENT] MediaRecorder.onstop triggered.');
-                if (currentStream) { // 确保 stream 存在再关闭
+                if (currentStream) {
                     currentStream.getTracks().forEach(track => track.stop());
                     currentStream = null;
                 }
-
-                // 这个时候 audioChunks 应该已经收集完毕
                 if (audioChunks.length > 0) {
                     const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
                     console.log(`[VOICE CLIENT] Sending voice data. Size: ${audioBlob.size}, Type: ${audioBlob.type}`);
-                    if (audioBlob.size > 100) { // 阈值可以调整
+                    if (audioBlob.size > 100) {
                         socket.emit('sendVoiceMessage', { roomId: currentRoomId, audioBlob });
                     } else {
                         console.log('[VOICE CLIENT] Audio data too small or empty, not sending.');
@@ -940,22 +930,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                      console.log('[VOICE CLIENT] No audio chunks to send.');
                 }
-                audioChunks = []; // 清空
-
-                // UI清理也在这里，确保在所有操作后
+                audioChunks = [];
                 isRecording = false;
                 if (micButton) {
                     micButton.classList.remove('recording');
                     micButton.textContent = "🎤";
                 }
-                socket.emit('playerStoppedSpeaking', { userId: myUserId, roomId: currentRoomId });
+                // Don't emit playerStoppedSpeaking here, it's done when button is released or timer fires
             };
-
             mediaRecorder.start();
             isRecording = true;
             if (micButton) {
                 micButton.classList.add('recording');
-                micButton.textContent = "录音中";
+                micButton.textContent = "停止"; // Or "录音中"
             }
             socket.emit('playerStartedSpeaking', { userId: myUserId, roomId: currentRoomId });
 
@@ -963,7 +950,8 @@ document.addEventListener('DOMContentLoaded', () => {
             recordingTimer = setTimeout(() => {
                 if (isRecording && mediaRecorder && mediaRecorder.state === "recording") {
                     console.log('[VOICE CLIENT] Max recording time reached. Stopping automatically.');
-                    mediaRecorder.stop(); // 这会触发 onstop
+                    mediaRecorder.stop(); // This will trigger onstop
+                    socket.emit('playerStoppedSpeaking', { userId: myUserId, roomId: currentRoomId }); // Also emit stop speaking
                 }
             }, MAX_RECORDING_TIME);
             console.log('[VOICE CLIENT] Recording started.');
@@ -976,23 +964,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 micButton.classList.remove('recording');
                 micButton.textContent = "🎤";
             }
-            if (currentStream) { // 如果获取了stream但后续失败，也关闭它
+            if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
                 currentStream = null;
             }
         }
     }
 
-    function forceStopRecording() { // 用于意外中断，如断线、离开房间
+    function forceStopRecording() {
         console.log('[VOICE CLIENT] Forcing stop recording.');
         clearTimeout(recordingTimer);
-        if (isRecording && mediaRecorder && mediaRecorder.state === "recording") {
-            // 不直接调用 mediaRecorder.stop() 来避免触发 onstop 中的发送逻辑
-            // 而是直接清理资源和UI
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
-                currentStream = null;
-            }
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+            mediaRecorder.onstop = null; // Prevent onstop from firing and sending data
+            mediaRecorder.stop();
+        }
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop());
+            currentStream = null;
         }
         isRecording = false;
         audioChunks = [];
@@ -1000,12 +988,11 @@ document.addEventListener('DOMContentLoaded', () => {
             micButton.classList.remove('recording');
             micButton.textContent = "🎤";
         }
-        if (currentRoomId && myUserId) { // 只有在房间内才发送停止说话事件
+        if (currentRoomId && myUserId) {
             socket.emit('playerStoppedSpeaking', { userId: myUserId, roomId: currentRoomId });
         }
-        mediaRecorder = null; // 清理 mediaRecorder 实例
+        mediaRecorder = null;
     }
-
 
     if (micButton) {
         micButton.addEventListener('click', () => {
@@ -1014,12 +1001,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             if (isRecording) {
+                clearTimeout(recordingTimer); // Clear auto-stop timer
                 if (mediaRecorder && mediaRecorder.state === "recording") {
-                    mediaRecorder.stop(); // 正常停止，会触发onstop进而发送
+                    mediaRecorder.stop(); // This will trigger onstop, which sends data and cleans UI
                 } else {
-                    // 如果 mediaRecorder 状态不对，也强制清理一下UI
-                    forceStopRecording();
+                    forceStopRecording(); // Fallback if state is inconsistent
                 }
+                socket.emit('playerStoppedSpeaking', { userId: myUserId, roomId: currentRoomId });
             } else {
                 startRecording();
             }
@@ -1070,15 +1058,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const audio = new Audio(audioUrl);
             audio.play()
                 .catch(e => console.error('[VOICE CLIENT] Error playing received audio:', e));
-            // 清理 URL.revokeObjectURL 可以在 audio 播放完毕后，或者在一段时间后，
-            // 或者当收到新的语音时清理旧的。这里简单处理，播完就清理。
             audio.onended = () => {
                 URL.revokeObjectURL(audioUrl);
                 console.log(`[VOICE CLIENT] Revoked Object URL for played audio from ${username}`);
             };
             audio.onerror = (e) => {
                 console.error(`[VOICE CLIENT] Error event on audio element for ${username}:`, e);
-                URL.revokeObjectURL(audioUrl); // 发生错误也清理
+                URL.revokeObjectURL(audioUrl);
             };
         } catch (e) {
             console.error('[VOICE CLIENT] Error processing received audioBlob:', e);
