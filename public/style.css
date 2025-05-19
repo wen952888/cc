@@ -14,7 +14,7 @@ html, body {
     display: flex; flex-direction: column; align-items: center;
     justify-content: center; padding: 15px;
 }
-#game-view.fullscreen-view { padding: 0; }
+#game-view.fullscreen-view { padding: 0; } /* Game view specific padding reset */
 .flex-center-center { align-items: center; justify-content: center; text-align: center; }
 
 /* Auth & Lobby Styles */
@@ -23,14 +23,15 @@ html, body {
 #auth-view h2 { color: #e8f5e9; margin-bottom: 20px; }
 #auth-view input[type="text"], #auth-view input[type="password"] { background-color: rgba(200, 230, 201, 0.15); border: 1px solid rgba(165, 214, 167, 0.4); color: #e8f5e9; padding: 12px; border-radius: 6px; margin-bottom: 15px; width: calc(100% - 26px); font-size: 1em; }
 #auth-view input::placeholder { color: #a5d6a7; }
-#auth-view button { background-color: #388e3c; color: #fff; padding: 12px 18px; width: 100%; font-size: 1.05em; border: none; border-radius: 6px; cursor: pointer; }
+#auth-view button { background-color: #388e3c; color: #fff; padding: 12px 18px; width: 100%; font-size: 1.05em; border: none; border-radius: 6px; cursor: pointer; transition: background-color 0.2s; }
 #auth-view button:hover { background-color: #2e7d32; }
 #auth-view p { font-size: 0.9em; margin-top: 15px; color: #c8e6c9;}
 #auth-view a { color: #81c784; text-decoration: none; }
 #auth-view a:hover { text-decoration: underline; }
 .message { margin-top: 12px; font-weight: bold; text-align: center; font-size: 0.85em; min-height: 1.1em; padding: 8px; border-radius: 4px; }
-.message.error { color: #ffcdd2; background-color: #c62828; border: 1px solid #b71c1c; display: block; }
+.message.error { color: #ffcdd2; background-color: #c62828; border: 1px solid #b71c1c; display: block; } /* Ensure errors are visible */
 .message.success { color: #c8e6c9; background-color: #2e7d32; border: 1px solid #1b5e20; }
+
 .lobby-content { background-color: rgba(67, 160, 71, 0.1); padding: 20px; border-radius: 10px; box-shadow: 0 3px 15px rgba(0,0,0,0.3); width: 100%; max-width: 600px; text-align: center; display: flex; flex-direction: column; gap: 15px; }
 #lobby-view h2 { color: #e8f5e9; margin-bottom: 10px; }
 #lobbyWelcomeMessage { font-size: 1.1em; margin-bottom: 10px; color: #c8e6c9; }
@@ -50,7 +51,6 @@ html, body {
 #logoutButtonLobby { background-color: #d32f2f; color: #fff; margin-top: 10px; }
 #logoutButtonLobby:hover { background-color: #b71c1c; }
 
-
 /* Game View Layout */
 #game-view { background-color: #356035; display: flex; flex-direction: column; }
 #gameInfoBar { min-height: 30px; padding: 5px 10px; display: flex; justify-content: space-between; align-items: center; background-color: rgba(0, 0, 0, 0.4); color: #a5d6a7; font-size: 0.8em; border-bottom: 1px solid rgba(129, 199, 132, 0.2); flex-shrink: 0; }
@@ -68,61 +68,42 @@ html, body {
     border-radius: 6px;
     transition: box-shadow 0.3s ease, background-color 0.3s ease;
     color: #c8e6c9;
-    position: relative; /* Needed for absolute positioning of ::after */
+    position: relative; /* For ::after positioning */
 }
 
-/* .player-area.current-turn: เดิมใช้ box-shadow, ตอนนี้จะเพิ่ม SVG indicator */
 .player-area.current-turn {
-    box-shadow: 0 0 10px 3px #a5d6a7, inset 0 0 0 2px #a5d6a7; /* 可以保留原来的高光 */
+    box-shadow: 0 0 10px 3px #a5d6a7, inset 0 0 0 2px #a5d6a7;
     background-color: rgba(165, 214, 167, 0.05);
 }
 
-/* 新增：回合指示器 SVG 的样式 */
+/* Turn indicator SVG styles */
 .player-area.current-turn .player-avatar-container::after {
-    content: ''; /*  可以通过 background-image 设置 SVG */
-    background-image: url('/images/turn-indicator.svg'); /* 确保路径正确 */
+    content: '';
+    background-image: url('/images/turn-indicator.svg'); /* UPDATE THIS PATH if your SVG is elsewhere */
     background-repeat: no-repeat;
     background-size: contain;
     background-position: center;
     position: absolute;
-    width: 20px;  /* SVG 指示器的大小 */
-    height: 20px; /* SVG 指示器的大小 */
-    /* 定位指示器，根据需要调整 */
-    /* 示例：在头像下方居中 */
-    bottom: -15px; /* 调整此值使SVG在头像下方 */
+    width: 20px;
+    height: 20px;
+    bottom: -15px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 5; /* 确保在头像上（如果需要覆盖部分）或旁边 */
-    animation: bounceIndicator 1.5s infinite ease-in-out; /* 添加简单动画 */
+    z-index: 5;
+    animation: bounceIndicator 1.5s infinite ease-in-out;
 }
+#my-info-in-bar.current-turn .player-avatar-container::after { top: -15px; bottom: auto; }
+#player-top.opponent-area.current-turn .player-avatar-container::after { bottom: -15px; top: auto; }
+#player-left.opponent-area.current-turn .player-avatar-container::after { right: -15px; left: auto; top: 50%; transform: translateY(-50%); animation-name: bounceIndicatorSidewaysLeft; }
+#player-right.opponent-area.current-turn .player-avatar-container::after { left: -15px; right: auto; top: 50%; transform: translateY(-50%); animation-name: bounceIndicatorSidewaysRight; }
 
-/* 为底部自己的信息条的当前回合指示器做特殊定位 */
-#my-info-in-bar.current-turn .player-avatar-container::after {
-    /* 示例：在头像上方居中 */
-    top: -15px; /* 调整此值使SVG在自己头像上方 */
-    bottom: auto; /* 重置 bottom */
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-
-@keyframes bounceIndicator {
-    0%, 100% {
-        transform: translateX(-50%) translateY(0);
-    }
-    50% {
-        transform: translateX(-50%) translateY(-3px);
-    }
-}
-
+@keyframes bounceIndicator { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-3px); } }
+@keyframes bounceIndicatorSidewaysLeft { 0%, 100% { transform: translateY(-50%) translateX(0); } 50% {  transform: translateY(-50%) translateX(3px); } }
+@keyframes bounceIndicatorSidewaysRight { 0%, 100% { transform: translateY(-50%) translateX(0); } 50% {  transform: translateY(-50%) translateX(-3px); } }
 
 .player-area.player-disconnected { opacity: 0.6; }
 .player-area.player-finished .playerName::after { content: " (已出完)"; font-style: italic; font-size: 0.9em; color: #a5d6a7; margin-left: 4px; }
-
-.player-avatar-container {
-    position: relative; /* 确保 ::after 相对于它定位 */
-    margin-right: 8px;
-}
+.player-avatar-container { position: relative; margin-right: 8px; }
 .player-avatar { width: 35px; height: 35px; border-radius: 50%; background-color: #4a704a; border: 1px solid #698c69; background-size: cover; background-position: center; }
 .voice-indicator-container { position: absolute; bottom: -1px; right: -1px; width: 12px; height: 12px; display: flex; align-items: center; justify-content: center; }
 .voice-indicator { width: 8px; height: 8px; background-color: #698c69; border-radius: 50%; transition: all 0.2s; }
@@ -139,55 +120,22 @@ html, body {
 #player-top.opponent-area { top: 5px; left: 50%; transform: translateX(-50%); flex-direction: column; align-items: center; }
 #player-top .player-avatar-container { margin-right: 0; margin-bottom: 3px; }
 #player-top .player-details { text-align: center; }
-/* 为顶部的对手调整SVG指示器位置 */
-#player-top.opponent-area.current-turn .player-avatar-container::after {
-    bottom: -15px; /* 确认在头像下方 */
-    top: auto;
-}
-
 #player-left.opponent-area { left: 5px; top: 35%; transform: translateY(-50%); }
-/* 为左边的对手调整SVG指示器位置 */
-#player-left.opponent-area.current-turn .player-avatar-container::after {
-    right: -15px; /* 在头像右边 */
-    left: auto;
-    top: 50%;
-    transform: translateY(-50%);
-    animation-name: bounceIndicatorSidewaysLeft; /* 可以用不同动画 */
-}
-@keyframes bounceIndicatorSidewaysLeft { /* 左右晃动的示例动画 */
-    0%, 100% { transform: translateY(-50%) translateX(0); }
-    50% {  transform: translateY(-50%) translateX(3px); }
-}
-
-
 #player-right.opponent-area { right: 5px; top: 35%; transform: translateY(-50%); flex-direction: row-reverse; }
 #player-right .player-avatar-container { margin-right: 0; margin-left: 8px;}
 #player-right .player-details { text-align: right; }
-/* 为右边的对手调整SVG指示器位置 */
-#player-right.opponent-area.current-turn .player-avatar-container::after {
-    left: -15px; /* 在头像左边 */
-    right: auto;
-    top: 50%;
-    transform: translateY(-50%);
-    animation-name: bounceIndicatorSidewaysRight; /* 可以用不同动画 */
-}
-@keyframes bounceIndicatorSidewaysRight { /* 左右晃动的示例动画 */
-    0%, 100% { transform: translateY(-50%) translateX(0); }
-    50% {  transform: translateY(-50%) translateX(-3px); }
-}
-
 
 #centerPileArea { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: auto; max-width: 60%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5px; min-height: 80px; }
 #lastHandType { font-size: 0.75em; color: #a5d6a7; margin-bottom: 3px; font-style: italic; }
-#discarded-cards-area { display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; gap: -25px; min-height: 80px; }
+#discarded-cards-area { display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; gap: -25px; /* Overlap cards in pile */ min-height: 80px; }
 .center-pile-card { width: 50px; height: 75px; border-color: #698c69; flex-shrink: 0; }
 
-
+/* Player Hand Area - Key for selected card "popup" */
 #player-hand-area-wrapper {
     width: 100%;
-    min-height: 155px;
+    min-height: 155px; /* Default card 108px + selected lift 30px + padding 8px = approx 146px. 155px is safe. */
     display: flex;
-    align-items: flex-end;
+    align-items: flex-end; /* Align cards to the bottom of this wrapper */
     justify-content: center;
     flex-shrink: 0;
     padding-bottom: 8px;
@@ -197,17 +145,18 @@ html, body {
 #player-hand-area {
     display: flex;
     justify-content: center;
-    align-items: flex-end;
+    align-items: flex-end; /* Align cards to the bottom of this area too */
     width: 100%;
     max-width: 100vw;
     padding: 0;
     box-sizing: border-box;
-    min-height: 138px;
-    overflow-x: hidden;
-    overflow-y: hidden;
-    position: relative;
+    min-height: 138px; /* Default card 108px + selected lift 30px = 138px */
+    overflow-x: auto;  /* Allow horizontal scroll if many cards don't fit with overlap */
+    overflow-y: hidden; /* Crucial: if height is not enough, card tops will be clipped */
+    position: relative; /* For z-index of cards and other potential absolute elements */
 }
 
+/* Bottom Bar */
 #bottom-bar {
     height: 60px;
     display: flex;
@@ -218,40 +167,20 @@ html, body {
     width: 100%;
     box-sizing: border-box;
     flex-shrink: 0;
-    z-index: 1100;
+    z-index: 1100; /* Ensure above hand area */
 }
-
-.bottom-bar-button-group {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    flex-shrink: 0;
-}
-.bottom-bar-button-group.left-buttons {
-    justify-content: flex-start;
-}
-.bottom-bar-button-group.right-buttons {
-    justify-content: flex-end;
-}
-
-
+.bottom-bar-button-group { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.bottom-bar-button-group.left-buttons { justify-content: flex-start; }
+.bottom-bar-button-group.right-buttons { justify-content: flex-end; }
 #bottom-bar button {
-    padding: 7px 9px;
-    font-size: 0.85em;
-    min-width: 45px;
-    border-radius: 5px;
-    border: 1px solid rgba(129, 199, 132, 0.3);
-    background-color: rgba(129, 199, 132, 0.2);
-    color: #e8f5e9;
-    transition: background-color 0.2s, transform 0.1s;
-    cursor: pointer;
-    line-height: 1.2;
-    white-space: nowrap;
+    padding: 7px 9px; font-size: 0.85em; min-width: 45px; border-radius: 5px;
+    border: 1px solid rgba(129, 199, 132, 0.3); background-color: rgba(129, 199, 132, 0.2);
+    color: #e8f5e9; transition: background-color 0.2s, transform 0.1s; cursor: pointer;
+    line-height: 1.2; white-space: nowrap;
 }
 #bottom-bar button:hover:not(:disabled) { background-color: rgba(129, 199, 132, 0.35); }
 #bottom-bar button:active:not(:disabled) { transform: scale(0.95); }
 #bottom-bar button:disabled { background-color: rgba(102, 135, 103, 0.2); color: #81a281; border-color: rgba(102, 135, 103, 0.3); cursor: not-allowed; }
-
 #bottom-bar #ready-button { background-color: #2196F3; border-color: #1976D2; }
 #bottom-bar #ready-button:hover:not(:disabled) { background-color: #1976D2; }
 #bottom-bar #ready-button.cancel-ready { background-color: #FF9800; border-color: #F57C00; }
@@ -264,25 +193,14 @@ html, body {
 #bottom-bar #hint-button:hover:not(:disabled) { background-color: #00796b;}
 #bottom-bar #micButton { font-size: 1.1em; padding: 6px 8px; }
 #bottom-bar #micButton.recording { background-color: #d32f2f; border-color: #b71c1c; color:white;}
-
 #ai-toggle-button { background-color: #607D8B; border-color: #455A64; }
 #ai-toggle-button:hover:not(:disabled) { background-color: #546E7A; }
 #ai-toggle-button.ai-active { background-color: #03A9F4; border-color: #0288D1; color: white; }
 
-
 #my-info-in-bar {
-    padding: 3px 5px;
-    background-color: rgba(0,0,0,0.2);
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    margin: 0 5px;
-    flex-shrink: 1;
-    min-width: 100px;
-    /* position: relative; 已在 .player-area 中设置 */
-}
-#my-info-in-bar .player-avatar-container { /* 确保这个容器存在且能应用 ::after */
-    /* 样式已在 .player-avatar-container 中定义 */
+    padding: 3px 5px; background-color: rgba(0,0,0,0.2); border-radius: 6px;
+    display: flex; align-items: center; margin: 0 5px;
+    flex-shrink: 1; min-width: 100px; /* position: relative; already on .player-area */
 }
 #my-info-in-bar .player-avatar { width: 30px; height: 30px; }
 #my-info-in-bar .voice-indicator-container { width:11px; height:11px; }
@@ -292,47 +210,46 @@ html, body {
 #my-info-in-bar .playerInfo { font-size: 0.9em; }
 #my-info-in-bar .player-ready-status { display: inline; }
 
-
+/* Card styles */
 .card {
-    width: 72px;
-    height: 108px;
+    width: 72px;  /* Default card width */
+    height: 108px; /* Default card height */
     background-size: cover; background-repeat: no-repeat;
     background-position: center; border: 1px solid #698c69;
     border-radius: 6px;
-    display: inline-block;
+    display: inline-block; /* Or flex-item if #player-hand-area is flex */
     box-shadow: 1px 1px 4px rgba(0,0,0,0.35);
-    position: relative;
-    background-color: #e8f5e9;
+    position: relative; /* For z-index to work */
+    background-color: #e8f5e9; /* Fallback background */
     transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, margin-left 0.15s ease-out;
-    user-select: none;
-    flex-shrink: 0;
+    user-select: none; /* Prevent text selection on cards */
+    flex-shrink: 0; /* Prevent cards from shrinking in flex container */
 }
-
 .my-card {
-    margin-left: -54px;
+    margin-left: -54px; /* Overlap: Card width 72, visible part e.g. 18px -> margin = -(72-18) = -54px */
 }
 .my-card:first-child {
-    margin-left: 0;
+    margin-left: 0; /* First card no negative margin */
 }
 .my-card.selectable { cursor: pointer; }
 .my-card.selectable:hover:not(.selected) {
-    transform: translateY(-18px) scale(1.07);
-    z-index: 10;
+    transform: translateY(-18px) scale(1.07); /* Lift on hover */
+    z-index: 10; /* Ensure hover is above non-selected, non-hinted cards */
 }
 .my-card.selected {
-    transform: translateY(-30px) scale(1.05);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    border-color: #66bb6a;
-    z-index: 20;
+    transform: translateY(-30px) scale(1.05); /* KEY: Lift selected card up */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);    /* Optional: Softer shadow */
+    border-color: #66bb6a;                   /* Optional: Highlight border */
+    z-index: 20; /* Ensure selected is above all other cards */
 }
 .my-card.hinted {
-    box-shadow: 0 0 22px 7px #ffeb3b, inset 0 0 0 3px #ffeb3b;
-    z-index: 15;
+    box-shadow: 0 0 22px 7px #ffeb3b, inset 0 0 0 3px #ffeb3b; /* Strong hint glow */
+    z-index: 15; /* Hinted cards above normal, below selected */
 }
+.card.card-in-hand { opacity: 0; transform: translateY(50px) rotate(10deg) scale(0.6); } /* Initial state for deal animation */
+.card.card-in-hand.dealt { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); } /* Final state after deal animation */
 
-.card.card-in-hand { opacity: 0; transform: translateY(50px) rotate(10deg) scale(0.6); }
-.card.card-in-hand.dealt { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
-
+/* Game Over Overlay */
 #gameOverOverlay { background-color: rgba(0,0,0,0.85); z-index: 10000; }
 #gameOverOverlay .overlay-content { background-color: rgba(67, 160, 71, 0.2); padding: 25px; border-radius: 10px; box-shadow: 0 0 30px rgba(0,0,0,0.5); text-align: center; max-width: 90%; width: 350px; }
 #gameOverOverlay h3 { color: #e8f5e9; margin-bottom: 15px; font-size: 1.6em; }
@@ -341,19 +258,18 @@ html, body {
 #gameOverScores .score-plus { color: #81c784; font-weight: bold; }
 #gameOverScores .score-minus { color: #e57373; font-weight: bold; }
 #gameOverScores .score-zero { color: #c8e6c9; }
-#backToLobbyBtn { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; margin-top: 20px; }
+#backToLobbyBtn { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; margin-top: 20px; transition: background-color 0.2s; }
 #backToLobbyBtn:hover { background-color: #388e3c; }
-
 
 /* --- Responsive Adjustments --- */
 @media (max-width: 450px) {
     .card { width: 68px; height: 102px; border-radius: 5px; }
-    .my-card { margin-left: -50px; }
+    .my-card { margin-left: -50px; /* 68w,露18 = -(68-18) */ }
     .my-card:first-child { margin-left: 0; }
-    #player-hand-area-wrapper { min-height: 133px; padding-bottom: 5px; }
-    #player-hand-area { min-height: 128px; }
+    #player-hand-area-wrapper { min-height: 133px; /* Card 102px + SelLift 26px + Pad 5px */ padding-bottom: 5px; }
+    #player-hand-area { min-height: 128px; /* Card 102px + SelLift 26px */ }
     .my-card.selectable:hover:not(.selected) { transform: translateY(-16px) scale(1.08); }
-    .my-card.selected { transform: translateY(-26px) scale(1.04); box-shadow: 0 2px 6px rgba(0,0,0,0.25); border-color: #66bb6a; }
+    .my-card.selected { transform: translateY(-26px) scale(1.04); box-shadow: 0 2px 6px rgba(0,0,0,0.25); }
     #bottom-bar { height: 58px; padding: 0 4px; }
     #bottom-bar button { font-size: 0.82em; padding: 6px 7px; min-width: 42px; }
     .bottom-bar-button-group { gap: 4px; }
@@ -361,7 +277,6 @@ html, body {
     #my-info-in-bar .player-avatar { width: 28px; height: 28px;}
     #my-info-in-bar .playerName { max-width: 55px; }
     #my-info-in-bar .player-details { font-size: 0.72em; }
-    /* Responsive SVG indicator size */
     .player-area.current-turn .player-avatar-container::after { width: 18px; height: 18px; bottom: -12px;}
     #my-info-in-bar.current-turn .player-avatar-container::after { top: -12px; }
     #player-left.opponent-area.current-turn .player-avatar-container::after,
@@ -372,12 +287,12 @@ html, body {
 
 @media (max-width: 375px) {
     .card { width: 62px; height: 93px; }
-    .my-card { margin-left: -46px; }
+    .my-card { margin-left: -46px; /* 62w,露16 = -(62-16) */ }
     .my-card:first-child { margin-left: 0; }
-    #player-hand-area-wrapper { min-height: 120px; }
-    #player-hand-area { min-height: 115px; }
+    #player-hand-area-wrapper { min-height: 120px; /* Card 93px + SelLift 22px + Pad 5px */ }
+    #player-hand-area { min-height: 115px; /* Card 93px + SelLift 22px */ }
     .my-card.selectable:hover:not(.selected) { transform: translateY(-14px) scale(1.07); }
-    .my-card.selected { transform: translateY(-22px) scale(1.03); box-shadow: 0 1px 4px rgba(0,0,0,0.2); border-color: #66bb6a; }
+    .my-card.selected { transform: translateY(-22px) scale(1.03); box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
     #bottom-bar { height: 55px; padding: 0 3px; }
     #bottom-bar button { font-size: 0.78em; padding: 5px 5px; min-width: 36px; }
     .bottom-bar-button-group { gap: 3px; }
@@ -388,7 +303,6 @@ html, body {
     #my-info-in-bar .player-details { font-size: 0.7em; margin-left: 4px; }
     #my-info-in-bar .playerName { max-width: 45px; }
     #my-info-in-bar .playerInfo { font-size: 0.85em; }
-    /* Responsive SVG indicator size */
     .player-area.current-turn .player-avatar-container::after { width: 16px; height: 16px; bottom: -10px;}
     #my-info-in-bar.current-turn .player-avatar-container::after { top: -10px; }
     #player-left.opponent-area.current-turn .player-avatar-container::after,
@@ -399,16 +313,15 @@ html, body {
 
 @media (orientation: landscape) and (max-height: 500px) {
     .card { width: 70px; height: 105px; }
-    .my-card { margin-left: -50px; }
-    .my-card:first-child { margin-left: 4px; }
-    #player-hand-area-wrapper { min-height: 140px; }
-    #player-hand-area { min-height: 130px; padding: 0 5px; }
+    .my-card { margin-left: -50px; /* 70w,露20 = -(70-20) */ }
+    .my-card:first-child { margin-left: 4px; } /* Give a little space from edge in landscape */
+    #player-hand-area-wrapper { min-height: 140px; /* Card 105px + SelLift 25px + Pad (area's) 5px + wrapper's pad 5px */ }
+    #player-hand-area { min-height: 130px; /* Card 105px + SelLift 25px */ padding: 0 5px; }
     .my-card.selectable:hover:not(.selected) { transform: translateY(-15px) scale(1.06); }
-    .my-card.selected { transform: translateY(-25px) scale(1.04); box-shadow: 0 2px 6px rgba(0,0,0,0.25); border-color: #66bb6a; }
+    .my-card.selected { transform: translateY(-25px) scale(1.04); box-shadow: 0 2px 6px rgba(0,0,0,0.25); }
     #bottom-bar { height: 50px; }
     #bottom-bar button { font-size: 0.8em; padding: 6px 8px; min-width: 40px; }
     #my-info-in-bar .player-avatar { width: 28px; height: 28px; }
-    /* Responsive SVG indicator size */
     .player-area.current-turn .player-avatar-container::after { width: 18px; height: 18px; bottom: -12px;}
     #my-info-in-bar.current-turn .player-avatar-container::after { top: -12px; }
     #player-left.opponent-area.current-turn .player-avatar-container::after,
