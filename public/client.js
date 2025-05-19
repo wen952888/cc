@@ -1,6 +1,6 @@
 // client.js
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM fully loaded and parsed. Client v1.0.32'); // 版本号更新
+    console.log('DOM fully loaded and parsed. Client v1.0.33'); // 版本号更新
     const socket = io({
         reconnectionAttempts: 5,
         reconnectionDelay: 2000,
@@ -71,30 +71,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- START: Card Image Mapping ---
     const rankToImageNamePart = {
-        'A': 'ace',
-        'K': 'king',
-        'Q': 'queen',
-        'J': 'jack',
-        'T': '10', // Assuming 'T' in game.js maps to "10" in filename
-        '9': '9',
-        '8': '8',
-        '7': '7',
-        '6': '6',
-        '5': '5',
-        '4': '4',
-        '3': '3',
-        '2': '2'
+        'A': 'ace', 'K': 'king', 'Q': 'queen', 'J': 'jack',
+        'T': '10', '9': '9', '8': '8', '7': '7', '6': '6',
+        '5': '5', '4': '4', '3': '3', '2': '2'
     };
-
     const suitToImageNamePart = {
-        'S': 'spades',   // Spades (黑桃)
-        'H': 'hearts',   // Hearts (红桃)
-        'D': 'diamonds', // Diamonds (方块)
-        'C': 'clubs'     // Clubs (梅花)
+        'S': 'spades', 'H': 'hearts', 'D': 'diamonds', 'C': 'clubs'
     };
-
-    const CARD_IMAGE_EXTENSION = '.jpg'; // Change to '.png' if your images are PNGs
-    const CARD_BACK_IMAGE = 'back.jpg'; // Change if your card back image has a different name or extension
+    const CARD_IMAGE_EXTENSION = '.jpg';
+    const CARD_BACK_IMAGE = 'back.jpg';
     // --- END: Card Image Mapping ---
 
 
@@ -157,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!phoneNumber || password.length < 4) { showAuthError("手机号不能为空，密码至少4位。"); return; }
         console.log(`[AUTH] Attempting registration for: ${phoneNumber}`);
         socket.emit('register', { phoneNumber, password }, (response) => {
-            alert(response.message);
+            alert(response.message); // 注册结果通常需要提示用户
             if (response.success) {
                 if (loginForm) loginForm.style.display = 'block'; if (registerForm) registerForm.style.display = 'none';
                 loginUsernameInput.value = phoneNumber; loginPasswordInput.value = ""; loginPasswordInput.focus();
@@ -195,8 +180,8 @@ document.addEventListener('DOMContentLoaded', () => {
         else { 
             showAuthError(response ? response.message : "认证失败，请重试。"); 
             localStorage.removeItem('userId');
-            myUserId = null; myUsername = null; // Ensure local state is cleared
-            switchToView('auth-view'); // Go back to auth view on failed re-auth
+            myUserId = null; myUsername = null; 
+            switchToView('auth-view'); 
         }
     }
 
@@ -250,9 +235,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('[CLIENT] Create room response from server:', response);
                 if (response && response.success) {
                     currentRoomId = response.roomId;
-                    displayGameState(response.roomState);
+                    displayGameState(response.roomState); 
                     switchToView('game-view');
-                    alert(`房间 "${roomName}" 创建成功! ID: ${response.roomId}`);
+                    // MODIFICATION: Removed alert for create room success
+                    // alert(`房间 "${roomName}" 创建成功! ID: ${response.roomId}`); 
+                    console.log(`[CLIENT] Room "${roomName}" created successfully! ID: ${response.roomId}`);
                 } else {
                     alert(`创建房间失败: ${response ? response.message : '服务器未响应或发生未知错误。'}`);
                 }
@@ -296,7 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         console.log('[CLIENT] Join room response:', response);
                         if (response && response.success) {
                             currentRoomId = response.roomId; 
-                            displayGameState(response.roomState); 
+                            displayGameState(response.roomState);  
                             switchToView('game-view');
                         } else alert(`加入房间失败: ${response ? response.message : '未知错误'}`);
                     });
@@ -329,7 +316,9 @@ document.addEventListener('DOMContentLoaded', () => {
         displayGameState(gameState, true); 
         switchToView('game-view'); 
         const mp=gameState.players.find(p=>p.userId===myUserId); 
-        alert("游戏开始！"+(mp&&mp.role?`你的身份是: ${mp.role}`:'')); 
+        // MODIFICATION: Removed alert for game started
+        // alert("游戏开始！"+(mp&&mp.role?`你的身份是: ${mp.role}`:'')); 
+        console.log("[CLIENT] Game started!" + (mp && mp.role ? ` Your role: ${mp.role}` : ''));
     });
     socket.on('gameStateUpdate', (gameState) => { 
         console.log('[EVENT] gameStateUpdate received:', gameState); 
@@ -574,8 +563,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const imagePath = `/images/cards/${imageName}`;
-        // console.log(`[GFX] Setting card image: ${imagePath}`); // Uncomment for deep debugging of image paths
-
         try {
             cardDiv.style.backgroundImage = `url('${imagePath}')`;
         } catch (e) {
