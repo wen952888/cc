@@ -1,21 +1,24 @@
 {
   "name": "KK 在线纸牌",
   "short_name": "KK纸牌",
+  "description": "KK 多人在线纸牌游戏",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#e0e0e0",
-  "theme_color": "#e0e0e0",
-  "description": "KK 多人在线纸牌游戏 (自定义图片)",
+  "background_color": "#356035", /* 更改为与游戏背景更协调的颜色 */
+  "theme_color": "#1a3a1a",      /* 更改为与游戏主题更协调的颜色 */
   "icons": [
     {
       "src": "/images/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable" /* 添加 purpose */
     },
     {
       "src": "/images/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable" /* 添加 purpose */
     }
-  ]
+  ],
+  "orientation": "landscape" /* 纸牌游戏通常横屏体验更好 */
 }
